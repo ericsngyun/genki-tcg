@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@genki-tcg/shared-types": "*",
+    "@react-native-async-storage/async-storage": "1.21.0",
     "expo": "~50.0.0",
     "expo-router": "~3.4.0",
     "expo-status-bar": "~1.11.1",
