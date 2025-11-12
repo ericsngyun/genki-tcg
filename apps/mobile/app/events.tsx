@@ -22,24 +22,34 @@ interface Event {
   _count: {
     entries: number;
   };
+  entries?: Array<{
+    userId: string;
+  }>;
 }
 
 export default function EventsScreen() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadEvents();
+    loadData();
   }, []);
 
-  const loadEvents = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.getEvents('SCHEDULED');
-      setEvents(data);
+      // Load user data
+      const userData = await api.getMe();
+      setMyUserId(userData.user.id);
+
+      // Load scheduled and in-progress events
+      const scheduledEvents = await api.getEvents('SCHEDULED');
+      const inProgressEvents = await api.getEvents('IN_PROGRESS');
+      setEvents([...inProgressEvents, ...scheduledEvents]);
     } catch (error) {
-      console.error('Failed to load events:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -48,17 +58,22 @@ export default function EventsScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadEvents();
+    loadData();
   };
 
   const handleRegister = async (eventId: string) => {
     try {
       await api.registerForEvent(eventId);
       alert('Successfully registered!');
-      loadEvents();
+      loadData();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to register');
     }
+  };
+
+  const isRegistered = (event: Event) => {
+    if (!myUserId || !event.entries) return false;
+    return event.entries.some((entry) => entry.userId === myUserId);
   };
 
   if (loading) {
@@ -112,12 +127,39 @@ export default function EventsScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => handleRegister(event.id)}
-              >
-                <Text style={styles.registerButtonText}>Register</Text>
-              </TouchableOpacity>
+              {isRegistered(event) ? (
+                <View style={styles.actionsContainer}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/pairings',
+                        params: { eventId: event.id },
+                      })
+                    }
+                  >
+                    <Text style={styles.actionButtonText}>View Pairings</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/standings',
+                        params: { eventId: event.id },
+                      })
+                    }
+                  >
+                    <Text style={styles.actionButtonText}>View Standings</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.registerButton}
+                  onPress={() => handleRegister(event.id)}
+                >
+                  <Text style={styles.registerButtonText}>Register</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </View>
@@ -209,6 +251,22 @@ const styles = StyleSheet.create({
   registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
   emptyState: {
