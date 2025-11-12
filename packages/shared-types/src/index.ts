@@ -71,7 +71,7 @@ export interface CreditBalance {
 // Events & Tournaments
 // ============================================================================
 
-export type GameType = 'OPTCG' | 'UNIONARENA' | 'DIGIMON' | 'ONEPIECE';
+export type GameType = 'ONE_PIECE_TCG' | 'AZUKI_TCG' | 'RIFTBOUND';
 
 export type EventFormat =
   | 'STANDARD'

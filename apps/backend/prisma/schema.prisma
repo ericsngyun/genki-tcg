@@ -143,10 +143,9 @@ model CreditBalance {
 // ============================================================================
 
 enum GameType {
-  OPTCG
-  UNIONARENA
-  DIGIMON
-  ONEPIECE
+  ONE_PIECE_TCG
+  AZUKI_TCG
+  RIFTBOUND
 }
 
 enum EventFormat {

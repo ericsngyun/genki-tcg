@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { formatGameName, formatEventFormat } from '@/lib/formatters';
 
 interface Event {
   id: string;
@@ -154,8 +155,8 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex items-center space-x-6 text-sm text-gray-600">
-                    <span>🎮 {event.game}</span>
-                    <span>📋 {event.format}</span>
+                    <span>🎮 {formatGameName(event.game)}</span>
+                    <span>📋 {formatEventFormat(event.format)}</span>
                     <span>
                       📅{' '}
                       {new Date(event.startAt).toLocaleDateString('en-US', {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
+import { formatGameName, formatEventFormat } from '../lib/formatters';
 
 interface Event {
   id: string;
@@ -116,8 +117,8 @@ export default function EventsScreen() {
               </View>
 
               <View style={styles.eventDetails}>
-                <Text style={styles.detailText}>🎮 {event.game}</Text>
-                <Text style={styles.detailText}>📋 {event.format}</Text>
+                <Text style={styles.detailText}>🎮 {formatGameName(event.game)}</Text>
+                <Text style={styles.detailText}>📋 {formatEventFormat(event.format)}</Text>
                 <Text style={styles.detailText}>
                   📅 {new Date(event.startAt).toLocaleDateString()}
                 </Text>
