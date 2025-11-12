@@ -88,6 +88,11 @@ class ApiClient {
     return data;
   }
 
+  async checkInEntry(entryId: string) {
+    const { data } = await this.client.post(`/events/entries/${entryId}/check-in`);
+    return data;
+  }
+
   // Rounds
   async createNextRound(eventId: string) {
     const { data } = await this.client.post(`/rounds/events/${eventId}/next`);
@@ -96,6 +101,17 @@ class ApiClient {
 
   async getPairings(roundId: string) {
     const { data } = await this.client.get(`/rounds/${roundId}/pairings`);
+    return data;
+  }
+
+  // Matches
+  async reportMatchResult(matchId: string, result: string, gamesWonA: number, gamesWonB: number) {
+    const { data } = await this.client.post('/matches/report', {
+      matchId,
+      result,
+      gamesWonA,
+      gamesWonB,
+    });
     return data;
   }
 

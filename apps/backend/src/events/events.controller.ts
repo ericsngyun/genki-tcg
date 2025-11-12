@@ -31,4 +31,11 @@ export class EventsController {
   async register(@CurrentUser() user: any, @Param('id') eventId: string) {
     return this.eventsService.registerForEvent(eventId, user.id);
   }
+
+  @Post('entries/:entryId/check-in')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async checkIn(@Param('entryId') entryId: string) {
+    return this.eventsService.checkIn(entryId);
+  }
 }

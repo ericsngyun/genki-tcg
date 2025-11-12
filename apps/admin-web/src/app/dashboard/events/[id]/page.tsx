@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useEventSocket } from '@/hooks/useEventSocket';
+import { MatchResultModal } from '@/components/MatchResultModal';
 
 interface Event {
   id: string;
@@ -73,12 +74,21 @@ export default function EventDetailPage() {
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resultModalOpen, setResultModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<Pairing | null>(null);
+  const [checkingIn, setCheckingIn] = useState<string | null>(null);
 
   // Socket.IO for real-time updates
   useEventSocket(eventId, {
     onPairingsPosted: (data) => {
       console.log('Pairings posted:', data);
       loadEvent();
+      if (selectedRound) {
+        loadPairings(selectedRound);
+      }
+    },
+    onMatchResultReported: (data) => {
+      console.log('Match result reported:', data);
       if (selectedRound) {
         loadPairings(selectedRound);
       }
@@ -160,6 +170,65 @@ export default function EventDetailPage() {
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to create round');
     }
+  };
+
+  const handleCheckIn = async (entryId: string) => {
+    setCheckingIn(entryId);
+    try {
+      await api.checkInEntry(entryId);
+      await loadEvent();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to check in player');
+    } finally {
+      setCheckingIn(null);
+    }
+  };
+
+  const handleBulkCheckIn = async () => {
+    if (!event) return;
+
+    const uncheckedEntries = event.entries.filter(
+      (e) => !e.checkedInAt && !e.droppedAt
+    );
+
+    if (uncheckedEntries.length === 0) {
+      alert('No players to check in');
+      return;
+    }
+
+    if (!confirm(`Check in ${uncheckedEntries.length} player(s)?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        uncheckedEntries.map((entry) => api.checkInEntry(entry.id))
+      );
+      await loadEvent();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to check in players');
+    }
+  };
+
+  const handleOpenResultModal = (match: Pairing) => {
+    setSelectedMatch(match);
+    setResultModalOpen(true);
+  };
+
+  const handleSubmitResult = async (
+    result: string,
+    gamesWonA: number,
+    gamesWonB: number
+  ) => {
+    if (!selectedMatch) return;
+
+    await api.reportMatchResult(selectedMatch.id, result, gamesWonA, gamesWonB);
+
+    // Reload pairings and standings
+    if (selectedRound) {
+      await loadPairings(selectedRound);
+    }
+    await loadStandings();
   };
 
   if (loading) {
@@ -277,47 +346,69 @@ export default function EventDetailPage() {
                   No players registered yet
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-left">
-                        <th className="pb-3 font-medium text-gray-700">Name</th>
-                        <th className="pb-3 font-medium text-gray-700">Email</th>
-                        <th className="pb-3 font-medium text-gray-700">Registered</th>
-                        <th className="pb-3 font-medium text-gray-700">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {event.entries.map((entry) => (
-                        <tr key={entry.id} className="border-b border-gray-100">
-                          <td className="py-3 font-medium text-gray-900">
-                            {entry.user.name}
-                          </td>
-                          <td className="py-3 text-gray-600">
-                            {entry.user.email}
-                          </td>
-                          <td className="py-3 text-gray-600 text-sm">
-                            {new Date(entry.registeredAt).toLocaleString()}
-                          </td>
-                          <td className="py-3">
-                            {entry.droppedAt ? (
-                              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                                Dropped
-                              </span>
-                            ) : entry.checkedInAt ? (
-                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                                Checked In
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
-                                Registered
-                              </span>
-                            )}
-                          </td>
+                <div>
+                  <div className="mb-4">
+                    <button
+                      onClick={handleBulkCheckIn}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+                    >
+                      Check In All
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left">
+                          <th className="pb-3 font-medium text-gray-700">Name</th>
+                          <th className="pb-3 font-medium text-gray-700">Email</th>
+                          <th className="pb-3 font-medium text-gray-700">Registered</th>
+                          <th className="pb-3 font-medium text-gray-700">Status</th>
+                          <th className="pb-3 font-medium text-gray-700">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {event.entries.map((entry) => (
+                          <tr key={entry.id} className="border-b border-gray-100">
+                            <td className="py-3 font-medium text-gray-900">
+                              {entry.user.name}
+                            </td>
+                            <td className="py-3 text-gray-600">
+                              {entry.user.email}
+                            </td>
+                            <td className="py-3 text-gray-600 text-sm">
+                              {new Date(entry.registeredAt).toLocaleString()}
+                            </td>
+                            <td className="py-3">
+                              {entry.droppedAt ? (
+                                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                  Dropped
+                                </span>
+                              ) : entry.checkedInAt ? (
+                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                  Checked In
+                                </span>
+                              ) : (
+                                <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+                                  Registered
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              {!entry.checkedInAt && !entry.droppedAt && (
+                                <button
+                                  onClick={() => handleCheckIn(entry.id)}
+                                  disabled={checkingIn === entry.id}
+                                  className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                                >
+                                  {checkingIn === entry.id ? 'Checking In...' : 'Check In'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -364,6 +455,7 @@ export default function EventDetailPage() {
                             <th className="pb-3 font-medium text-gray-700">Player A</th>
                             <th className="pb-3 font-medium text-gray-700">Player B</th>
                             <th className="pb-3 font-medium text-gray-700">Result</th>
+                            <th className="pb-3 font-medium text-gray-700">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -390,6 +482,19 @@ export default function EventDetailPage() {
                                   </span>
                                 ) : (
                                   <span className="text-sm text-gray-500">Not reported</span>
+                                )}
+                              </td>
+                              <td className="py-3">
+                                {!pairing.result && pairing.playerB && (
+                                  <button
+                                    onClick={() => handleOpenResultModal(pairing)}
+                                    className="text-sm bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary/90 transition"
+                                  >
+                                    Report Result
+                                  </button>
+                                )}
+                                {!pairing.result && !pairing.playerB && (
+                                  <span className="text-sm text-gray-400">Auto Win</span>
                                 )}
                               </td>
                             </tr>
@@ -454,6 +559,19 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Match Result Modal */}
+      {selectedMatch && (
+        <MatchResultModal
+          isOpen={resultModalOpen}
+          onClose={() => {
+            setResultModalOpen(false);
+            setSelectedMatch(null);
+          }}
+          onSubmit={handleSubmitResult}
+          match={selectedMatch}
+        />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { OrgsModule } from './orgs/orgs.module';
 import { CreditsModule } from './credits/credits.module';
 import { EventsModule } from './events/events.module';
 import { RoundsModule } from './rounds/rounds.module';
+import { MatchesModule } from './matches/matches.module';
 import { StandingsModule } from './standings/standings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
@@ -36,6 +37,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     CreditsModule,
     EventsModule,
     RoundsModule,
+    MatchesModule,
     StandingsModule,
     NotificationsModule,
     AuditModule,
