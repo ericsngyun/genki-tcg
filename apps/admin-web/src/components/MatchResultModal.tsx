@@ -1,6 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface MatchResultModalProps {
   isOpen: boolean;
@@ -19,8 +28,6 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match }: MatchResu
   const [gamesWonA, setGamesWonA] = useState<number>(0);
   const [gamesWonB, setGamesWonB] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,17 +53,18 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match }: MatchResu
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
-            Report Match Result - Table {match.tableNumber}
-          </h2>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Report Match Result - Table {match.tableNumber}</DialogTitle>
+          <DialogDescription>
+            Select the match result and optionally enter game scores
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit}>
+          {/* Match Info */}
           <div className="mb-6">
-            <div className="text-sm font-medium text-gray-700 mb-2">Match</div>
             <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
               <div className="text-center">
                 <div className="font-bold text-gray-900">{match.playerA.name}</div>
@@ -78,54 +86,58 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match }: MatchResu
               Match Result *
             </label>
             <div className="space-y-2">
-              <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                 <input
                   type="radio"
                   name="result"
                   value="PLAYER_A_WIN"
                   checked={result === 'PLAYER_A_WIN'}
                   onChange={(e) => setResult(e.target.value)}
-                  className="mr-3"
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
                 />
-                <span className="font-medium text-gray-900">
+                <span className="ml-3 font-medium text-gray-900">
                   {match.playerA.name} Wins
                 </span>
               </label>
-              <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className={`flex items-center p-3 border-2 border-gray-200 rounded-lg transition-all ${
+                match.playerB
+                  ? 'cursor-pointer hover:bg-gray-50 hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5'
+                  : 'opacity-50 cursor-not-allowed'
+              }`}>
                 <input
                   type="radio"
                   name="result"
                   value="PLAYER_B_WIN"
                   checked={result === 'PLAYER_B_WIN'}
                   onChange={(e) => setResult(e.target.value)}
-                  className="mr-3"
                   disabled={!match.playerB}
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
-                <span className={`font-medium ${!match.playerB ? 'text-gray-400' : 'text-gray-900'}`}>
+                <span className="ml-3 font-medium text-gray-900">
                   {match.playerB ? match.playerB.name : 'N/A'} Wins
                 </span>
               </label>
-              <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                 <input
                   type="radio"
                   name="result"
                   value="DRAW"
                   checked={result === 'DRAW'}
                   onChange={(e) => setResult(e.target.value)}
-                  className="mr-3"
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
                 />
-                <span className="font-medium text-gray-900">Draw</span>
+                <span className="ml-3 font-medium text-gray-900">Draw</span>
               </label>
-              <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                 <input
                   type="radio"
                   name="result"
                   value="INTENTIONAL_DRAW"
                   checked={result === 'INTENTIONAL_DRAW'}
                   onChange={(e) => setResult(e.target.value)}
-                  className="mr-3"
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
                 />
-                <span className="font-medium text-gray-900">Intentional Draw</span>
+                <span className="ml-3 font-medium text-gray-900">Intentional Draw</span>
               </label>
             </div>
           </div>
@@ -146,7 +158,7 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match }: MatchResu
                   max="9"
                   value={gamesWonA}
                   onChange={(e) => setGamesWonA(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 />
               </div>
               <div className="text-gray-400 font-bold pt-5">-</div>
@@ -161,32 +173,31 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match }: MatchResu
                   value={gamesWonB}
                   onChange={(e) => setGamesWonB(parseInt(e.target.value) || 0)}
                   disabled={!match.playerB}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:bg-gray-100"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all"
                 />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex space-x-3">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={submitting || !result}
-              className="flex-1 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Reporting...' : 'Report Result'}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
