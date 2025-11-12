@@ -1,0 +1,412 @@
+// Genki TCG Database Schema
+// PostgreSQL via Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Organization & Users
+// ============================================================================
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  inviteCode    String   @unique
+  logoUrl       String?
+  primaryColor  String?  @default("#4F46E5") // Indigo-600
+  secondaryColor String? @default("#10B981") // Emerald-500
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  memberships   OrgMembership[]
+  events        Event[]
+  creditEntries CreditLedgerEntry[]
+  auditLogs     AuditLog[]
+
+  @@index([slug])
+  @@index([inviteCode])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  passwordHash String?
+  avatarUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  memberships      OrgMembership[]
+  creditEntries    CreditLedgerEntry[]
+  creditBalances   CreditBalance[]
+  entries          Entry[]
+  decklists        Decklist[]
+  matchesAsPlayerA Match[]         @relation("MatchPlayerA")
+  matchesAsPlayerB Match[]         @relation("MatchPlayerB")
+  notificationTokens NotificationToken[]
+  auditLogs        AuditLog[]      @relation("AuditPerformer")
+
+  @@index([email])
+}
+
+enum OrgRole {
+  OWNER
+  STAFF
+  PLAYER
+}
+
+model OrgMembership {
+  id     String  @id @default(cuid())
+  userId String
+  orgId  String
+  role   OrgRole @default(PLAYER)
+
+  joinedAt DateTime @default(now())
+
+  // Relations
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([userId])
+  @@index([orgId])
+  @@index([orgId, role])
+}
+
+// ============================================================================
+// Credits System
+// ============================================================================
+
+enum CreditReasonCode {
+  PRIZE
+  REFUND
+  PURCHASE
+  MANUAL_ADD
+  MANUAL_DEDUCT
+  EVENT_ENTRY
+  EVENT_REFUND
+}
+
+model CreditLedgerEntry {
+  id        String           @id @default(cuid())
+  orgId     String
+  userId    String
+  amount    Int              // Signed: positive = credit, negative = debit
+  reasonCode CreditReasonCode
+  memo      String?
+
+  relatedEventId String?
+  createdBy      String   // User ID of staff/owner
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event?       @relation(fields: [relatedEventId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}
+
+// Derived balance table for performance
+model CreditBalance {
+  id        String @id @default(cuid())
+  orgId     String
+  userId    String
+  balance   Int    @default(0)
+
+  lastTransactionAt DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+// ============================================================================
+// Events & Tournaments
+// ============================================================================
+
+enum GameType {
+  OPTCG
+  UNIONARENA
+  DIGIMON
+  ONEPIECE
+}
+
+enum EventFormat {
+  STANDARD
+  DRAFT
+  SEALED
+  CONSTRUCTED
+  SUPER_PRE_RELEASE
+  PRE_RELEASE
+}
+
+enum EventStatus {
+  DRAFT
+  SCHEDULED
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  orgId       String
+  name        String
+  game        GameType
+  format      EventFormat
+  status      EventStatus @default(DRAFT)
+  description String?
+
+  startAt     DateTime
+  endAt       DateTime?
+  maxPlayers  Int?
+  entryFeeCents Int?      @default(0)
+
+  requiresDecklist      Boolean @default(false)
+  allowLateRegistration Boolean @default(true)
+
+  roundsPlanned  Int?
+  currentRound   Int?        @default(0)
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  org              Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entries          Entry[]
+  rounds           Round[]
+  standingSnapshots StandingSnapshot[]
+  creditEntries    CreditLedgerEntry[]
+
+  @@index([orgId, status])
+  @@index([orgId, startAt])
+  @@index([status])
+}
+
+// ============================================================================
+// Entries & Decklists
+// ============================================================================
+
+model Entry {
+  id          String    @id @default(cuid())
+  eventId     String
+  userId      String
+
+  registeredAt DateTime  @default(now())
+  checkedInAt  DateTime?
+  droppedAt    DateTime?
+  droppedAfterRound Int?
+
+  decklistId String?
+
+  // Relations
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decklist Decklist?
+
+  @@unique([eventId, userId])
+  @@index([eventId, checkedInAt])
+  @@index([userId])
+}
+
+model Decklist {
+  id       String @id @default(cuid())
+  entryId  String @unique
+  userId   String
+
+  deckName      String?
+  mainDeckUrl   String?
+  mainDeckJson  Json?
+
+  lockedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// Rounds & Matches
+// ============================================================================
+
+enum RoundStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Round {
+  id          String      @id @default(cuid())
+  eventId     String
+  roundNumber Int
+  status      RoundStatus @default(PENDING)
+
+  startAt      DateTime?
+  endAt        DateTime?
+  timerSeconds Int?       @default(3000) // 50 minutes default
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@unique([eventId, roundNumber])
+  @@index([eventId, status])
+}
+
+enum MatchResult {
+  PLAYER_A_WIN
+  PLAYER_B_WIN
+  DRAW
+  INTENTIONAL_DRAW
+  DOUBLE_LOSS
+  PLAYER_A_DQ
+  PLAYER_B_DQ
+}
+
+model Match {
+  id          String  @id @default(cuid())
+  roundId     String
+  tableNumber Int
+
+  playerAId String
+  playerBId String? // Null for bye
+
+  result    MatchResult?
+  gamesWonA Int?        @default(0)
+  gamesWonB Int?        @default(0)
+
+  reportedBy  String?   // User ID
+  confirmedBy String?   // User ID (for player self-report)
+  reportedAt  DateTime?
+
+  overriddenBy String?   // Staff user ID
+  overriddenAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  round    Round  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerA  User   @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB  User?  @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, tableNumber])
+  @@index([roundId])
+  @@index([playerAId])
+  @@index([playerBId])
+}
+
+// ============================================================================
+// Standings Snapshots
+// ============================================================================
+
+model StandingSnapshot {
+  id          String @id @default(cuid())
+  eventId     String
+  roundNumber Int
+
+  // JSON array of PlayerStanding objects
+  standings Json
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, roundNumber])
+  @@index([eventId])
+}
+
+// ============================================================================
+// Notifications
+// ============================================================================
+
+enum NotificationPlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+model NotificationToken {
+  id       String               @id @default(cuid())
+  userId   String
+  platform NotificationPlatform
+  token    String               @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, token])
+  @@index([userId])
+}
+
+// ============================================================================
+// Audit Log
+// ============================================================================
+
+enum AuditAction {
+  CREDIT_ADJUST
+  MATCH_OVERRIDE
+  ROUND_REPAIR
+  BYE_ASSIGN
+  PLAYER_DROP
+  PLAYER_LATE_ADD
+  EVENT_CANCEL
+  DECKLIST_LOCK
+  RESULT_OVERRIDE
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  orgId       String
+  action      AuditAction
+  performedBy String      // User ID
+
+  targetUserId  String?
+  targetEventId String?
+  targetMatchId String?
+
+  // JSON metadata for additional context
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  performer User         @relation("AuditPerformer", fields: [performedBy], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([performedBy])
+  @@index([targetEventId])
+}

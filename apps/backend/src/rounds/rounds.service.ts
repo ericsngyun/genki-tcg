@@ -1,0 +1,99 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { generateSwissPairings } from '@genki-tcg/tournament-logic';
+
+@Injectable()
+export class RoundsService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Generate next round with Swiss pairings
+   * TODO: Implement full logic with standings calculation
+   */
+  async createNextRound(eventId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        entries: {
+          where: {
+            checkedInAt: { not: null },
+            droppedAt: null,
+          },
+          include: {
+            user: true,
+          },
+        },
+        rounds: true,
+      },
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    const nextRoundNumber = event.rounds.length + 1;
+
+    // TODO: Get player records from previous matches and calculate standings
+    // For now, simple pairing based on registration order
+    const players = event.entries.map((e) => ({
+      userId: e.userId,
+      userName: e.user.name,
+      points: 0,
+      matchWins: 0,
+      matchLosses: 0,
+      matchDraws: 0,
+      gameWins: 0,
+      gameLosses: 0,
+      omwPercent: 0.33,
+      gwPercent: 0,
+      ogwPercent: 0,
+      receivedBye: false,
+      opponentIds: [],
+    }));
+
+    const pairingResult = generateSwissPairings({
+      players,
+      avoidRematches: true,
+    });
+
+    // Create round and matches in transaction
+    return this.prisma.$transaction(async (tx) => {
+      const round = await tx.round.create({
+        data: {
+          eventId,
+          roundNumber: nextRoundNumber,
+          status: 'PENDING',
+          timerSeconds: 3000, // 50 minutes
+        },
+      });
+
+      const matches = await Promise.all(
+        pairingResult.pairings.map((pairing) =>
+          tx.match.create({
+            data: {
+              roundId: round.id,
+              tableNumber: pairing.tableNumber,
+              playerAId: pairing.playerAId,
+              playerBId: pairing.playerBId,
+            },
+          })
+        )
+      );
+
+      return { round, matches };
+    });
+  }
+
+  async getPairings(roundId: string) {
+    return this.prisma.match.findMany({
+      where: { roundId },
+      include: {
+        playerA: true,
+        playerB: true,
+      },
+      orderBy: {
+        tableNumber: 'asc',
+      },
+    });
+  }
+}
