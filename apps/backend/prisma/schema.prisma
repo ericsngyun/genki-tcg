@@ -186,6 +186,12 @@ model Event {
   roundsPlanned  Int?
   currentRound   Int?        @default(0)
 
+  // Prize distribution
+  totalPrizeCredits    Int?     @default(0)
+  prizesDistributed    Boolean  @default(false)
+  prizesDistributedAt  DateTime?
+  prizesDistributedBy  String?
+
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

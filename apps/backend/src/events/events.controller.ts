@@ -38,4 +38,15 @@ export class EventsController {
   async checkIn(@Param('entryId') entryId: string) {
     return this.eventsService.checkIn(entryId);
   }
+
+  @Post(':id/distribute-prizes')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async distributePrizes(
+    @Param('id') eventId: string,
+    @Body() dto: { distributions: Array<{ userId: string; amount: number; placement: number }> },
+    @CurrentUser() user: any,
+  ) {
+    return this.eventsService.distributePrizes(eventId, dto.distributions, user.id);
+  }
 }

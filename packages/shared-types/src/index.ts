@@ -105,6 +105,10 @@ export interface Event {
   allowLateRegistration: boolean;
   roundsPlanned?: number; // Auto-calculated based on player count
   currentRound?: number;
+  totalPrizeCredits?: number;
+  prizesDistributed?: boolean;
+  prizesDistributedAt?: Date;
+  prizesDistributedBy?: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -341,6 +345,7 @@ export interface CreateEventRequest {
   entryFeeCents?: number;
   requiresDecklist?: boolean;
   description?: string;
+  totalPrizeCredits?: number;
 }
 
 export interface RegisterForEventRequest {
@@ -376,6 +381,17 @@ export interface DropPlayerRequest {
 export interface RepairRoundRequest {
   roundId: string;
   reason: string;
+}
+
+export interface PrizeDistribution {
+  userId: string;
+  amount: number;
+  placement: number;
+}
+
+export interface DistributePrizesRequest {
+  eventId: string;
+  distributions: PrizeDistribution[];
 }
 
 // Standings

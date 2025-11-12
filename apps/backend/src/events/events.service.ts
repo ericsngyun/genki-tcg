@@ -11,6 +11,7 @@ export interface CreateEventDto {
   entryFeeCents?: number;
   requiresDecklist?: boolean;
   description?: string;
+  totalPrizeCredits?: number;
 }
 
 @Injectable()
@@ -80,6 +81,86 @@ export class EventsService {
       data: {
         checkedInAt: new Date(),
       },
+    });
+  }
+
+  async distributePrizes(
+    eventId: string,
+    distributions: Array<{ userId: string; amount: number; placement: number }>,
+    distributedBy: string,
+  ) {
+    // Check if event exists and prizes haven't been distributed
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    if (event.prizesDistributed) {
+      throw new Error('Prizes have already been distributed for this event');
+    }
+
+    // Use transaction to ensure all distributions succeed or none do
+    return this.prisma.$transaction(async (tx) => {
+      // Create credit ledger entries for each distribution
+      const ledgerEntries = await Promise.all(
+        distributions.map((dist) =>
+          tx.creditLedgerEntry.create({
+            data: {
+              orgId: event.orgId,
+              userId: dist.userId,
+              amount: dist.amount,
+              reasonCode: 'PRIZE',
+              memo: `Tournament prize - ${event.name} (Placement: ${dist.placement})`,
+              relatedEventId: eventId,
+              createdBy: distributedBy,
+            },
+          }),
+        ),
+      );
+
+      // Update or create credit balances
+      await Promise.all(
+        distributions.map((dist) =>
+          tx.creditBalance.upsert({
+            where: {
+              orgId_userId: {
+                orgId: event.orgId,
+                userId: dist.userId,
+              },
+            },
+            create: {
+              orgId: event.orgId,
+              userId: dist.userId,
+              balance: dist.amount,
+              lastTransactionAt: new Date(),
+            },
+            update: {
+              balance: {
+                increment: dist.amount,
+              },
+              lastTransactionAt: new Date(),
+            },
+          }),
+        ),
+      );
+
+      // Mark event prizes as distributed
+      const updatedEvent = await tx.event.update({
+        where: { id: eventId },
+        data: {
+          prizesDistributed: true,
+          prizesDistributedAt: new Date(),
+          prizesDistributedBy: distributedBy,
+        },
+      });
+
+      return {
+        event: updatedEvent,
+        distributions: ledgerEntries,
+      };
     });
   }
 }

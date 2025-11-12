@@ -16,6 +16,7 @@ export default function NewEventPage() {
     startAt: '',
     maxPlayers: '',
     entryFeeCents: '',
+    totalPrizeCredits: '',
     requiresDecklist: false,
     description: '',
   });
@@ -34,6 +35,9 @@ export default function NewEventPage() {
           : undefined,
         entryFeeCents: formData.entryFeeCents
           ? parseInt(formData.entryFeeCents)
+          : undefined,
+        totalPrizeCredits: formData.totalPrizeCredits
+          ? parseInt(formData.totalPrizeCredits)
           : undefined,
       };
 
@@ -176,6 +180,27 @@ export default function NewEventPage() {
                 Example: 500 = $5.00
               </p>
             </div>
+          </div>
+
+          {/* Prize Credits */}
+          <div>
+            <label htmlFor="totalPrizeCredits" className="block text-sm font-medium text-gray-700 mb-2">
+              Total Prize Credits
+            </label>
+            <input
+              id="totalPrizeCredits"
+              type="number"
+              min="0"
+              value={formData.totalPrizeCredits}
+              onChange={(e) =>
+                setFormData({ ...formData, totalPrizeCredits: e.target.value })
+              }
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              placeholder="100"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Store credits to distribute to top players after tournament
+            </p>
           </div>
 
           {/* Description */}
