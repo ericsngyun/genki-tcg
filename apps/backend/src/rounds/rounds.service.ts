@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { generateSwissPairings } from '@genki-tcg/tournament-logic';
 
 @Injectable()
 export class RoundsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private realtimeGateway: RealtimeGateway
+  ) {}
 
   /**
    * Generate next round with Swiss pairings
@@ -57,7 +61,7 @@ export class RoundsService {
     });
 
     // Create round and matches in transaction
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const round = await tx.round.create({
         data: {
           eventId,
@@ -82,6 +86,11 @@ export class RoundsService {
 
       return { round, matches };
     });
+
+    // Emit real-time event
+    this.realtimeGateway.emitPairingsPosted(eventId, nextRoundNumber);
+
+    return result;
   }
 
   async getPairings(roundId: string) {

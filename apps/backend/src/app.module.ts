@@ -11,6 +11,7 @@ import { RoundsModule } from './rounds/rounds.module';
 import { StandingsModule } from './standings/standings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AuditModule } from './audit/audit.module';
     StandingsModule,
     NotificationsModule,
     AuditModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}

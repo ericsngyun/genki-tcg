@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useEventSocket } from '@/hooks/useEventSocket';
 
 interface Event {
   id: string;
@@ -72,6 +73,23 @@ export default function EventDetailPage() {
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Socket.IO for real-time updates
+  useEventSocket(eventId, {
+    onPairingsPosted: (data) => {
+      console.log('Pairings posted:', data);
+      loadEvent();
+      if (selectedRound) {
+        loadPairings(selectedRound);
+      }
+    },
+    onStandingsUpdated: (data) => {
+      console.log('Standings updated:', data);
+      if (activeTab === 'standings') {
+        loadStandings();
+      }
+    },
+  });
 
   useEffect(() => {
     loadEvent();
