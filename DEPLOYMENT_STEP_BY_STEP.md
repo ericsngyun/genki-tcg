@@ -72,12 +72,34 @@ railway link
 ## Step 3: Add PostgreSQL Database
 
 ### 3.1 Add PostgreSQL Plugin
+
+**Option A: Interactive Add (Recommended)**
 ```bash
-railway add --plugin postgresql
+# Opens interactive menu
+railway add
+
+# Use arrow keys to navigate
+# Press SPACE to select PostgreSQL
+# Press ENTER to confirm
 
 # Expected output:
-# ✅ Created plugin: PostgreSQL
-# 📦 Plugin ID: xxxxx
+# ✅ Created PostgreSQL
+```
+
+**Option B: Dashboard (Easiest)**
+```bash
+# Open Railway dashboard
+railway open
+
+# Then in browser:
+# 1. Click "+ New" → "Database" → "Add PostgreSQL"
+# 2. Wait ~30 seconds for provisioning
+```
+
+**Option C: Direct Command (If Available)**
+```bash
+# Some versions support this
+railway add --database postgres
 ```
 
 ### 3.2 Verify Database Added
@@ -88,7 +110,8 @@ railway status
 # You should see:
 # Project: genki-tcg-staging
 # Environment: production
-# Plugins:
+# Services:
+#   - backend
 #   - PostgreSQL
 ```
 
@@ -103,12 +126,34 @@ railway status
 ## Step 4: Add Redis (Optional but Recommended)
 
 ### 4.1 Add Redis Plugin
+
+**Option A: Interactive Add (Recommended)**
 ```bash
-railway add --plugin redis
+# Opens interactive menu
+railway add
+
+# Use arrow keys to navigate
+# Press SPACE to select Redis
+# Press ENTER to confirm
 
 # Expected output:
-# ✅ Created plugin: Redis
-# 📦 Plugin ID: xxxxx
+# ✅ Created Redis
+```
+
+**Option B: Dashboard (Easiest)**
+```bash
+# Open Railway dashboard (if not already open)
+railway open
+
+# Then in browser:
+# 1. Click "+ New" → "Database" → "Add Redis"
+# 2. Wait ~30 seconds for provisioning
+```
+
+**Option C: Direct Command (If Available)**
+```bash
+# Some versions support this
+railway add --database redis
 ```
 
 ### 4.2 Verify Redis Added
@@ -116,7 +161,8 @@ railway add --plugin redis
 railway status
 
 # You should see:
-# Plugins:
+# Services:
+#   - backend
 #   - PostgreSQL
 #   - Redis
 ```
