@@ -2,16 +2,15 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
+import { Button, Card, Input } from '../components';
+import { theme } from '../lib/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -43,74 +42,91 @@ export default function LoginScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      accessibilityRole="none"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Genki TCG</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        accessibilityRole="none"
+      >
+        <View
+          style={styles.header}
+          accessibilityRole="header"
+        >
+          <Text
+            style={styles.title}
+            accessibilityRole="header"
+            accessibilityLabel="Genki TCG"
+          >
+            Genki TCG
+          </Text>
+          <Text
+            style={styles.subtitle}
+            accessibilityRole="text"
+          >
+            Sign in to your account
+          </Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="player1@test.com"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!loading}
-            />
-          </View>
+        <Card variant="elevated" padding="xl">
+          <Input
+            label="Email"
+            placeholder="player1@test.com"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!loading}
+            error={error && !password ? error : undefined}
+            accessibilityLabel="Email address"
+            accessibilityHint="Enter your email address to sign in"
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
+          <Input
+            label="Password"
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            editable={!loading}
+            error={error && password ? error : undefined}
+            accessibilityLabel="Password"
+            accessibilityHint="Enter your password to sign in"
+          />
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
             onPress={handleLogin}
-            disabled={loading}
+            loading={loading}
+            fullWidth
+            style={{ marginTop: theme.spacing.md }}
+            accessibilityLabel="Sign in"
+            accessibilityHint="Double tap to sign in to your account"
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+            Sign In
+          </Button>
 
-          <TouchableOpacity
-            style={styles.signupLink}
+          <Button
             onPress={() => router.push('/signup')}
+            variant="ghost"
             disabled={loading}
+            fullWidth
+            style={{ marginTop: theme.spacing.sm }}
+            accessibilityLabel="Sign up"
+            accessibilityHint="Double tap to create a new account"
           >
-            <Text style={styles.signupLinkText}>
-              Don't have an account? <Text style={styles.signupLinkBold}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
+            Don't have an account? Sign Up
+          </Button>
 
-          <View style={styles.testAccounts}>
+          <View
+            style={styles.testAccounts}
+            accessibilityRole="summary"
+            accessibilityLabel="Test account information"
+          >
             <Text style={styles.testAccountsTitle}>Test Accounts:</Text>
             <Text style={styles.testAccountsText}>player1@test.com / password123</Text>
             <Text style={styles.testAccountsText}>player2@test.com / password123</Text>
             <Text style={styles.testAccountsInfo}>Use invite code: GENKI</Text>
           </View>
-        </View>
+        </Card>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -119,114 +135,48 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.secondary,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing.xl,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: theme.spacing['3xl'],
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#4F46E5',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize['3xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  form: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#FFFFFF',
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: '#991B1B',
-    fontSize: 14,
-  },
-  button: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  signupLink: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  signupLinkText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  signupLinkBold: {
-    color: '#4F46E5',
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
   },
   testAccounts: {
-    marginTop: 24,
-    paddingTop: 24,
+    marginTop: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: theme.colors.border.light,
   },
   testAccountsTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
   },
   testAccountsText: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    marginBottom: 4,
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
+    marginBottom: theme.spacing.xs,
   },
   testAccountsInfo: {
-    fontSize: 11,
-    color: '#4F46E5',
-    marginTop: 4,
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.primary.main,
+    marginTop: theme.spacing.xs,
     fontStyle: 'italic',
   },
 });
