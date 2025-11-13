@@ -20,6 +20,7 @@ interface Standing {
   matchDraws: number;
   omwPercent: number;
   gwPercent: number;
+  oomwPercent: number;
   receivedBye: boolean;
   isDropped: boolean;
 }
@@ -177,6 +178,12 @@ export default function StandingsScreen() {
                 </Text>
                 <Text style={styles.statLabel}>GW%</Text>
               </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {(myStanding.oomwPercent * 100).toFixed(1)}%
+                </Text>
+                <Text style={styles.statLabel}>OOMW%</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -238,7 +245,7 @@ export default function StandingsScreen() {
           Standings are calculated using Swiss pairing tiebreakers
         </Text>
         <Text style={styles.footerSubtext}>
-          Points: Win=3, Draw=1, Loss=0 • OMW%: Opponent Match Win% (min 33.33%)
+          Points: Win=3, Draw=1, Loss=0 • Tiebreakers: OMW%, GW%, OGW%, OOMW%
         </Text>
       </View>
     </ScrollView>

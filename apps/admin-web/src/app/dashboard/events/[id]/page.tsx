@@ -66,6 +66,7 @@ interface Standing {
   matchDraws: number;
   omwPercent: number;
   gwPercent: number;
+  oomwPercent: number;
 }
 
 export default function EventDetailPage() {
@@ -591,6 +592,7 @@ export default function EventDetailPage() {
                         <th className="pb-3 font-medium text-gray-700 text-right">Record</th>
                         <th className="pb-3 font-medium text-gray-700 text-right">OMW%</th>
                         <th className="pb-3 font-medium text-gray-700 text-right">GW%</th>
+                        <th className="pb-3 font-medium text-gray-700 text-right">OOMW%</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -613,6 +615,9 @@ export default function EventDetailPage() {
                           </td>
                           <td className="py-3 text-gray-700 text-right">
                             {(standing.gwPercent * 100).toFixed(1)}%
+                          </td>
+                          <td className="py-3 text-gray-700 text-right">
+                            {(standing.oomwPercent * 100).toFixed(1)}%
                           </td>
                         </tr>
                       ))}

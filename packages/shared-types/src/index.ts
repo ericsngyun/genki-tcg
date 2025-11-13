@@ -204,6 +204,7 @@ export interface PlayerStanding {
   omwPercent: number; // Opponent Match Win % (floor 33.33%)
   gwPercent: number; // Game Win %
   ogwPercent: number; // Opponent Game Win %
+  oomwPercent: number; // Opponent's Opponent Match Win % (floor 33.33%)
   receivedBye: boolean;
   isDropped: boolean;
   droppedAfterRound?: number;

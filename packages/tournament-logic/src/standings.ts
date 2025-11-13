@@ -6,6 +6,7 @@
  * 2. OMW% (Opponent Match Win %, floor 33.33%)
  * 3. GW% (Game Win %)
  * 4. OGW% (Opponent Game Win %)
+ * 5. OOMW% (Opponent's Opponent Match Win %, floor 33.33%)
  */
 
 import type { PlayerStanding } from '@genki-tcg/shared-types';
@@ -140,10 +141,23 @@ export function calculateStandings(
   // Calculate tiebreakers
   const standings: PlayerStanding[] = [];
 
+  // First pass: Calculate OMW, GW, OGW for all players
+  const omwMap = new Map<string, number>();
+  const gwMap = new Map<string, number>();
+  const ogwMap = new Map<string, number>();
+
   for (const player of playerStatsMap.values()) {
-    const omwPercent = calculateOMW(player, playerStatsMap);
-    const gwPercent = calculateGW(player);
-    const ogwPercent = calculateOGW(player, playerStatsMap);
+    omwMap.set(player.userId, calculateOMW(player, playerStatsMap));
+    gwMap.set(player.userId, calculateGW(player));
+    ogwMap.set(player.userId, calculateOGW(player, playerStatsMap));
+  }
+
+  // Second pass: Calculate OOMW and build standings
+  for (const player of playerStatsMap.values()) {
+    const omwPercent = omwMap.get(player.userId) || 0;
+    const gwPercent = gwMap.get(player.userId) || 0;
+    const ogwPercent = ogwMap.get(player.userId) || 0;
+    const oomwPercent = calculateOOMW(player, playerStatsMap, omwMap);
 
     standings.push({
       userId: player.userId,
@@ -158,6 +172,7 @@ export function calculateStandings(
       omwPercent,
       gwPercent,
       ogwPercent,
+      oomwPercent,
       receivedBye: player.receivedBye,
       isDropped: player.isDropped,
       droppedAfterRound: undefined,
@@ -180,7 +195,12 @@ export function calculateStandings(
     }
 
     // Quaternary: OGW%
-    return b.ogwPercent - a.ogwPercent;
+    if (Math.abs(b.ogwPercent - a.ogwPercent) > 0.0001) {
+      return b.ogwPercent - a.ogwPercent;
+    }
+
+    // Quinary: OOMW%
+    return b.oomwPercent - a.oomwPercent;
   });
 
   // Assign ranks
@@ -256,6 +276,30 @@ function calculateOGW(
 }
 
 /**
+ * Calculate Opponent's Opponent Match Win % (OOMW%)
+ * This is the average OMW% of all the player's opponents
+ */
+function calculateOOMW(
+  player: PlayerStats,
+  allPlayers: Map<string, PlayerStats>,
+  omwMap: Map<string, number>
+): number {
+  if (player.opponentIds.length === 0) return 0.3333;
+
+  let totalOpponentOMW = 0;
+
+  for (const opponentId of player.opponentIds) {
+    const opponent = allPlayers.get(opponentId);
+    if (!opponent) continue;
+
+    const opponentOMW = omwMap.get(opponentId) || 0.3333;
+    totalOpponentOMW += opponentOMW;
+  }
+
+  return totalOpponentOMW / player.opponentIds.length;
+}
+
+/**
  * Get player record for pairing purposes
  */
 export function getPlayerRecordsForPairing(
@@ -272,6 +316,7 @@ export function getPlayerRecordsForPairing(
   omwPercent: number;
   gwPercent: number;
   ogwPercent: number;
+  oomwPercent: number;
   receivedBye: boolean;
   opponentIds: string[];
 }> {
@@ -301,6 +346,7 @@ export function getPlayerRecordsForPairing(
       omwPercent: s.omwPercent,
       gwPercent: s.gwPercent,
       ogwPercent: s.ogwPercent,
+      oomwPercent: s.oomwPercent,
       receivedBye: s.receivedBye,
       opponentIds: playerStats,
     };
