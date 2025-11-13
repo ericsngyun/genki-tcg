@@ -1,0 +1,81 @@
+# Dependencies
+node_modules
+**/node_modules
+**/.pnpm-store
+
+# Build outputs
+**/dist
+**/build
+**/.next
+**/.expo
+
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.production.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.sublime-*
+
+# Testing
+**/coverage
+**/.nyc_output
+**/test
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Documentation (except necessary ones)
+*.md
+!README.md
+SESSION_*.md
+CURRENT_STATUS*.md
+SECURITY_*.md
+DEPLOYMENT_*.md
+PRODUCT_*.md
+TESTING_*.md
+BACKEND_*.md
+QUICK_*.md
+FILE_*.txt
+VULNERABILITY_*.txt
+
+# Apps we don't need for backend build
+apps/mobile
+apps/admin-web
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Other
+.prettierrc*
+.eslintrc*
+.editorconfig
+railway.toml
+.railwayignore
