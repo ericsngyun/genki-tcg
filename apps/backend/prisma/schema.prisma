@@ -222,6 +222,11 @@ model Entry {
   droppedAt    DateTime?
   droppedAfterRound Int?
 
+  // Payment tracking
+  paidAt      DateTime?
+  paidAmount  Int?      // Amount paid in cents
+  paidBy      String?   // Staff user ID who confirmed payment
+
   decklistId String?
 
   // Relations
@@ -231,6 +236,7 @@ model Entry {
 
   @@unique([eventId, userId])
   @@index([eventId, checkedInAt])
+  @@index([eventId, paidAt])
   @@index([userId])
 }
 

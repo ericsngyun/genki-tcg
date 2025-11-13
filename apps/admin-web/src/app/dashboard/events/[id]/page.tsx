@@ -25,6 +25,8 @@ interface Event {
     registeredAt: string;
     checkedInAt?: string;
     droppedAt?: string;
+    paidAt?: string;
+    paidAmount?: number;
     user: {
       id: string;
       name: string;
@@ -84,6 +86,7 @@ export default function EventDetailPage() {
   const [selectedMatch, setSelectedMatch] = useState<Pairing | null>(null);
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [dropping, setDropping] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
   const [lateAddModalOpen, setLateAddModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -304,6 +307,22 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleMarkAsPaid = async (entryId: string, playerName: string) => {
+    if (!confirm(`Mark ${playerName} as paid?`)) {
+      return;
+    }
+
+    setMarkingPaid(entryId);
+    try {
+      await api.markEntryAsPaid(entryId);
+      await loadEvent();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to mark as paid');
+    } finally {
+      setMarkingPaid(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -444,12 +463,15 @@ export default function EventDetailPage() {
                           <th className="pb-3 font-medium text-gray-700">Name</th>
                           <th className="pb-3 font-medium text-gray-700">Email</th>
                           <th className="pb-3 font-medium text-gray-700">Registered</th>
+                          <th className="pb-3 font-medium text-gray-700">Payment</th>
                           <th className="pb-3 font-medium text-gray-700">Status</th>
                           <th className="pb-3 font-medium text-gray-700">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {event.entries.map((entry) => (
+                        {event.entries.map((entry) => {
+                          const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
+                          return (
                           <tr key={entry.id} className="border-b border-gray-100">
                             <td className="py-3 font-medium text-gray-900">
                               {entry.user.name}
@@ -459,6 +481,19 @@ export default function EventDetailPage() {
                             </td>
                             <td className="py-3 text-gray-600 text-sm">
                               {new Date(entry.registeredAt).toLocaleString()}
+                            </td>
+                            <td className="py-3">
+                              {!requiresPayment ? (
+                                <span className="text-xs text-gray-500">Free</span>
+                              ) : entry.paidAt ? (
+                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                  Paid
+                                </span>
+                              ) : (
+                                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                                  Unpaid
+                                </span>
+                              )}
                             </td>
                             <td className="py-3">
                               {entry.droppedAt ? (
@@ -477,7 +512,16 @@ export default function EventDetailPage() {
                             </td>
                             <td className="py-3">
                               <div className="flex items-center gap-2">
-                                {!entry.checkedInAt && !entry.droppedAt && (
+                                {requiresPayment && !entry.paidAt && !entry.droppedAt && (
+                                  <button
+                                    onClick={() => handleMarkAsPaid(entry.id, entry.user.name)}
+                                    disabled={markingPaid === entry.id}
+                                    className="text-sm bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition disabled:opacity-50"
+                                  >
+                                    {markingPaid === entry.id ? 'Marking...' : 'Mark Paid'}
+                                  </button>
+                                )}
+                                {!entry.checkedInAt && !entry.droppedAt && (!requiresPayment || entry.paidAt) && (
                                   <button
                                     onClick={() => handleCheckIn(entry.id)}
                                     disabled={checkingIn === entry.id}

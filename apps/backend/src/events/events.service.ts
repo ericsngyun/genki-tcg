@@ -85,10 +85,54 @@ export class EventsService {
   }
 
   async checkIn(entryId: string) {
+    // Get entry with event details
+    const entry = await this.prisma.entry.findUnique({
+      where: { id: entryId },
+      include: { event: true },
+    });
+
+    if (!entry) {
+      throw new Error('Entry not found');
+    }
+
+    // Check if payment is required and has been made
+    const requiresPayment = entry.event.entryFeeCents && entry.event.entryFeeCents > 0;
+    if (requiresPayment && !entry.paidAt) {
+      throw new Error('Player must pay entry fee before check-in');
+    }
+
     return this.prisma.entry.update({
       where: { id: entryId },
       data: {
         checkedInAt: new Date(),
+      },
+    });
+  }
+
+  async markAsPaid(entryId: string, confirmedBy: string, amount?: number) {
+    // Get entry with event details
+    const entry = await this.prisma.entry.findUnique({
+      where: { id: entryId },
+      include: { event: true },
+    });
+
+    if (!entry) {
+      throw new Error('Entry not found');
+    }
+
+    if (entry.paidAt) {
+      throw new Error('Entry has already been marked as paid');
+    }
+
+    // Use event entry fee if no amount specified
+    const paidAmount = amount ?? entry.event.entryFeeCents ?? 0;
+
+    return this.prisma.entry.update({
+      where: { id: entryId },
+      data: {
+        paidAt: new Date(),
+        paidAmount,
+        paidBy: confirmedBy,
       },
     });
   }

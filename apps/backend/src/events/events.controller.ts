@@ -51,6 +51,17 @@ export class EventsController {
     return this.eventsService.checkIn(entryId);
   }
 
+  @Post('entries/:entryId/mark-paid')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async markAsPaid(
+    @Param('entryId') entryId: string,
+    @CurrentUser() user: any,
+    @Body() dto?: { amount?: number },
+  ) {
+    return this.eventsService.markAsPaid(entryId, user.id, dto?.amount);
+  }
+
   @Post(':id/add-late-player')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')

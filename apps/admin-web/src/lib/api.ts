@@ -88,8 +88,20 @@ class ApiClient {
     return data;
   }
 
+  async selfCheckIn(eventId: string) {
+    const { data } = await this.client.post(`/events/${eventId}/self-check-in`);
+    return data;
+  }
+
   async checkInEntry(entryId: string) {
     const { data } = await this.client.post(`/events/entries/${entryId}/check-in`);
+    return data;
+  }
+
+  async markEntryAsPaid(entryId: string, amount?: number) {
+    const { data } = await this.client.post(`/events/entries/${entryId}/mark-paid`, {
+      amount,
+    });
     return data;
   }
 
