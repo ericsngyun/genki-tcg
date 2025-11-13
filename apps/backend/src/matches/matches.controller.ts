@@ -21,4 +21,21 @@ export class MatchesController {
   async getMatch(@Param('id') id: string) {
     return this.matchesService.getMatch(id);
   }
+
+  @Post(':id/override')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async overrideResult(
+    @Param('id') matchId: string,
+    @CurrentUser() user: any,
+    @Body() dto: { result: any; gamesWonA: number; gamesWonB: number },
+  ) {
+    return this.matchesService.overrideMatchResult(
+      matchId,
+      dto.result,
+      dto.gamesWonA,
+      dto.gamesWonB,
+      user.id,
+    );
+  }
 }

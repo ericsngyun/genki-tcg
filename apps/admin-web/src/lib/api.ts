@@ -107,6 +107,23 @@ class ApiClient {
     return data;
   }
 
+  async updateEvent(eventId: string, eventData: any) {
+    const { data } = await this.client.patch(`/events/${eventId}`, eventData);
+    return data;
+  }
+
+  async addLatePlayer(eventId: string, userId: string) {
+    const { data} = await this.client.post(`/events/${eventId}/add-late-player`, {
+      userId,
+    });
+    return data;
+  }
+
+  async getMyMatches(eventId: string) {
+    const { data } = await this.client.get(`/events/${eventId}/my-matches`);
+    return data;
+  }
+
   // Rounds
   async createNextRound(eventId: string) {
     const { data } = await this.client.post(`/rounds/events/${eventId}/next`);
@@ -129,9 +146,54 @@ class ApiClient {
     return data;
   }
 
+  async overrideMatchResult(matchId: string, result: string, gamesWonA: number, gamesWonB: number) {
+    const { data } = await this.client.post(`/matches/${matchId}/override`, {
+      result,
+      gamesWonA,
+      gamesWonB,
+    });
+    return data;
+  }
+
   // Standings
   async getStandings(eventId: string) {
     const { data } = await this.client.get(`/standings/events/${eventId}`);
+    return data;
+  }
+
+  async exportStandings(eventId: string) {
+    const token = localStorage.getItem('auth_token');
+    // Open in new tab for download
+    window.open(`${API_URL}/standings/events/${eventId}/export?token=${token}`, '_blank');
+  }
+
+  // Decklists
+  async submitDecklist(entryId: string, deckName?: string, mainDeckUrl?: string) {
+    const { data } = await this.client.post('/decklists', {
+      entryId,
+      deckName,
+      mainDeckUrl,
+    });
+    return data;
+  }
+
+  async getMyDecklist(entryId: string) {
+    const { data } = await this.client.get(`/decklists/entry/${entryId}`);
+    return data;
+  }
+
+  async getDecklistsForEvent(eventId: string) {
+    const { data } = await this.client.get(`/decklists/event/${eventId}`);
+    return data;
+  }
+
+  async lockDecklist(entryId: string) {
+    const { data } = await this.client.post(`/decklists/entry/${entryId}/lock`);
+    return data;
+  }
+
+  async lockAllDecklists(eventId: string) {
+    const { data } = await this.client.post(`/decklists/event/${eventId}/lock-all`);
     return data;
   }
 

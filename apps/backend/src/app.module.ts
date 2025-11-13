@@ -10,6 +10,7 @@ import { EventsModule } from './events/events.module';
 import { RoundsModule } from './rounds/rounds.module';
 import { MatchesModule } from './matches/matches.module';
 import { StandingsModule } from './standings/standings.module';
+import { DecklistsModule } from './decklists/decklists.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -39,6 +40,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     RoundsModule,
     MatchesModule,
     StandingsModule,
+    DecklistsModule,
     NotificationsModule,
     AuditModule,
     RealtimeModule,

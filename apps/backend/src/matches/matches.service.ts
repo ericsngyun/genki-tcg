@@ -71,4 +71,52 @@ export class MatchesService {
       },
     });
   }
+
+  async overrideMatchResult(
+    matchId: string,
+    result: MatchResult,
+    gamesWonA: number,
+    gamesWonB: number,
+    overriddenBy: string,
+  ) {
+    // Get match with round info
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        round: {
+          include: {
+            event: true,
+          },
+        },
+      },
+    });
+
+    if (!match) {
+      throw new BadRequestException('Match not found');
+    }
+
+    // Update match result with override tracking
+    const updatedMatch = await this.prisma.match.update({
+      where: { id: matchId },
+      data: {
+        result,
+        gamesWonA,
+        gamesWonB,
+        overriddenBy,
+        overriddenAt: new Date(),
+      },
+    });
+
+    // Emit real-time event
+    this.realtimeGateway.emitMatchResultReported(
+      match.round.eventId,
+      matchId,
+      match.tableNumber,
+    );
+
+    // Also emit standings updated
+    this.realtimeGateway.emitStandingsUpdated(match.round.eventId);
+
+    return updatedMatch;
+  }
 }

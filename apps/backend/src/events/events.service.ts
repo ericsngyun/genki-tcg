@@ -14,6 +14,15 @@ export interface CreateEventDto {
   totalPrizeCredits?: number;
 }
 
+export interface UpdateEventDto {
+  name?: string;
+  description?: string;
+  startAt?: Date;
+  maxPlayers?: number;
+  entryFeeCents?: number;
+  totalPrizeCredits?: number;
+}
+
 @Injectable()
 export class EventsService {
   constructor(private prisma: PrismaService) {}
@@ -172,5 +181,133 @@ export class EventsService {
         droppedAfterRound: currentRound,
       },
     });
+  }
+
+  async updateEvent(eventId: string, dto: UpdateEventDto) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    // Only allow editing if event hasn't started or completed
+    if (event.status === 'COMPLETED' || event.status === 'CANCELLED') {
+      throw new Error('Cannot edit completed or cancelled events');
+    }
+
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: dto,
+    });
+  }
+
+  async addLatePlayer(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    // Check if player is already registered
+    const existingEntry = await this.prisma.entry.findFirst({
+      where: {
+        eventId,
+        userId,
+      },
+    });
+
+    if (existingEntry) {
+      throw new Error('Player already registered');
+    }
+
+    // Create entry and auto-check-in
+    return this.prisma.entry.create({
+      data: {
+        eventId,
+        userId,
+        checkedInAt: new Date(), // Auto check-in for late adds
+      },
+    });
+  }
+
+  async selfCheckIn(eventId: string, userId: string) {
+    // Find the user's entry
+    const entry = await this.prisma.entry.findFirst({
+      where: {
+        eventId,
+        userId,
+      },
+    });
+
+    if (!entry) {
+      throw new Error('Entry not found - you are not registered for this event');
+    }
+
+    if (entry.checkedInAt) {
+      throw new Error('Already checked in');
+    }
+
+    if (entry.droppedAt) {
+      throw new Error('Cannot check in - you have dropped from this event');
+    }
+
+    return this.prisma.entry.update({
+      where: { id: entry.id },
+      data: {
+        checkedInAt: new Date(),
+      },
+    });
+  }
+
+  async getMyMatches(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        rounds: {
+          include: {
+            matches: {
+              where: {
+                OR: [{ playerAId: userId }, { playerBId: userId }],
+              },
+              include: {
+                playerA: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                playerB: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                round: {
+                  select: {
+                    roundNumber: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            roundNumber: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    // Flatten matches from all rounds
+    const matches = event.rounds.flatMap((round) => round.matches);
+
+    return matches;
   }
 }
