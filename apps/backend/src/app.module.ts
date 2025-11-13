@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { OrgsModule } from './orgs/orgs.module';
 import { CreditsModule } from './credits/credits.module';
@@ -33,6 +34,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 
     // Core modules
     PrismaModule,
+    HealthModule,
     AuthModule,
     OrgsModule,
     CreditsModule,
