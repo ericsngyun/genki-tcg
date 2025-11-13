@@ -62,8 +62,12 @@ class ApiClient {
   }
 
   async getMe() {
-    const { data } = await this.client.get('/auth/me');
+    const { data} = await this.client.get('/auth/me');
     return data;
+  }
+
+  async logout() {
+    await AsyncStorage.removeItem('auth_token');
   }
 
   // Events

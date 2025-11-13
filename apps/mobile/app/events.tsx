@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
@@ -42,6 +43,24 @@ export default function EventsScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await api.logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
 
   const loadData = async () => {
     try {
@@ -130,10 +149,20 @@ export default function EventsScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Upcoming Events</Text>
-        <Text style={styles.subtitle}>
-          Register for tournaments and track your matches
-        </Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>Upcoming Events</Text>
+            <Text style={styles.subtitle}>
+              Register for tournaments and track your matches
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {events.length === 0 ? (
@@ -271,6 +300,11 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#4F46E5',
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -280,6 +314,19 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#E0E7FF',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   eventList: {
     padding: 16,
