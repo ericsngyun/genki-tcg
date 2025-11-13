@@ -163,4 +163,14 @@ export class EventsService {
       };
     });
   }
+
+  async dropPlayer(entryId: string, currentRound?: number) {
+    return this.prisma.entry.update({
+      where: { id: entryId },
+      data: {
+        droppedAt: new Date(),
+        droppedAfterRound: currentRound,
+      },
+    });
+  }
 }

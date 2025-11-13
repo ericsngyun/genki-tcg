@@ -100,6 +100,13 @@ class ApiClient {
     return data;
   }
 
+  async dropPlayer(entryId: string, currentRound?: number) {
+    const { data } = await this.client.post(`/events/entries/${entryId}/drop`, {
+      currentRound,
+    });
+    return data;
+  }
+
   // Rounds
   async createNextRound(eventId: string) {
     const { data } = await this.client.post(`/rounds/events/${eventId}/next`);

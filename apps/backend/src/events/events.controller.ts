@@ -49,4 +49,11 @@ export class EventsController {
   ) {
     return this.eventsService.distributePrizes(eventId, dto.distributions, user.id);
   }
+
+  @Post('entries/:entryId/drop')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async dropPlayer(@Param('entryId') entryId: string, @Body() body: { currentRound?: number }) {
+    return this.eventsService.dropPlayer(entryId, body.currentRound);
+  }
 }

@@ -82,6 +82,7 @@ export default function EventDetailPage() {
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Pairing | null>(null);
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
+  const [dropping, setDropping] = useState<string | null>(null);
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
 
   // Socket.IO for real-time updates
@@ -213,6 +214,26 @@ export default function EventDetailPage() {
       await loadEvent();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to check in players');
+    }
+  };
+
+  const handleDropPlayer = async (entryId: string, playerName: string) => {
+    if (!event) return;
+
+    const currentRound = event.rounds.length;
+
+    if (!confirm(`Drop ${playerName} from the tournament? This will remove them from future rounds.`)) {
+      return;
+    }
+
+    setDropping(entryId);
+    try {
+      await api.dropPlayer(entryId, currentRound);
+      await loadEvent();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to drop player');
+    } finally {
+      setDropping(null);
     }
   };
 
@@ -410,15 +431,26 @@ export default function EventDetailPage() {
                               )}
                             </td>
                             <td className="py-3">
-                              {!entry.checkedInAt && !entry.droppedAt && (
-                                <button
-                                  onClick={() => handleCheckIn(entry.id)}
-                                  disabled={checkingIn === entry.id}
-                                  className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                                >
-                                  {checkingIn === entry.id ? 'Checking In...' : 'Check In'}
-                                </button>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {!entry.checkedInAt && !entry.droppedAt && (
+                                  <button
+                                    onClick={() => handleCheckIn(entry.id)}
+                                    disabled={checkingIn === entry.id}
+                                    className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                                  >
+                                    {checkingIn === entry.id ? 'Checking In...' : 'Check In'}
+                                  </button>
+                                )}
+                                {entry.checkedInAt && !entry.droppedAt && (
+                                  <button
+                                    onClick={() => handleDropPlayer(entry.id, entry.user.name)}
+                                    disabled={dropping === entry.id}
+                                    className="text-sm bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                                  >
+                                    {dropping === entry.id ? 'Dropping...' : 'Drop'}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
