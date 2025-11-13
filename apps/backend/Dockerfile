@@ -13,7 +13,6 @@ RUN npm ci
 
 # Copy source code
 COPY apps/backend ./apps/backend
-COPY tsconfig.json ./
 
 # Generate Prisma Client
 WORKDIR /app/apps/backend
