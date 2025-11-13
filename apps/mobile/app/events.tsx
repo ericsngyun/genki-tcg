@@ -20,11 +20,14 @@ interface Event {
   status: string;
   startAt: string;
   maxPlayers?: number;
+  entryFeeCents?: number;
   _count: {
     entries: number;
   };
   entries?: Array<{
     userId: string;
+    checkedInAt?: string;
+    paidAt?: string;
   }>;
 }
 
@@ -34,6 +37,7 @@ export default function EventsScreen() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [checkingIn, setCheckingIn] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -72,9 +76,42 @@ export default function EventsScreen() {
     }
   };
 
+  const handleCheckIn = async (eventId: string) => {
+    setCheckingIn(eventId);
+    try {
+      await api.selfCheckIn(eventId);
+      alert('Successfully checked in!');
+      loadData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to check in');
+    } finally {
+      setCheckingIn(null);
+    }
+  };
+
+  const getMyEntry = (event: Event) => {
+    if (!myUserId || !event.entries) return null;
+    return event.entries.find((entry) => entry.userId === myUserId);
+  };
+
   const isRegistered = (event: Event) => {
-    if (!myUserId || !event.entries) return false;
-    return event.entries.some((entry) => entry.userId === myUserId);
+    return getMyEntry(event) !== null;
+  };
+
+  const isCheckedIn = (event: Event) => {
+    const entry = getMyEntry(event);
+    return entry?.checkedInAt !== undefined && entry?.checkedInAt !== null;
+  };
+
+  const canCheckIn = (event: Event) => {
+    const entry = getMyEntry(event);
+    if (!entry || isCheckedIn(event)) return false;
+
+    // If event has entry fee, must be paid first
+    const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
+    if (requiresPayment && !entry.paidAt) return false;
+
+    return true;
   };
 
   if (loading) {
@@ -129,29 +166,74 @@ export default function EventsScreen() {
               </View>
 
               {isRegistered(event) ? (
-                <View style={styles.actionsContainer}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/pairings',
-                        params: { eventId: event.id },
-                      })
-                    }
-                  >
-                    <Text style={styles.actionButtonText}>View Pairings</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/standings',
-                        params: { eventId: event.id },
-                      })
-                    }
-                  >
-                    <Text style={styles.actionButtonText}>View Standings</Text>
-                  </TouchableOpacity>
+                <View>
+                  {/* Check-in Status */}
+                  <View style={styles.statusRow}>
+                    {isCheckedIn(event) ? (
+                      <View style={styles.checkedInBadge}>
+                        <Text style={styles.checkedInText}>✓ Checked In</Text>
+                      </View>
+                    ) : (
+                      <>
+                        {event.entryFeeCents && event.entryFeeCents > 0 ? (
+                          getMyEntry(event)?.paidAt ? (
+                            <View style={styles.paidBadge}>
+                              <Text style={styles.paidText}>Paid - Ready to Check In</Text>
+                            </View>
+                          ) : (
+                            <View style={styles.unpaidBadge}>
+                              <Text style={styles.unpaidText}>
+                                Payment Required (${(event.entryFeeCents / 100).toFixed(2)})
+                              </Text>
+                            </View>
+                          )
+                        ) : (
+                          <View style={styles.registeredBadge}>
+                            <Text style={styles.registeredText}>Registered - Not Checked In</Text>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+
+                  {/* Check-in Button */}
+                  {canCheckIn(event) && (
+                    <TouchableOpacity
+                      style={styles.checkInButton}
+                      onPress={() => handleCheckIn(event.id)}
+                      disabled={checkingIn === event.id}
+                    >
+                      <Text style={styles.checkInButtonText}>
+                        {checkingIn === event.id ? 'Checking In...' : 'Check In Now'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Action Buttons */}
+                  <View style={styles.actionsContainer}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/pairings',
+                          params: { eventId: event.id },
+                        })
+                      }
+                    >
+                      <Text style={styles.actionButtonText}>View Pairings</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/standings',
+                          params: { eventId: event.id },
+                        })
+                      }
+                    >
+                      <Text style={styles.actionButtonText}>View Standings</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -250,6 +332,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusRow: {
+    marginBottom: 12,
+  },
+  checkedInBadge: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  checkedInText: {
+    color: '#059669',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  paidBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  paidText: {
+    color: '#1E40AF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  unpaidBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  unpaidText: {
+    color: '#B45309',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  registeredBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  registeredText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  checkInButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkInButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

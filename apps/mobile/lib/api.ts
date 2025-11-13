@@ -84,6 +84,11 @@ class ApiClient {
     return data;
   }
 
+  async selfCheckIn(eventId: string) {
+    const { data } = await this.client.post(`/events/${eventId}/self-check-in`);
+    return data;
+  }
+
   // Pairings
   async getPairings(roundId: string) {
     const { data } = await this.client.get(`/rounds/${roundId}/pairings`);
