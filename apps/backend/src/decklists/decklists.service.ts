@@ -6,7 +6,7 @@ export interface SubmitDecklistDto {
   entryId: string;
   deckName?: string;
   mainDeckUrl?: string;
-  mainDeckJson?: Record<string, unknown>;
+  mainDeckJson?: Prisma.InputJsonValue;
 }
 
 @Injectable()
