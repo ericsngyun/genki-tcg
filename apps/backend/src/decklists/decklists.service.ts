@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SubmitDecklistDto {
@@ -53,12 +54,12 @@ export class DecklistsService {
         userId,
         deckName: dto.deckName,
         mainDeckUrl: dto.mainDeckUrl,
-        mainDeckJson: dto.mainDeckJson || null,
+        mainDeckJson: dto.mainDeckJson ?? Prisma.JsonNull,
       },
       update: {
         deckName: dto.deckName,
         mainDeckUrl: dto.mainDeckUrl,
-        mainDeckJson: dto.mainDeckJson || null,
+        mainDeckJson: dto.mainDeckJson ?? Prisma.JsonNull,
         updatedAt: new Date(),
       },
     });

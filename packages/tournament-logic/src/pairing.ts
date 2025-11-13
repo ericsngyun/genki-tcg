@@ -142,13 +142,13 @@ function pairPlayersByBuckets(
 ): Array<{
   tableNumber: number;
   playerAId: string;
-  playerBId: string;
+  playerBId: string | null;
 }> {
   const buckets = bucketPlayersByPoints(players);
   const pairings: Array<{
     tableNumber: number;
     playerAId: string;
-    playerBId: string;
+    playerBId: string | null;
   }> = [];
 
   let tableNumber = 1;
@@ -173,7 +173,7 @@ function pairPlayersByBuckets(
         playerBId: pair.playerBId,
       });
       paired.add(pair.playerAId);
-      paired.add(pair.playerBId);
+      if (pair.playerBId) paired.add(pair.playerBId);
     }
 
     // If odd player remains, try to float down to next bucket
