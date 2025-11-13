@@ -85,6 +85,10 @@ export default function EventDetailPage() {
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [dropping, setDropping] = useState<string | null>(null);
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
+  const [lateAddModalOpen, setLateAddModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [orgUsers, setOrgUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Socket.IO for real-time updates
   useEventSocket(eventId, {
@@ -269,6 +273,37 @@ export default function EventDetailPage() {
     alert('Prize credits distributed successfully!');
   };
 
+  const loadOrgUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const users = await api.getOrgUsers();
+      // Filter out already registered players
+      const registeredUserIds = new Set(event?.entries.map(e => e.userId) || []);
+      setOrgUsers(users.filter((u: any) => !registeredUserIds.has(u.id)));
+    } catch (error: any) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleAddLatePlayer = async () => {
+    if (!selectedUserId) {
+      alert('Please select a player');
+      return;
+    }
+
+    try {
+      await api.addLatePlayer(eventId, selectedUserId);
+      await loadEvent();
+      setLateAddModalOpen(false);
+      setSelectedUserId('');
+      alert('Player added successfully!');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to add player');
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -385,12 +420,21 @@ export default function EventDetailPage() {
                 </p>
               ) : (
                 <div>
-                  <div className="mb-4">
+                  <div className="mb-4 flex items-center gap-3">
                     <button
                       onClick={handleBulkCheckIn}
                       className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"
                     >
                       Check In All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLateAddModalOpen(true);
+                        loadOrgUsers();
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+                    >
+                      + Add Late Player
                     </button>
                   </div>
                   <div className="overflow-x-auto">
@@ -566,17 +610,23 @@ export default function EventDetailPage() {
                 </p>
               ) : (
                 <div>
-                  {/* Prize Distribution Button */}
-                  {event.totalPrizeCredits && event.totalPrizeCredits > 0 && !event.prizesDistributed && (
-                    <div className="mb-4">
+                  {/* Action Buttons */}
+                  <div className="mb-4 flex items-center gap-3">
+                    {event.totalPrizeCredits && event.totalPrizeCredits > 0 && !event.prizesDistributed && (
                       <button
                         onClick={() => setPrizeModalOpen(true)}
                         className="bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-yellow-700 transition"
                       >
                         💰 Distribute {event.totalPrizeCredits} Prize Credits
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => api.exportStandings(eventId)}
+                      className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+                    >
+                      📥 Export CSV
+                    </button>
+                  </div>
                   {event.prizesDistributed && (
                     <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
                       ✅ Prize credits have been distributed{event.prizesDistributedAt && ` on ${new Date(event.prizesDistributedAt).toLocaleDateString()}`}
@@ -654,6 +704,57 @@ export default function EventDetailPage() {
           totalPrizeCredits={event.totalPrizeCredits || 0}
           eventName={event.name}
         />
+      )}
+
+      {/* Late Add Player Modal */}
+      {lateAddModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Add Late Player</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Player will be automatically checked in upon addition.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Player
+              </label>
+              {loadingUsers ? (
+                <p className="text-sm text-gray-500">Loading players...</p>
+              ) : (
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                >
+                  <option value="">Choose a player...</option>
+                  {orgUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setLateAddModalOpen(false);
+                  setSelectedUserId('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddLatePlayer}
+                disabled={!selectedUserId}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
+              >
+                Add Player
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
