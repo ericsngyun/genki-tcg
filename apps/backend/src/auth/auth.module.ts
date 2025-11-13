@@ -13,12 +13,21 @@ import { OrgsModule } from '../orgs/orgs.module';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET') || 'dev-secret-change-me',
-        signOptions: {
-          expiresIn: config.get('JWT_EXPIRES_IN') || '7d',
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = config.get('JWT_SECRET');
+        if (!secret || secret === 'dev-secret-change-me') {
+          throw new Error(
+            'JWT_SECRET environment variable must be set to a secure value. ' +
+            'Generate one with: openssl rand -base64 64'
+          );
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: config.get('JWT_EXPIRES_IN') || '7d',
+          },
+        };
+      },
     }),
     OrgsModule,
   ],

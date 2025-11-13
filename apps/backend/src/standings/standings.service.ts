@@ -12,7 +12,12 @@ export class StandingsService {
       include: {
         entries: {
           include: {
-            user: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         rounds: {

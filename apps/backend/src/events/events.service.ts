@@ -63,7 +63,14 @@ export class EventsService {
       include: {
         entries: {
           include: {
-            user: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                // Never expose passwordHash, avatarUrl, or other sensitive fields
+              },
+            },
           },
         },
         rounds: {

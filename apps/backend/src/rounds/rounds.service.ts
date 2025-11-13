@@ -24,7 +24,12 @@ export class RoundsService {
             droppedAt: null,
           },
           include: {
-            user: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         rounds: true,
@@ -97,8 +102,18 @@ export class RoundsService {
     return this.prisma.match.findMany({
       where: { roundId },
       include: {
-        playerA: true,
-        playerB: true,
+        playerA: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        playerB: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
         tableNumber: 'asc',

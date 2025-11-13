@@ -65,8 +65,18 @@ export class MatchesService {
     return this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
-        playerA: true,
-        playerB: true,
+        playerA: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        playerB: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         round: true,
       },
     });

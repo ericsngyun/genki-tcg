@@ -174,9 +174,20 @@ class ApiClient {
   }
 
   async exportStandings(eventId: string) {
-    const token = localStorage.getItem('auth_token');
-    // Open in new tab for download
-    window.open(`${API_URL}/standings/events/${eventId}/export?token=${token}`, '_blank');
+    // Use proper authentication via headers instead of URL
+    const response = await this.client.get(`/standings/events/${eventId}/export`, {
+      responseType: 'blob',
+    });
+
+    // Create download programmatically
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `standings-${eventId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   // Decklists
