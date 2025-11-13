@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EventStatus, GameType, EventFormat } from '@prisma/client';
 
@@ -57,8 +57,8 @@ export class EventsService {
     });
   }
 
-  async getEvent(eventId: string) {
-    return this.prisma.event.findUnique({
+  async getEvent(eventId: string, userOrgId: string) {
+    const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
         entries: {
@@ -80,6 +80,17 @@ export class EventsService {
         },
       },
     });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization access
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
+    }
+
+    return event;
   }
 
   async registerForEvent(eventId: string, userId: string) {
