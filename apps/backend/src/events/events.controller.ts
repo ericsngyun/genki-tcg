@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { EventsService, CreateEventDto, UpdateEventDto } from './events.service';
+import { EventsService } from './events.service';
+import { CreateEventDto, UpdateEventDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';

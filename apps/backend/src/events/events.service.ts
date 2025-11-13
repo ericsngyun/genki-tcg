@@ -1,27 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { EventStatus, GameType, EventFormat } from '@prisma/client';
-
-export interface CreateEventDto {
-  name: string;
-  game: GameType;
-  format: EventFormat;
-  startAt: Date;
-  maxPlayers?: number;
-  entryFeeCents?: number;
-  requiresDecklist?: boolean;
-  description?: string;
-  totalPrizeCredits?: number;
-}
-
-export interface UpdateEventDto {
-  name?: string;
-  description?: string;
-  startAt?: Date;
-  maxPlayers?: number;
-  entryFeeCents?: number;
-  totalPrizeCredits?: number;
-}
+import type { EventStatus } from '@prisma/client';
+import { CreateEventDto, UpdateEventDto } from './dto';
 
 @Injectable()
 export class EventsService {

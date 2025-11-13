@@ -8,18 +8,7 @@ import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../prisma/prisma.service';
 import type { User, OrgMembership } from '@prisma/client';
-
-export interface SignupDto {
-  email: string;
-  password: string;
-  name: string;
-  inviteCode: string;
-}
-
-export interface LoginDto {
-  email: string;
-  password: string;
-}
+import { SignupDto, LoginDto } from './dto';
 
 export interface JwtPayload {
   sub: string; // user ID
