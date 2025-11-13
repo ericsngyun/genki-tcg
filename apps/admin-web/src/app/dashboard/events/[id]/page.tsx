@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useEventSocket } from '@/hooks/useEventSocket';
 import { MatchResultModal } from '@/components/MatchResultModal';
+import { PrizeDistributionModal } from '@/components/PrizeDistributionModal';
 import { formatGameName, formatEventFormat } from '@/lib/formatters';
 
 interface Event {
@@ -15,6 +16,9 @@ interface Event {
   status: string;
   startAt: string;
   maxPlayers?: number;
+  totalPrizeCredits?: number;
+  prizesDistributed?: boolean;
+  prizesDistributedAt?: string;
   entries: Array<{
     id: string;
     userId: string;
@@ -78,6 +82,7 @@ export default function EventDetailPage() {
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Pairing | null>(null);
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
+  const [prizeModalOpen, setPrizeModalOpen] = useState(false);
 
   // Socket.IO for real-time updates
   useEventSocket(eventId, {
@@ -230,6 +235,16 @@ export default function EventDetailPage() {
       await loadPairings(selectedRound);
     }
     await loadStandings();
+  };
+
+  const handleDistributePrizes = async (
+    distributions: Array<{ userId: string; amount: number; placement: number }>
+  ) => {
+    if (!event) return;
+
+    await api.distributePrizes(eventId, distributions);
+    await loadEvent();
+    alert('Prize credits distributed successfully!');
   };
 
   if (loading) {
@@ -517,7 +532,24 @@ export default function EventDetailPage() {
                   No standings available yet. Create a round to start the tournament.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
+                <div>
+                  {/* Prize Distribution Button */}
+                  {event.totalPrizeCredits && event.totalPrizeCredits > 0 && !event.prizesDistributed && (
+                    <div className="mb-4">
+                      <button
+                        onClick={() => setPrizeModalOpen(true)}
+                        className="bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-yellow-700 transition"
+                      >
+                        💰 Distribute {event.totalPrizeCredits} Prize Credits
+                      </button>
+                    </div>
+                  )}
+                  {event.prizesDistributed && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+                      ✅ Prize credits have been distributed{event.prizesDistributedAt && ` on ${new Date(event.prizesDistributedAt).toLocaleDateString()}`}
+                    </div>
+                  )}
+                  <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 text-left">
@@ -555,6 +587,7 @@ export default function EventDetailPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               )}
             </div>
           )}
@@ -571,6 +604,18 @@ export default function EventDetailPage() {
           }}
           onSubmit={handleSubmitResult}
           match={selectedMatch}
+        />
+      )}
+
+      {/* Prize Distribution Modal */}
+      {event && (
+        <PrizeDistributionModal
+          isOpen={prizeModalOpen}
+          onClose={() => setPrizeModalOpen(false)}
+          onSubmit={handleDistributePrizes}
+          standings={standings}
+          totalPrizeCredits={event.totalPrizeCredits || 0}
+          eventName={event.name}
         />
       )}
     </div>

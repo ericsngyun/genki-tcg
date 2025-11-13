@@ -93,6 +93,13 @@ class ApiClient {
     return data;
   }
 
+  async distributePrizes(eventId: string, distributions: Array<{ userId: string; amount: number; placement: number }>) {
+    const { data } = await this.client.post(`/events/${eventId}/distribute-prizes`, {
+      distributions,
+    });
+    return data;
+  }
+
   // Rounds
   async createNextRound(eventId: string) {
     const { data } = await this.client.post(`/rounds/events/${eventId}/next`);
