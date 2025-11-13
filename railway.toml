@@ -1,0 +1,11 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "apps/backend/Dockerfile"
+watchPatterns = ["apps/backend/**", "packages/**"]
+
+[deploy]
+startCommand = "sh -c 'cd apps/backend && npx prisma migrate deploy && node dist/main'"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
