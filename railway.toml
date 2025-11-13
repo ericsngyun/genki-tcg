@@ -1,10 +1,10 @@
 [build]
 builder = "dockerfile"
-dockerfilePath = "apps/backend/Dockerfile"
+dockerfilePath = "apps/backend/Dockerfile.railway"
 watchPatterns = ["apps/backend/**", "packages/**"]
 
 [deploy]
-startCommand = "sh -c 'cd apps/backend && npx prisma migrate deploy && node dist/main'"
+startCommand = "sh -c 'npx prisma migrate deploy && node dist/main'"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
