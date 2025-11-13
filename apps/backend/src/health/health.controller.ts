@@ -7,28 +7,28 @@ export class HealthController {
 
   @Get()
   async check() {
-    // Check database connection
+    // Basic liveness check - always returns 200
+    const response = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      },
+      database: 'unknown',
+    };
+
+    // Try to check database connection, but don't fail if it's down
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-
-      return {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        database: 'connected',
-        uptime: process.uptime(),
-        memory: {
-          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-        },
-      };
+      response.database = 'connected';
     } catch (error) {
-      return {
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        database: 'disconnected',
-        error: error.message,
-      };
+      response.database = 'disconnected';
+      response['databaseError'] = error.message;
     }
+
+    return response;
   }
 
   @Get('ready')
@@ -44,7 +44,7 @@ export class HealthController {
 
   @Get('live')
   async live() {
-    // Liveness check - simple ping
+    // Liveness check - simple ping, no dependencies
     return { alive: true, timestamp: new Date().toISOString() };
   }
 }

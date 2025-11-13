@@ -52,8 +52,12 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic ./packa
 # Copy built application
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backend/prisma
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Make start script executable
+RUN chmod +x ./apps/backend/start.sh
 
 # Switch to non-root user
 USER nestjs
@@ -70,5 +74,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
 # Use dumb-init to handle signals
 ENTRYPOINT ["dumb-init", "--"]
 
-# Run migrations and start the app
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# Run startup script with resilient migration handling
+CMD ["./start.sh"]
