@@ -1,0 +1,460 @@
+================================================================================
+GENKI TCG BACKEND - FILE-BY-FILE SECURITY AUDIT
+================================================================================
+
+/home/user/genki-tcg/apps/backend/src/auth/auth.controller.ts
+================================================================================
+[✓] Authentication Guards
+    - JwtAuthGuard applied to GET /auth/me
+    
+[✗] DTO Validation (CRITICAL)
+    - POST /auth/signup: Uses interface SignupDto (no validation)
+    - POST /auth/login: Uses interface LoginDto (no validation)
+    
+[✓] User Data Sanitization
+    - GET /auth/me returns sanitized user object (no passwordHash)
+    
+Issues:
+    Line 12: SignupDto is interface, not class - NO VALIDATION
+    Line 17: LoginDto is interface, not class - NO VALIDATION
+    Line 2: ImportedSignupDto without decorators
+
+
+/home/user/genki-tcg/apps/backend/src/auth/auth.service.ts
+================================================================================
+[✓] Password Hashing
+    - Line 60: Uses bcrypt.hash with 10 rounds (good)
+    
+[✓] Password Verification
+    - Line 112: Uses bcrypt.compare
+    
+[✓] JWT Token Generation
+    - Lines 147-159: Includes orgId and role in payload
+    
+[~] Signup Validation
+    - Line 42-47: Checks org exists and user doesn't exist
+    - Line 39: No email format validation (relies on caller)
+    - Line 39: No password strength validation
+    
+[✗] DTO Interface Issues (CRITICAL)
+    - Line 12: SignupDto interface - no validation
+    - Line 19: LoginDto interface - no validation
+    
+Issues to Fix:
+    - Add email validation (@IsEmail)
+    - Add password strength validation (@MinLength, regex for complexity)
+    - Convert to class-based DTOs
+
+
+/home/user/genki-tcg/apps/backend/src/orgs/orgs.controller.ts
+================================================================================
+[✓] Authentication Guards
+    - JwtAuthGuard applied to entire controller
+    
+[✗] Input Validation (HIGH)
+    - Line 17: @Query('search') not validated
+    - Can be any string, no length limit
+    - Potential injection (though Prisma protects somewhat)
+    
+Issues to Fix:
+    - Add validation to search parameter
+    - @IsString() @MaxLength(50) @IsOptional()
+
+
+/home/user/genki-tcg/apps/backend/src/orgs/orgs.service.ts
+================================================================================
+[✓] Organization Queries
+    - Line 8: getOrg filters by orgId
+    - Line 14-36: getOrgUsers filters by orgId
+    
+[~] Search Implementation
+    - Line 22-27: Uses Prisma contains (case-insensitive)
+    - Line 34: take: 50 limits results
+    - No validation of search parameter at service level
+
+
+/home/user/genki-tcg/apps/backend/src/events/events.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to sensitive endpoints
+    
+[✗] CRITICAL: Missing Organization Validation
+    - Line 19: GET /events/:id - NO orgId check (IDOR)
+    - Line 33: PATCH /events/:id - NO orgId check (IDOR)
+    
+[✓] Input Validation
+    - Line 26: CreateEventDto (but interface, not class)
+    - Line 34: UpdateEventDto (but interface, not class)
+    
+[✗] CRITICAL: Payment Marking Issues
+    - Line 60: @Body() dto?: { amount?: number }
+    - Untyped body - no validation
+    - Can pass $0 to bypass payment (PAYMENT BYPASS)
+    - Race condition possible (RACE CONDITION)
+    
+[✗] CRITICAL: Prize Distribution Issues
+    - Line 77: distributions array not validated
+    - No validation of total amount (PRIZE MANIPULATION)
+    - No validation users in event
+    - No validation amounts positive
+    
+[✗] HIGH: Missing Entry Ownership
+    - Line 50: checkIn doesn't validate entry org
+    - Line 60: markAsPaid doesn't validate entry org
+    - Line 86: dropPlayer doesn't validate entry org
+    
+[✗] HIGH: Check-in Bypass
+    - Line 68: add-late-player auto-checks in
+    - Can bypass payment requirement
+    
+[✗] HIGH: Event Ownership Missing
+    - Line 20: getEvent passes eventId to service without orgId
+    - Line 39: registerForEvent doesn't validate event org
+    - Line 44: selfCheckIn doesn't validate event org
+
+Specific Lines to Fix:
+    19: Pass user.orgId to getEvent
+    33: Pass user.orgId to updateEvent
+    44: Validate user.orgId in selfCheckIn
+    50: Pass orgId to checkIn service
+    54-62: Create proper DTO class for mark-paid
+    68: Remove auto-checkIn from add-late-player
+    77: Create DTO class and validate distributions
+    86: Pass orgId to dropPlayer
+
+
+/home/user/genki-tcg/apps/backend/src/events/events.service.ts
+================================================================================
+[✗] CRITICAL: Missing orgId Filtering (MULTIPLE LOCATIONS)
+    - Line 60: getEvent(eventId) - no orgId filter
+    - Line 78: registerForEvent(eventId, userId) - no orgId check
+    - Line 112: markAsPaid(entryId) - no orgId check
+    - Line 140: distributePrizes(eventId) - no orgId check
+    - Line 230: updateEvent(eventId) - no orgId check
+    - Line 250: addLatePlayer(eventId) - no orgId check
+    - Line 281: selfCheckIn(eventId, userId) - no orgId check
+    
+[✗] CRITICAL: Payment Bypass (Line 112-138)
+    - Line 128: const paidAmount = amount ?? entry.event.entryFeeCents ?? 0
+    - Can pass amount=$0 to bypass fee
+    - No validation amount matches event fee
+    - Should validate: amount === entry.event.entryFeeCents
+    
+[✗] CRITICAL: Race Condition (Line 112-138)
+    - Line 123: if (entry.paidAt) throw
+    - Check and update not atomic
+    - Between check and update, another request could update
+    - Should use transaction or unique constraint
+    
+[✗] CRITICAL: Prize Manipulation (Line 140-218)
+    - Line 161-174: No validation total amount <= totalPrizeCredits
+    - Line 166: No validation user is in event
+    - Line 167: No validation amount is positive
+    - Line 206: Could distribute to non-event-participants
+    - Missing validations:
+        * totalAmount validation
+        * User in event validation
+        * Positive amount validation
+        * Duplicate placement validation
+    
+[✓] Good: Prize Distribution Uses Transaction
+    - Line 159: Uses prisma.$transaction
+    
+[~] Check-in Logic (Line 87-110)
+    - Line 100: Only checks if paidAt exists
+    - Should also validate paidAmount === entryFeeCents
+    
+[✗] HIGH: Late Add Bypass (Line 250-279)
+    - Line 276: checkedInAt: new Date() - auto check-in
+    - Bypasses normal check-in workflow
+    - Bypasses payment requirement
+
+Lines to Fix:
+    60: Add orgId parameter and filter
+    78: Add orgId parameter and filter
+    87-110: Add paidAmount validation in checkIn
+    112-138: Add orgId, validate amount, use transaction
+    140-218: Add 4x validations, add orgId check
+    230: Add orgId parameter and filter
+    250-279: Remove auto-checkIn
+    281: Add orgId parameter and filter
+    310: getMyMatches already has good filtering
+
+
+/home/user/genki-tcg/apps/backend/src/rounds/rounds.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to POST endpoints
+    
+[✗] CRITICAL: Missing Organization Validation
+    - Line 15: POST events/:eventId/next - no orgId check (IDOR)
+    - Line 20: GET :roundId/pairings - no orgId check (IDOR)
+
+Lines to Fix:
+    15: Pass user.orgId to createNextRound
+    20: Add orgId parameter for pairings verification
+
+
+/home/user/genki-tcg/apps/backend/src/rounds/rounds.service.ts
+================================================================================
+[✗] CRITICAL: Missing Organization Validation
+    - Line 18: findUnique({ id: eventId }) - no orgId filter
+    - Line 96: findMany({ roundId }) - no event->org validation
+    
+[~] Complex Business Logic (Line 17-94)
+    - Generates Swiss pairings
+    - Uses transactions
+    - Creates round and matches atomically
+    - Missing: event ownership validation
+
+Lines to Fix:
+    18: Add orgId filter to event query
+    96: Add event->orgId validation for round
+
+
+/home/user/genki-tcg/apps/backend/src/matches/matches.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to sensitive endpoints
+    
+[✗] CRITICAL: Missing Organization Validation
+    - Line 21: GET :id - no orgId check (IDOR)
+    - Line 16: POST report - no event org check
+    - Line 34: POST :id/override - no event org check
+    
+[✗] MEDIUM: Weak DTO Validation
+    - Line 16: ReportMatchResultDto is interface (no validation)
+    - Line 31: Override DTO inline, not validated
+
+Lines to Fix:
+    16: Create class DTO for reportResult
+    21: Add orgId parameter to getMatch
+    31: Create class DTO for override
+
+
+/home/user/genki-tcg/apps/backend/src/matches/matches.service.ts
+================================================================================
+[✗] CRITICAL: Missing Organization Validation
+    - Line 24: findUnique({ id: matchId }) - no org check
+    - Line 83: findUnique({ id: matchId }) - no org check
+    
+[✗] MEDIUM: Weak Input Validation
+    - Line 21: No validation on gamesWonA/gamesWonB
+    - Should validate: 0-5 games typical tournament format
+    
+[~] DTO Issues
+    - Line 6: ReportMatchResultDto is interface
+
+Lines to Fix:
+    24, 83: Add match->round->event->orgId validation
+
+
+/home/user/genki-tcg/apps/backend/src/standings/standings.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to export endpoint
+    
+[✗] CRITICAL: Missing Organization Validation
+    - Line 14: GET events/:eventId - no orgId check (IDOR)
+    - Line 21: GET events/:eventId/export - no orgId check (IDOR)
+    
+[✗] MEDIUM: Sensitive Data in Export
+    - Line 31: Exports player names (PII)
+    - Line 45-46: CSV download (large files)
+    - No rate limiting on export
+
+Lines to Fix:
+    14: Add orgId validation
+    21: Add orgId validation, mask names, add rate limits
+
+
+/home/user/genki-tcg/apps/backend/src/standings/standings.service.ts
+================================================================================
+[✗] CRITICAL: Missing Organization Validation
+    - Line 10: findUnique({ id: eventId }) - no orgId filter
+    
+[✓] Standings Calculation
+    - Uses @genki-tcg/tournament-logic library
+    - Properly filters dropped players
+    - Good use of aggregate functions
+
+Lines to Fix:
+    10: Add orgId filter to event query
+
+
+/home/user/genki-tcg/apps/backend/src/decklists/decklists.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to sensitive endpoints
+    
+[~] DTO Validation
+    - Line 23: SubmitDecklistDto is interface (no validation)
+    
+[✓] User Ownership (Line 25)
+    - Verified by service: user.id
+    
+[✗] CRITICAL: Missing Event Ownership
+    - Line 39: GET event/:eventId - no org check (IDOR)
+    - Line 46: POST entry/:entryId/lock - no org check (IDOR)
+    - Line 53: POST event/:eventId/lock-all - no org check (IDOR)
+
+Lines to Fix:
+    23: Create class DTO for submitDecklist
+    39: Add orgId validation
+    46: Add orgId validation
+    53: Add orgId validation
+
+
+/home/user/genki-tcg/apps/backend/src/decklists/decklists.service.ts
+================================================================================
+[✓] User Ownership Validation
+    - Line 26: Verifies entry.userId === userId
+    
+[✓] Event Status Check
+    - Line 30: Checks event.status === 'SCHEDULED'
+    
+[✓] Decklist Lock Check
+    - Line 39: Prevents modification of locked decklists
+    
+[~] Missing Organization Checks
+    - Line 85: getDecklistsForEvent - no orgId filter
+    - Line 117: lockAllDecklists - no orgId filter
+
+Lines to Fix:
+    85: Add event orgId validation
+    117: Add event orgId validation
+
+
+/home/user/genki-tcg/apps/backend/src/credits/credits.controller.ts
+================================================================================
+[✓] Authentication
+    - JwtAuthGuard applied to entire controller
+    
+[✓] Authorization
+    - RolesGuard applied to staff endpoints
+    - Role checking for OWNER/STAFF
+    
+[✓] Organization Membership
+    - Credits service validates user in org
+    
+[~] DTO Validation
+    - Line 61: CreditAdjustDto uses interface (no validation)
+    - Line 73: Untyped body { userId, amount, memo }
+    
+[✗] MEDIUM: Weak Amount Validation
+    - No max limit on credit amounts
+    - Could adjust by billions
+
+Lines to Fix:
+    61: Create class DTO with validators
+    73: Create class DTO for redeem
+
+
+/home/user/genki-tcg/apps/backend/src/credits/credits.service.ts
+================================================================================
+[✓] Organization Membership Validation
+    - Line 33-44: Validates user exists in org
+    
+[✓] Audit Logging
+    - Line 95-106: Logs all credit adjustments
+    
+[✓] Transaction Support
+    - Line 55: Uses prisma.$transaction
+    
+[✓] Balance Validation
+    - Line 46-51: Prevents negative balances on debit
+    
+[~] DTO Definition
+    - Line 6-12: CreditAdjustDto is interface (no validation)
+    
+[~] Amount Boundaries
+    - No max limit validation on amounts
+
+Generally Good! Minor improvements:
+    - Add max amount validation
+    - Convert DTO to class
+
+
+/home/user/genki-tcg/apps/backend/src/main.ts
+================================================================================
+[✓] Global ValidationPipe Configured
+    - Line 11-17: ValidationPipe with:
+        * whitelist: true
+        * forbidNonWhitelisted: true
+        * transform: true
+    
+[✗] CRITICAL: Useless Without Class DTOs
+    - ValidationPipe can't validate interfaces
+    - All DTOs are interfaces = no validation happens
+    
+[✓] CORS Configuration
+    - Line 20-26: Allows localhost:3000 and localhost:8081
+    
+[~] CORS Security
+    - Should restrict origins more strictly in production
+    - Could add credentials validation
+
+Issues:
+    - The ValidationPipe configuration is misleading
+    - Creates false sense of security
+    - All DTOs must be converted to classes
+
+
+================================================================================
+SUMMARY BY SEVERITY
+================================================================================
+
+CRITICAL (5 types):
+1. IDOR - Missing orgId validation (11 endpoints)
+   Files: events.service.ts, rounds.service.ts, matches.service.ts,
+          standings.service.ts, decklists.service.ts
+          
+2. No DTO Validation (7 DTOs are interfaces)
+   Files: auth.service.ts, events.service.ts, credits.service.ts,
+          decklists.service.ts, matches.service.ts
+          
+3. Payment Bypass
+   File: events.service.ts:112
+   
+4. Prize Manipulation
+   File: events.service.ts:140
+   
+5. Race Condition
+   File: events.service.ts:112
+
+HIGH (6 types):
+6. Entry Ownership Missing: events.service.ts:87, 112, 220
+7. Event Ownership in Rounds: rounds.service.ts:17
+8. Match Ownership: matches.service.ts:20, 75
+9. Search Parameter: orgs.controller.ts:17
+10. Decklist Ownership: decklists.service.ts:85, 117
+11. Check-in Bypass: events.service.ts:250
+
+MEDIUM (3 types):
+12. Untyped DTOs: events.controller.ts:60, 77, 86; matches.controller.ts:31
+13. CSV Export Issues: standings.controller.ts:21
+14. Weak Match Validation: matches.service.ts:20
+
+
+Most Critical Files (by impact):
+1. events.service.ts - 4 critical + 3 high issues
+2. events.controller.ts - 2 critical + 3 high issues
+3. auth.service.ts - 1 critical (DTO validation issue affecting login/signup)
+4. matches.service.ts - 1 critical + 1 high issue
+5. rounds.service.ts - 1 critical + 1 high issue
+

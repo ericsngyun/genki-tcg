@@ -1,0 +1,154 @@
+================================================================================
+                    SECURITY AUDIT SUMMARY TABLE
+================================================================================
+
+VULNERABILITY STATISTICS:
+  Critical Issues:      6
+  High Issues:          8
+  Medium Issues:        6
+  Low Issues:           4
+  ─────────────────────────
+  Total Issues:        24
+
+CRITICAL VULNERABILITIES (Require Immediate Action):
+────────────────────────────────────────────────────────────────────────────────
+ID  | Category        | Issue                              | File Location
+────────────────────────────────────────────────────────────────────────────────
+C1  | Authorization   | Cross-organization event access    | events.service.ts:60-76
+C2  | Authorization   | Cross-org match/round access       | rounds/matches services
+C3  | Authorization   | Missing org validation in services | All service layers
+C4  | Authorization   | Untyped user object (any)          | All controllers (24x)
+C5  | Authorization   | RolesGuard org bypass              | roles.guard.ts
+C6  | Credentials     | Default JWT secret fallback        | auth.module.ts, jwt.strategy.ts
+
+HIGH SEVERITY VULNERABILITIES (Urgent - 1 Week):
+────────────────────────────────────────────────────────────────────────────────
+H1  | Input Validation| No DTO validation                  | auth.service.ts, all DTOs
+H2  | Authentication  | No password strength validation    | auth.service.ts
+H3  | Input Validation| No email validation                | auth.service.ts
+H4  | Authorization   | Missing auth checks in endpoints   | 6 endpoints
+H5  | Privilege Esc.  | Match override without org check   | matches.controller.ts
+H6  | Input Validation| Invite code not validated          | auth.service.ts
+H7  | Input Validation| Credits adjustment not validated   | credits.service.ts
+H8  | Rate Limiting   | No rate limit on auth endpoints    | auth.controller.ts
+
+MEDIUM SEVERITY VULNERABILITIES (Important - 2 Weeks):
+────────────────────────────────────────────────────────────────────────────────
+M1  | Cryptography    | Bcrypt rounds = 10 (use 12+)       | auth.service.ts:60
+M2  | Session Mgmt    | Long JWT expiration (7 days)       | auth.module.ts:19
+M3  | Session Mgmt    | No logout/token revocation         | Global issue
+M4  | Input Validation| Match result not validated         | matches.controller.ts
+M5  | Error Handling  | Missing null checks on user object | current-user.decorator.ts
+M6  | Transport Sec.  | No HTTPS enforcement               | main.ts, global
+M7  | CORS Config     | Production CORS not configured     | main.ts:20-26
+
+LOW SEVERITY VULNERABILITIES (Nice-to-Have - 1 Month+):
+────────────────────────────────────────────────────────────────────────────────
+L1  | Error Messages  | Some endpoints leak information    | Various services
+L2  | CSRF Protection | No CSRF tokens implemented         | Global issue
+L3  | 2FA             | No two-factor authentication       | Global issue
+L4  | Security Headers| Missing security headers           | main.ts, nginx/proxy
+
+================================================================================
+TOP 3 MOST CRITICAL ISSUES (FIX FIRST):
+================================================================================
+
+1. Default JWT Secret Fallback
+   Risk: Complete authentication bypass if environment not set
+   Fix: Remove 'dev-secret-change-me' fallback, require env variable
+   Time: 30 minutes
+   Impact: CRITICAL - affects entire auth system
+
+2. RolesGuard Missing Organization Validation
+   Risk: Privilege escalation across organizations
+   Fix: Query database to verify user's org membership
+   Time: 2 hours
+   Impact: CRITICAL - affects all role-protected endpoints
+
+3. Missing Organization Isolation in Services
+   Risk: Cross-organization data access
+   Fix: Add orgId parameter to all service methods and verify
+   Time: 8-12 hours
+   Impact: CRITICAL - affects data privacy and integrity
+
+================================================================================
+REMEDIATION TIMELINE:
+================================================================================
+
+Phase 1 (EMERGENCY - 48 hours):
+  [X] Fix JWT secret fallback
+  [X] Update RolesGuard to check database membership
+  [X] Add orgId validation to critical service methods
+
+Phase 2 (URGENT - 1 week):
+  [X] Add DTO validation using class-validator
+  [X] Implement password strength requirements
+  [X] Add rate limiting to auth endpoints
+  [X] Implement email validation
+
+Phase 3 (IMPORTANT - 2 weeks):
+  [X] Implement token blacklist/revocation
+  [X] Reduce JWT expiration to 1-2 hours
+  [X] Add refresh token mechanism
+  [X] Increase bcrypt rounds to 12
+
+Phase 4 (SOON - 1 month):
+  [X] Add HTTPS enforcement
+  [X] Implement security headers
+  [X] Add CSRF protection
+  [X] Set up production CORS config
+
+================================================================================
+FILES NEEDING IMMEDIATE FIXES (CRITICAL):
+================================================================================
+
+1. /home/user/genki-tcg/apps/backend/src/auth/auth.module.ts
+   - Remove default JWT secret fallback
+
+2. /home/user/genki-tcg/apps/backend/src/auth/strategies/jwt.strategy.ts
+   - Validate JWT_SECRET is set
+
+3. /home/user/genki-tcg/apps/backend/src/auth/guards/roles.guard.ts
+   - Add database membership check
+
+4. /home/user/genki-tcg/apps/backend/src/events/events.service.ts
+   - Add orgId parameter to all methods
+   - Validate orgId matches
+
+5. /home/user/genki-tcg/apps/backend/src/events/events.controller.ts
+   - Pass user.orgId to service methods
+
+================================================================================
+AFFECTED ENDPOINTS BY SEVERITY:
+================================================================================
+
+CRITICAL ACCESS:
+  - GET  /events/:id          (can view other org events)
+  - GET  /rounds/:id/pairings (can view other org pairings)
+  - GET  /matches/:id         (can view other org matches)
+  - POST /matches/:id/override (can modify other org matches)
+
+HIGH RISK:
+  - POST /auth/signup         (no validation, weak passwords)
+  - POST /auth/login          (no rate limiting)
+  - POST /events              (can create in other orgs)
+  - PATCH /events/:id         (can update other org events)
+  - POST /credits/adjust      (can adjust other users' credits)
+
+================================================================================
+TESTING CHECKLIST:
+================================================================================
+
+Before deploying any fixes, test:
+  □ User A from Org X cannot access events from Org Y
+  □ STAFF user downgraded to PLAYER can't perform STAFF actions
+  □ Empty passwords are rejected
+  □ Negative entry fees are rejected
+  □ Invalid email formats are rejected
+  □ Match results with invalid games count are rejected
+  □ Rate limiting blocks brute force on login/signup
+  □ JWT tokens without valid secret are rejected
+  □ Cross-org event registration is blocked
+  □ Service methods validate orgId parameter
+
+================================================================================
