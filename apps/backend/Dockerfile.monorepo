@@ -1,19 +1,21 @@
-# Railway-specific Dockerfile (deploys from apps/backend directory)
+# Multi-stage build for production
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY prisma ./prisma
+COPY apps/backend/package*.json ./apps/backend/
+COPY packages ./packages/
 
-# Install dependencies (use npm install since we don't have package-lock.json)
-RUN npm install --production=false
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci
 
 # Copy source code
-COPY . .
+COPY apps/backend ./apps/backend
 
 # Generate Prisma Client
+WORKDIR /app/apps/backend
 RUN npx prisma generate
 
 # Build the application
@@ -26,7 +28,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install dumb-init
+# Install dumb-init to handle signals properly
 RUN apk add --no-cache dumb-init
 
 # Create non-root user
@@ -35,18 +37,22 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Copy package files
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/package*.json ./apps/backend/
 
 # Install production dependencies only
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --workspace=apps/backend && \
+    npm cache clean --force
 
-# Copy built application and Prisma files
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+# Copy built application
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backend/prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Switch to non-root user
 USER nestjs
+
+WORKDIR /app/apps/backend
 
 # Expose port
 EXPOSE 3000
