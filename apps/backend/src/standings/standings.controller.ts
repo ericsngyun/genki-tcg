@@ -4,6 +4,7 @@ import { StandingsService } from './standings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('standings')
 @UseGuards(JwtAuthGuard)
@@ -11,15 +12,15 @@ export class StandingsController {
   constructor(private standingsService: StandingsService) {}
 
   @Get('events/:eventId')
-  async getStandings(@Param('eventId') eventId: string) {
-    return this.standingsService.calculateCurrentStandings(eventId);
+  async getStandings(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+    return this.standingsService.calculateCurrentStandings(eventId, user.orgId);
   }
 
   @Get('events/:eventId/export')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async exportStandings(@Param('eventId') eventId: string, @Res() res: Response) {
-    const standings = await this.standingsService.calculateCurrentStandings(eventId);
+  async exportStandings(@CurrentUser() user: any, @Param('eventId') eventId: string, @Res() res: Response) {
+    const standings = await this.standingsService.calculateCurrentStandings(eventId, user.orgId);
 
     // Generate CSV
     const headers = ['Rank', 'Player', 'Points', 'Match Record', 'OMW%', 'GW%', 'OGW%', 'OOMW%'];

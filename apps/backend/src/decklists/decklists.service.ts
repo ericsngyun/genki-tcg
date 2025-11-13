@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SubmitDecklistDto {
@@ -12,7 +12,7 @@ export interface SubmitDecklistDto {
 export class DecklistsService {
   constructor(private prisma: PrismaService) {}
 
-  async submitDecklist(userId: string, dto: SubmitDecklistDto) {
+  async submitDecklist(userId: string, userOrgId: string, dto: SubmitDecklistDto) {
     // Verify the entry belongs to the user
     const entry = await this.prisma.entry.findUnique({
       where: { id: dto.entryId },
@@ -20,15 +20,20 @@ export class DecklistsService {
     });
 
     if (!entry) {
-      throw new Error('Entry not found');
+      throw new NotFoundException('Entry not found');
+    }
+
+    // Validate organization
+    if (entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     if (entry.userId !== userId) {
-      throw new Error('Unauthorized');
+      throw new ForbiddenException('This entry does not belong to you');
     }
 
     if (entry.event.status !== 'SCHEDULED') {
-      throw new Error('Cannot submit decklist after event has started');
+      throw new BadRequestException('Cannot submit decklist after event has started');
     }
 
     // Check if decklist already exists and is locked
@@ -37,7 +42,7 @@ export class DecklistsService {
     });
 
     if (existingDecklist?.lockedAt) {
-      throw new Error('Decklist is locked and cannot be modified');
+      throw new BadRequestException('Decklist is locked and cannot be modified');
     }
 
     // Create or update decklist
@@ -59,7 +64,7 @@ export class DecklistsService {
     });
   }
 
-  async getMyDecklist(userId: string, entryId: string) {
+  async getMyDecklist(userId: string, userOrgId: string, entryId: string) {
     const decklist = await this.prisma.decklist.findUnique({
       where: { entryId },
       include: {
@@ -75,14 +80,33 @@ export class DecklistsService {
       return null;
     }
 
+    // Validate organization
+    if (decklist.entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
+    }
+
     if (decklist.userId !== userId) {
-      throw new Error('Unauthorized');
+      throw new ForbiddenException('This decklist does not belong to you');
     }
 
     return decklist;
   }
 
-  async getDecklistsForEvent(eventId: string) {
+  async getDecklistsForEvent(eventId: string, userOrgId: string) {
+    // Validate event exists and user has access
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
+    }
+
     return this.prisma.decklist.findMany({
       where: {
         entry: {
@@ -105,7 +129,28 @@ export class DecklistsService {
     });
   }
 
-  async lockDecklist(entryId: string) {
+  async lockDecklist(entryId: string, userOrgId: string) {
+    // Get decklist with entry and event to validate organization
+    const decklist = await this.prisma.decklist.findUnique({
+      where: { entryId },
+      include: {
+        entry: {
+          include: {
+            event: true,
+          },
+        },
+      },
+    });
+
+    if (!decklist) {
+      throw new NotFoundException('Decklist not found');
+    }
+
+    // Validate organization
+    if (decklist.entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this decklist');
+    }
+
     return this.prisma.decklist.update({
       where: { entryId },
       data: {
@@ -114,7 +159,21 @@ export class DecklistsService {
     });
   }
 
-  async lockAllDecklists(eventId: string) {
+  async lockAllDecklists(eventId: string, userOrgId: string) {
+    // Validate event exists and user has access
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
+    }
+
     const entries = await this.prisma.entry.findMany({
       where: { eventId },
       select: { id: true },

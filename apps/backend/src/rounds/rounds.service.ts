@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { generateSwissPairings } from '@genki-tcg/tournament-logic';
@@ -14,7 +14,7 @@ export class RoundsService {
    * Generate next round with Swiss pairings
    * TODO: Implement full logic with standings calculation
    */
-  async createNextRound(eventId: string) {
+  async createNextRound(eventId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -37,7 +37,12 @@ export class RoundsService {
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     const nextRoundNumber = event.rounds.length + 1;
@@ -98,7 +103,24 @@ export class RoundsService {
     return result;
   }
 
-  async getPairings(roundId: string) {
+  async getPairings(roundId: string, userOrgId: string) {
+    // Fetch round with event to validate organization
+    const round = await this.prisma.round.findUnique({
+      where: { id: roundId },
+      include: {
+        event: true,
+      },
+    });
+
+    if (!round) {
+      throw new NotFoundException('Round not found');
+    }
+
+    // Validate organization
+    if (round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this round');
+    }
+
     return this.prisma.match.findMany({
       where: { roundId },
       include: {

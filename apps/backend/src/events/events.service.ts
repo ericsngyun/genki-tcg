@@ -93,7 +93,32 @@ export class EventsService {
     return event;
   }
 
-  async registerForEvent(eventId: string, userId: string) {
+  async registerForEvent(eventId: string, userId: string, userOrgId: string) {
+    // Validate event belongs to user's org
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Cannot register for events in other organizations');
+    }
+
+    // Check for duplicate registration
+    const existingEntry = await this.prisma.entry.findFirst({
+      where: {
+        eventId,
+        userId,
+      },
+    });
+
+    if (existingEntry) {
+      throw new BadRequestException('Already registered for this event');
+    }
+
     return this.prisma.entry.create({
       data: {
         eventId,
@@ -102,7 +127,7 @@ export class EventsService {
     });
   }
 
-  async checkIn(entryId: string) {
+  async checkIn(entryId: string, userOrgId: string) {
     // Get entry with event details
     const entry = await this.prisma.entry.findUnique({
       where: { id: entryId },
@@ -110,13 +135,18 @@ export class EventsService {
     });
 
     if (!entry) {
-      throw new Error('Entry not found');
+      throw new NotFoundException('Entry not found');
+    }
+
+    // Validate organization
+    if (entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied');
     }
 
     // Check if payment is required and has been made
     const requiresPayment = entry.event.entryFeeCents && entry.event.entryFeeCents > 0;
     if (requiresPayment && !entry.paidAt) {
-      throw new Error('Player must pay entry fee before check-in');
+      throw new BadRequestException('Player must pay entry fee before check-in');
     }
 
     return this.prisma.entry.update({
@@ -127,7 +157,7 @@ export class EventsService {
     });
   }
 
-  async markAsPaid(entryId: string, confirmedBy: string, amount?: number) {
+  async markAsPaid(entryId: string, confirmedBy: string, userOrgId: string, amount?: number) {
     // Get entry with event details
     const entry = await this.prisma.entry.findUnique({
       where: { id: entryId },
@@ -135,42 +165,94 @@ export class EventsService {
     });
 
     if (!entry) {
-      throw new Error('Entry not found');
+      throw new NotFoundException('Entry not found');
     }
 
-    if (entry.paidAt) {
-      throw new Error('Entry has already been marked as paid');
+    // Validate organization
+    if (entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied');
     }
 
-    // Use event entry fee if no amount specified
-    const paidAmount = amount ?? entry.event.entryFeeCents ?? 0;
+    const requiredAmount = entry.event.entryFeeCents;
+    const paidAmount = amount ?? requiredAmount ?? 0;
 
-    return this.prisma.entry.update({
-      where: { id: entryId },
+    // Validate payment amount
+    if (requiredAmount && paidAmount < requiredAmount) {
+      throw new BadRequestException(
+        `Payment amount ($${(paidAmount/100).toFixed(2)}) is less than required entry fee ($${(requiredAmount/100).toFixed(2)})`
+      );
+    }
+
+    // Use atomic updateMany to prevent race condition
+    const updated = await this.prisma.entry.updateMany({
+      where: {
+        id: entryId,
+        paidAt: null, // Only update if not already paid
+      },
       data: {
         paidAt: new Date(),
         paidAmount,
         paidBy: confirmedBy,
       },
     });
+
+    if (updated.count === 0) {
+      throw new BadRequestException('Entry already paid or not found');
+    }
+
+    return this.prisma.entry.findUnique({ where: { id: entryId } });
   }
 
   async distributePrizes(
     eventId: string,
     distributions: Array<{ userId: string; amount: number; placement: number }>,
     distributedBy: string,
+    userOrgId: string,
   ) {
     // Check if event exists and prizes haven't been distributed
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
+      include: {
+        entries: {
+          select: {
+            userId: true,
+          },
+        },
+      },
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization access
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     if (event.prizesDistributed) {
-      throw new Error('Prizes have already been distributed for this event');
+      throw new BadRequestException('Prizes have already been distributed for this event');
+    }
+
+    // Validate all recipients are participants in the event
+    const participantUserIds = new Set(event.entries.map(e => e.userId));
+    const invalidRecipients = distributions.filter(d => !participantUserIds.has(d.userId));
+    if (invalidRecipients.length > 0) {
+      throw new BadRequestException('Some prize recipients are not participants in this event');
+    }
+
+    // Validate all amounts are positive
+    const invalidAmounts = distributions.filter(d => d.amount <= 0);
+    if (invalidAmounts.length > 0) {
+      throw new BadRequestException('Prize amounts must be positive');
+    }
+
+    // Validate total distribution doesn't exceed totalPrizeCredits
+    const totalDistributed = distributions.reduce((sum, d) => sum + d.amount, 0);
+    if (event.totalPrizeCredits && totalDistributed > event.totalPrizeCredits) {
+      throw new BadRequestException(
+        `Total prize distribution ($${(totalDistributed/100).toFixed(2)}) exceeds event prize pool ($${(event.totalPrizeCredits/100).toFixed(2)})`
+      );
     }
 
     // Use transaction to ensure all distributions succeed or none do
@@ -235,7 +317,22 @@ export class EventsService {
     });
   }
 
-  async dropPlayer(entryId: string, currentRound?: number) {
+  async dropPlayer(entryId: string, userOrgId: string, currentRound?: number) {
+    // Get entry with event details
+    const entry = await this.prisma.entry.findUnique({
+      where: { id: entryId },
+      include: { event: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundException('Entry not found');
+    }
+
+    // Validate organization
+    if (entry.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     return this.prisma.entry.update({
       where: { id: entryId },
       data: {
@@ -245,18 +342,23 @@ export class EventsService {
     });
   }
 
-  async updateEvent(eventId: string, dto: UpdateEventDto) {
+  async updateEvent(eventId: string, userOrgId: string, dto: UpdateEventDto) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     // Only allow editing if event hasn't started or completed
     if (event.status === 'COMPLETED' || event.status === 'CANCELLED') {
-      throw new Error('Cannot edit completed or cancelled events');
+      throw new BadRequestException('Cannot edit completed or cancelled events');
     }
 
     return this.prisma.event.update({
@@ -265,13 +367,18 @@ export class EventsService {
     });
   }
 
-  async addLatePlayer(eventId: string, userId: string) {
+  async addLatePlayer(eventId: string, userId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     // Check if player is already registered
@@ -283,7 +390,7 @@ export class EventsService {
     });
 
     if (existingEntry) {
-      throw new Error('Player already registered');
+      throw new BadRequestException('Player already registered');
     }
 
     // Create entry and auto-check-in
@@ -296,25 +403,48 @@ export class EventsService {
     });
   }
 
-  async selfCheckIn(eventId: string, userId: string) {
+  async selfCheckIn(eventId: string, userId: string, userOrgId: string) {
+    // Validate event exists and user has access
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Cannot check in to events in other organizations');
+    }
+
     // Find the user's entry
     const entry = await this.prisma.entry.findFirst({
       where: {
         eventId,
         userId,
       },
+      include: {
+        event: true,
+      },
     });
 
     if (!entry) {
-      throw new Error('Entry not found - you are not registered for this event');
+      throw new NotFoundException('Entry not found - you are not registered for this event');
     }
 
     if (entry.checkedInAt) {
-      throw new Error('Already checked in');
+      throw new BadRequestException('Already checked in');
     }
 
     if (entry.droppedAt) {
-      throw new Error('Cannot check in - you have dropped from this event');
+      throw new BadRequestException('Cannot check in - you have dropped from this event');
+    }
+
+    // Check if payment is required
+    const requiresPayment = entry.event.entryFeeCents && entry.event.entryFeeCents > 0;
+    if (requiresPayment && !entry.paidAt) {
+      throw new BadRequestException('You must pay the entry fee before checking in');
     }
 
     return this.prisma.entry.update({
@@ -325,7 +455,7 @@ export class EventsService {
     });
   }
 
-  async getMyMatches(eventId: string, userId: string) {
+  async getMyMatches(eventId: string, userId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -364,7 +494,12 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Cannot view matches for events in other organizations');
     }
 
     // Flatten matches from all rounds

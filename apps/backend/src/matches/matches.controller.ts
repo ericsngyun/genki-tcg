@@ -14,12 +14,12 @@ export class MatchesController {
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
   async reportResult(@CurrentUser() user: any, @Body() dto: ReportMatchResultDto) {
-    return this.matchesService.reportMatchResult(dto, user.id);
+    return this.matchesService.reportMatchResult(dto, user.id, user.orgId);
   }
 
   @Get(':id')
-  async getMatch(@Param('id') id: string) {
-    return this.matchesService.getMatch(id);
+  async getMatch(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.matchesService.getMatch(id, user.orgId);
   }
 
   @Post(':id/override')
@@ -36,6 +36,7 @@ export class MatchesController {
       dto.gamesWonA,
       dto.gamesWonB,
       user.id,
+      user.orgId,
     );
   }
 }

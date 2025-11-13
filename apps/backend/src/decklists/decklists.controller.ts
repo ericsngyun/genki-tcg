@@ -22,7 +22,7 @@ export class DecklistsController {
     @CurrentUser() user: any,
     @Body() dto: SubmitDecklistDto,
   ) {
-    return this.decklistsService.submitDecklist(user.id, dto);
+    return this.decklistsService.submitDecklist(user.id, user.orgId, dto);
   }
 
   @Get('entry/:entryId')
@@ -30,27 +30,27 @@ export class DecklistsController {
     @CurrentUser() user: any,
     @Param('entryId') entryId: string,
   ) {
-    return this.decklistsService.getMyDecklist(user.id, entryId);
+    return this.decklistsService.getMyDecklist(user.id, user.orgId, entryId);
   }
 
   @Get('event/:eventId')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async getDecklistsForEvent(@Param('eventId') eventId: string) {
-    return this.decklistsService.getDecklistsForEvent(eventId);
+  async getDecklistsForEvent(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+    return this.decklistsService.getDecklistsForEvent(eventId, user.orgId);
   }
 
   @Post('entry/:entryId/lock')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async lockDecklist(@Param('entryId') entryId: string) {
-    return this.decklistsService.lockDecklist(entryId);
+  async lockDecklist(@CurrentUser() user: any, @Param('entryId') entryId: string) {
+    return this.decklistsService.lockDecklist(entryId, user.orgId);
   }
 
   @Post('event/:eventId/lock-all')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async lockAllDecklists(@Param('eventId') eventId: string) {
-    return this.decklistsService.lockAllDecklists(eventId);
+  async lockAllDecklists(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+    return this.decklistsService.lockAllDecklists(eventId, user.orgId);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateStandings } from '@genki-tcg/tournament-logic';
 
@@ -6,7 +6,7 @@ import { calculateStandings } from '@genki-tcg/tournament-logic';
 export class StandingsService {
   constructor(private prisma: PrismaService) {}
 
-  async calculateCurrentStandings(eventId: string) {
+  async calculateCurrentStandings(eventId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -29,7 +29,12 @@ export class StandingsService {
     });
 
     if (!event) {
-      throw new Error('Event not found');
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
     }
 
     const playerIds = event.entries.map((e) => e.userId);

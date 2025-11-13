@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import type { MatchResult } from '@prisma/client';
@@ -17,7 +17,7 @@ export class MatchesService {
     private realtimeGateway: RealtimeGateway
   ) {}
 
-  async reportMatchResult(dto: ReportMatchResultDto, reportedBy: string) {
+  async reportMatchResult(dto: ReportMatchResultDto, reportedBy: string, userOrgId: string) {
     const { matchId, result, gamesWonA, gamesWonB } = dto;
 
     // Get match with round info
@@ -33,7 +33,12 @@ export class MatchesService {
     });
 
     if (!match) {
-      throw new BadRequestException('Match not found');
+      throw new NotFoundException('Match not found');
+    }
+
+    // Validate organization
+    if (match.round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this match');
     }
 
     // Update match result
@@ -61,8 +66,8 @@ export class MatchesService {
     return updatedMatch;
   }
 
-  async getMatch(matchId: string) {
-    return this.prisma.match.findUnique({
+  async getMatch(matchId: string, userOrgId: string) {
+    const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
         playerA: {
@@ -77,9 +82,24 @@ export class MatchesService {
             name: true,
           },
         },
-        round: true,
+        round: {
+          include: {
+            event: true,
+          },
+        },
       },
     });
+
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    // Validate organization
+    if (match.round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this match');
+    }
+
+    return match;
   }
 
   async overrideMatchResult(
@@ -88,6 +108,7 @@ export class MatchesService {
     gamesWonA: number,
     gamesWonB: number,
     overriddenBy: string,
+    userOrgId: string,
   ) {
     // Get match with round info
     const match = await this.prisma.match.findUnique({
@@ -102,7 +123,12 @@ export class MatchesService {
     });
 
     if (!match) {
-      throw new BadRequestException('Match not found');
+      throw new NotFoundException('Match not found');
+    }
+
+    // Validate organization
+    if (match.round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this match');
     }
 
     // Update match result with override tracking
