@@ -62,7 +62,9 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+
+  // In Docker, we need to bind to 0.0.0.0 to accept external connections
+  await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Genki TCG API running on http://localhost:${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
