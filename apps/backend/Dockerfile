@@ -2,6 +2,9 @@
 # Railway should set: Root Directory = / (or leave blank)
 FROM node:20-alpine AS builder
 
+# Install OpenSSL for Prisma in builder stage
+RUN apk add --no-cache openssl openssl-dev
+
 WORKDIR /app
 
 # Copy root package files first
@@ -21,6 +24,10 @@ COPY apps/backend ./apps/backend/
 
 # Generate Prisma Client
 WORKDIR /app/apps/backend
+
+# Set a dummy DATABASE_URL for build time (Prisma needs it to generate)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+
 RUN npx prisma generate
 
 # Build the application
