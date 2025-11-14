@@ -1,6 +1,9 @@
 # Multi-stage build for production
 FROM node:20-alpine AS builder
 
+# Install OpenSSL and other dependencies needed for Prisma
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
 WORKDIR /app
 
 # Copy package files
@@ -24,12 +27,15 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine
 
+# Install runtime dependencies for Prisma and NestJS
+RUN apk add --no-cache \
+    openssl \
+    libc6-compat \
+    dumb-init
+
 WORKDIR /app
 
 ENV NODE_ENV=production
-
-# Install dumb-init to handle signals properly
-RUN apk add --no-cache dumb-init
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
