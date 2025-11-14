@@ -1,11 +1,13 @@
 # Railway-specific Dockerfile (must be built from monorepo root)
 # Railway should set: Root Directory = / (or leave blank)
 # Using Debian slim instead of Alpine for better Prisma compatibility
+# REBUILD: 2025-11-14-v2 - Force clean build with Debian + OpenSSL 3
 FROM node:20-slim AS builder
 
 # Install OpenSSL and required libraries for Prisma
 RUN apt-get update && apt-get install -y \
     openssl \
+    libssl3 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,7 +34,14 @@ WORKDIR /app/apps/backend
 # Set a dummy DATABASE_URL for build time (Prisma needs it to generate)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
-RUN npx prisma generate
+# Force clean Prisma generation with correct binary target
+RUN rm -rf node_modules/.prisma node_modules/@prisma/client 2>/dev/null || true
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Verify Prisma binary was generated correctly
+RUN echo "Verifying Prisma client generation..." && \
+    ls -la ../../../node_modules/.prisma/client/ && \
+    echo "Prisma client generated successfully"
 
 # Build the application
 RUN npm run build
@@ -51,6 +60,7 @@ ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
+    libssl3 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
