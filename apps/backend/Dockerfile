@@ -2,8 +2,8 @@
 # Railway should set: Root Directory = / (or leave blank)
 FROM node:20-alpine AS builder
 
-# Install OpenSSL for Prisma in builder stage
-RUN apk add --no-cache openssl openssl-dev
+# Install OpenSSL and required libraries for Prisma in builder stage
+RUN apk add --no-cache openssl openssl-dev libc6-compat
 
 WORKDIR /app
 
@@ -43,8 +43,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install dumb-init and other necessary tools
-RUN apk add --no-cache dumb-init openssl
+# Install dumb-init, OpenSSL, and libraries needed for Prisma
+RUN apk add --no-cache dumb-init openssl openssl-dev libc6-compat libgcc
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
