@@ -8,7 +8,14 @@ export class HealthController {
   @Get()
   async check() {
     // Basic liveness check - always returns 200
-    const response = {
+    const response: {
+      status: string;
+      timestamp: string;
+      uptime: number;
+      memory: { used: number; total: number };
+      database: string;
+      databaseError?: string;
+    } = {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
@@ -25,7 +32,7 @@ export class HealthController {
       response.database = 'connected';
     } catch (error) {
       response.database = 'disconnected';
-      response['databaseError'] = error.message;
+      response.databaseError = error?.message || 'Unknown error';
     }
 
     return response;
