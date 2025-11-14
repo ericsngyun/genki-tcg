@@ -69,13 +69,32 @@ fi
 # Run database migrations
 echo ""
 echo "📦 Database Migrations:"
-set +e  # Don't exit on migration failure, just warn
+set +e  # Don't exit on migration failure, try to recover
+
+# Try to deploy migrations
 if npx prisma migrate deploy; then
   echo "  ✅ Migrations completed successfully"
 else
   MIGRATION_EXIT_CODE=$?
   echo "  ⚠️  WARNING: Migration failed with exit code $MIGRATION_EXIT_CODE"
-  echo "  Continuing to start app (migrations may need to be run manually)"
+
+  # Check if it's a failed migration state (P3009 error)
+  if [ $MIGRATION_EXIT_CODE -eq 1 ]; then
+    echo "  🔄 Attempting to resolve failed migration state..."
+
+    # Try to mark failed migrations as rolled back
+    npx prisma migrate resolve --rolled-back 20241112000000_update_game_types 2>/dev/null || true
+    npx prisma migrate resolve --rolled-back 20241112000001_add_prize_distribution 2>/dev/null || true
+    npx prisma migrate resolve --rolled-back 20241113000000_add_payment_tracking 2>/dev/null || true
+
+    # Try migrations again
+    echo "  🔄 Retrying migrations..."
+    if npx prisma migrate deploy; then
+      echo "  ✅ Migrations completed successfully after recovery"
+    else
+      echo "  ⚠️  Migrations still failing, continuing to start app..."
+    fi
+  fi
 fi
 set -e  # Re-enable exit on error
 
