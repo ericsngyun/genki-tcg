@@ -1,9 +1,13 @@
 # Railway-specific Dockerfile (must be built from monorepo root)
 # Railway should set: Root Directory = / (or leave blank)
-FROM node:20-alpine AS builder
+# Using Debian slim instead of Alpine for better Prisma compatibility
+FROM node:20-slim AS builder
 
-# Install OpenSSL and required libraries for Prisma in builder stage
-RUN apk add --no-cache openssl openssl-dev libc6-compat
+# Install OpenSSL and required libraries for Prisma
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -37,18 +41,22 @@ RUN npm run build
 RUN ls -la dist/ && echo "Build completed successfully"
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install dumb-init, OpenSSL, and libraries needed for Prisma
-RUN apk add --no-cache dumb-init openssl openssl-dev libc6-compat libgcc
+# Install dumb-init, OpenSSL, and required runtime libraries
+RUN apt-get update && apt-get install -y \
+    dumb-init \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nestjs
 
 # Copy root package.json and workspace structure
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
