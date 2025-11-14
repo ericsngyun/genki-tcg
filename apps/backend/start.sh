@@ -19,14 +19,29 @@ echo ""
 
 # Check critical files
 echo "📂 File Check:"
-if [ ! -f "dist/main.js" ]; then
-  echo "❌ ERROR: dist/main.js not found!"
-  echo "📁 Current directory contents:"
-  ls -la
-  echo "📁 dist/ directory:"
-  ls -la dist/ 2>/dev/null || echo "  dist/ directory not found"
+echo "  Current directory: $(pwd)"
+echo "  Directory contents:"
+ls -la
+
+if [ ! -d "dist" ]; then
+  echo "  ❌ ERROR: dist/ directory not found!"
+  echo "  Looking in parent directories..."
+  ls -la ../
+  ls -la ../../
   exit 1
 fi
+
+echo "  ✅ dist/ directory exists"
+echo "  dist/ contents:"
+ls -la dist/
+
+if [ ! -f "dist/main.js" ]; then
+  echo "  ❌ ERROR: dist/main.js not found!"
+  echo "  Checking for alternative paths..."
+  find . -name "main.js" 2>/dev/null || echo "  main.js not found anywhere"
+  exit 1
+fi
+
 echo "  ✅ dist/main.js exists"
 
 # Check for node_modules
