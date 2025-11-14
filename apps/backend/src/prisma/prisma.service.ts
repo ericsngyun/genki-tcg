@@ -6,6 +6,8 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private connected = false;
+
   constructor() {
     super({
       log: ['warn', 'error'],
@@ -13,13 +15,28 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    await this.$connect();
-    console.log('✅ Database connected');
+    // Try to connect to database, but don't crash if it fails
+    try {
+      await this.$connect();
+      this.connected = true;
+      console.log('✅ Database connected');
+    } catch (error) {
+      this.connected = false;
+      console.warn('⚠️  Database connection failed:', error.message);
+      console.warn('⚠️  Application will start without database connectivity');
+      console.warn('⚠️  Set DATABASE_URL environment variable to enable database features');
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
-    console.log('❌ Database disconnected');
+    if (this.connected) {
+      await this.$disconnect();
+      console.log('❌ Database disconnected');
+    }
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 
   /**

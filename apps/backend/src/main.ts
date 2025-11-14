@@ -4,11 +4,15 @@ import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  console.log('🔧 Bootstrapping NestJS application...');
+
   const app = await NestFactory.create(AppModule, {
     logger: process.env.NODE_ENV === 'production'
-      ? ['error', 'warn']
+      ? ['error', 'warn', 'log']
       : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+
+  console.log('✅ NestJS application created');
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -62,13 +66,24 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
+  const host = '0.0.0.0';
+
+  console.log('🌐 Starting server...');
+  console.log(`📍 Host: ${host}`);
+  console.log(`📍 Port: ${port}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // In Docker, we need to bind to 0.0.0.0 to accept external connections
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port, host);
 
+  console.log('');
+  console.log('='.repeat(60));
   console.log(`🚀 Genki TCG API running on http://localhost:${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌍 CORS origins: ${allowedOrigins.join(', ')}`);
+  console.log(`✅ Server is ready to accept connections`);
+  console.log('='.repeat(60));
+  console.log('');
 }
 
 bootstrap();
