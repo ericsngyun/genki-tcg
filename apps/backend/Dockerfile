@@ -1,23 +1,33 @@
-# Railway-specific Dockerfile (deploys from apps/backend directory)
+# Railway-specific Dockerfile (must be built from monorepo root)
+# Railway should set: Root Directory = / (or leave blank)
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files first
 COPY package*.json ./
-COPY prisma ./prisma
 
-# Install dependencies (use npm install since we don't have package-lock.json)
-RUN npm install --production=false
+# Copy workspace package files
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/tournament-logic/package.json ./packages/tournament-logic/
+COPY apps/backend/package.json ./apps/backend/
 
-# Copy source code
-COPY . .
+# Install all workspace dependencies
+RUN npm ci || npm install
+
+# Copy workspace source code
+COPY packages ./packages/
+COPY apps/backend ./apps/backend/
 
 # Generate Prisma Client
+WORKDIR /app/apps/backend
 RUN npx prisma generate
 
 # Build the application
 RUN npm run build
+
+# Verify build output
+RUN ls -la dist/ && echo "Build completed successfully"
 
 # Production stage
 FROM node:20-alpine
@@ -26,37 +36,51 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install dumb-init
-RUN apk add --no-cache dumb-init
+# Install dumb-init and other necessary tools
+RUN apk add --no-cache dumb-init openssl
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Copy package files
+# Copy root package.json and workspace structure
 COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/
+COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/package.json ./apps/backend/
 
-# Install production dependencies only
-RUN npm ci --omit=dev && npm cache clean --force
+# Copy built workspace packages source (they're imported as TypeScript, need source)
+COPY --from=builder --chown=nestjs:nodejs /app/packages ./packages/
 
-# Copy built application and Prisma files
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+# Install production dependencies for all workspaces
+RUN npm ci --omit=dev --workspaces || npm install --omit=dev --workspaces
+
+# Copy built backend application
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backend/prisma
+
+# Copy Prisma client from builder (critical!)
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy start script
+COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh
+RUN chmod +x ./apps/backend/start.sh
 
 # Switch to non-root user
 USER nestjs
 
+WORKDIR /app/apps/backend
+
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"
+# Health check with longer timeout for Railway
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1))"
 
 # Use dumb-init to handle signals
 ENTRYPOINT ["dumb-init", "--"]
 
-# Run migrations and start the app
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# Use the start script which handles migrations gracefully
+CMD ["./start.sh"]
