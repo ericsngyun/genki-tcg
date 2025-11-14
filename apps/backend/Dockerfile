@@ -46,8 +46,12 @@ RUN echo "Verifying Prisma client generation..." && \
 # Build the application
 RUN npm run build
 
-# Verify build output
-RUN ls -la dist/ && echo "Build completed successfully"
+# Verify build output with detailed paths
+RUN echo "=== Build Verification ===" && \
+    pwd && \
+    ls -la dist/ && \
+    ls -la dist/main.js && \
+    echo "Build completed successfully at $(pwd)/dist"
 
 # Production stage
 FROM node:20-slim
@@ -91,6 +95,14 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modul
 # Copy start script
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh
 RUN chmod +x ./apps/backend/start.sh
+
+# Verify all files are in place before switching user
+RUN echo "=== Production Image Verification ===" && \
+    ls -la /app/apps/backend/ && \
+    echo "=== Checking dist directory ===" && \
+    ls -la /app/apps/backend/dist/ && \
+    echo "=== Checking main.js ===" && \
+    ls -la /app/apps/backend/dist/main.js
 
 # Switch to non-root user
 USER nestjs
