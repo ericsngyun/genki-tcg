@@ -32,7 +32,7 @@ export class HealthController {
       response.database = 'connected';
     } catch (error) {
       response.database = 'disconnected';
-      response.databaseError = error?.message || 'Unknown error';
+      response.databaseError = (error as Error)?.message || 'Unknown error';
     }
 
     return response;

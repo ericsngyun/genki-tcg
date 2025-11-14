@@ -22,7 +22,7 @@ export class PrismaService
       console.log('✅ Database connected');
     } catch (error) {
       this.connected = false;
-      console.warn('⚠️  Database connection failed:', error.message);
+      console.warn('⚠️  Database connection failed:', (error as Error).message);
       console.warn('⚠️  Application will start without database connectivity');
       console.warn('⚠️  Set DATABASE_URL environment variable to enable database features');
     }

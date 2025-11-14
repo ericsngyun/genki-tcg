@@ -18,6 +18,9 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "paths": {
       "@genki-tcg/shared-types": ["../../packages/shared-types/src"],
       "@genki-tcg/tournament-logic": ["../../packages/tournament-logic/src"]
