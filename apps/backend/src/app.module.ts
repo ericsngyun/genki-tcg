@@ -15,6 +15,7 @@ import { DecklistsModule } from './decklists/decklists.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     NotificationsModule,
     AuditModule,
     RealtimeModule,
+    SeedModule,
   ],
 })
 export class AppModule {}
