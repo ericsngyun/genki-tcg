@@ -150,8 +150,8 @@ async function main() {
   const event = await prisma.event.create({
     data: {
       orgId: genkiOrg.id,
-      name: 'Friday Night OPTCG',
-      game: 'OPTCG',
+      name: 'Friday Night One Piece TCG',
+      game: 'ONE_PIECE_TCG',
       format: 'CONSTRUCTED',
       status: 'SCHEDULED',
       description: 'Weekly Friday night One Piece TCG tournament',
