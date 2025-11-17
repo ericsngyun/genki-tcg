@@ -37,7 +37,7 @@ export class SeedController {
       return {
         success: false,
         message: 'Seeding failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
