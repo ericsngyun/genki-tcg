@@ -24,6 +24,11 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
+# Verify build output location
+RUN echo "=== Checking build output ===" && \
+    find /app -name "main.js" -type f && \
+    ls -la /app/apps/backend/dist/ || true
+
 # Production stage
 FROM node:20-alpine
 
@@ -55,10 +60,12 @@ RUN npm ci --omit=dev --workspace=apps/backend && \
 COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types ./packages/shared-types
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic ./packages/tournament-logic
 
-# Copy built application
+# Copy built application (NestJS builds to dist/apps/backend/src/* when built from monorepo root)
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backend/prisma
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh
+
+# Copy Prisma client (generated in monorepo root node_modules)
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 

@@ -16,7 +16,7 @@ In your Railway backend service settings:
 
 **Build Settings:**
 - **Root Directory:** Leave blank or set to `/` (must build from monorepo root)
-- **Dockerfile Path:** `apps/backend/Dockerfile`
+- **Dockerfile Path:** `Dockerfile` (uses the root Dockerfile, not apps/backend/Dockerfile)
 - **Builder:** Docker (not Nixpacks)
 
 **Deploy Settings:**
@@ -132,7 +132,7 @@ This means your app built successfully but isn't starting. Check the **deploymen
 
 ### Build fails with "Cannot find module @genki-tcg/..."
 - Verify Root Directory is **blank** or `/` in Railway settings
-- Check that Dockerfile Path is `apps/backend/Dockerfile`
+- Check that Dockerfile Path is `Dockerfile` (the root Dockerfile)
 - Ensure Builder is set to **Docker** (not Nixpacks)
 
 ### Database connection fails
@@ -157,7 +157,7 @@ To test the Docker build locally from the monorepo root:
 
 ```bash
 # From the monorepo root (genki-tcg/)
-docker build -f apps/backend/Dockerfile -t genki-backend .
+docker build -f Dockerfile -t genki-backend .
 
 # Run with environment variables
 docker run -p 3000:3000 \

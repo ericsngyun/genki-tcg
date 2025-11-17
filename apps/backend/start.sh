@@ -123,12 +123,19 @@ echo "🚀 Executing: node dist/main"
 echo ""
 
 # Use exec to replace the shell process with node
-# Note: Build output is at dist/apps/backend/src/main.js when building from monorepo root
+# Note: Build output location varies depending on build context
 if [ -f "dist/main.js" ]; then
+  echo "✅ Found main.js at dist/main.js"
   exec node dist/main
+elif [ -f "dist/src/main.js" ]; then
+  echo "✅ Found main.js at dist/src/main.js"
+  exec node dist/src/main
 elif [ -f "dist/apps/backend/src/main.js" ]; then
+  echo "✅ Found main.js at dist/apps/backend/src/main.js"
   exec node dist/apps/backend/src/main
 else
   echo "❌ ERROR: Could not find main.js in any expected location"
+  echo "Searching for main.js..."
+  find . -name "main.js" -type f 2>/dev/null || echo "No main.js found"
   exit 1
 fi
