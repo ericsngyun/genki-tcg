@@ -231,6 +231,23 @@ class ApiClient {
     return data;
   }
 
+  async getUserTransactionHistory(userId: string, params?: { limit?: number; cursor?: string; reasonCode?: string; startDate?: string; endDate?: string }) {
+    const { data } = await this.client.get(`/credits/history/${userId}`, { params });
+    return data;
+  }
+
+  async exportUserCreditsHistory(userId: string, params?: { reasonCode?: string; startDate?: string; endDate?: string }) {
+    return await this.client.get(`/credits/history/${userId}/export`, {
+      params,
+      responseType: 'text',
+    });
+  }
+
+  async getAllUserBalances() {
+    const { data } = await this.client.get('/credits/all-balances');
+    return data;
+  }
+
   async adjustCredits(userId: string, amount: number, reasonCode: string, memo?: string) {
     const { data } = await this.client.post('/credits/adjust', {
       userId,
