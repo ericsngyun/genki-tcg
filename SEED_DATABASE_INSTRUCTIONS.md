@@ -2,23 +2,33 @@
 
 ## Quick Method (Recommended)
 
-### Option 1: Using Railway Dashboard
+### Option 1: Using Railway Dashboard (EASIEST - RECOMMENDED)
 
 1. Open Railway Dashboard: https://railway.app/
 2. Go to your project
-3. Click on the "backend" service
-4. Click on "Shell" tab
-5. Run this command:
+3. Click on the "genki-tcg" service
+4. Click on "Shell" tab at the top
+5. Run these commands:
    ```bash
-   npm run db:seed --workspace=apps/backend
+   cd apps/backend
+   npm run db:seed
    ```
 
-### Option 2: Using Railway CLI
+### Option 2: Using Railway CLI with Public URL
 
 ```bash
-# From the monorepo root (genki-tcg/)
+# From apps/backend directory
 cd apps/backend
-railway run npm run db:seed
+
+# Get your DATABASE_URL
+railway variables
+
+# Copy the DATABASE_URL value, then run:
+# Windows PowerShell:
+$env:DATABASE_URL="your-copied-url"; npm run db:seed
+
+# Mac/Linux:
+DATABASE_URL="your-copied-url" npm run db:seed
 ```
 
 ### Option 3: Using the Custom Script
@@ -28,7 +38,7 @@ railway run npm run db:seed
 node scripts/seed-railway.js
 ```
 
-**Note:** You'll need to set the DATABASE_URL environment variable. Get it from Railway dashboard → backend service → Variables → DATABASE_URL
+**Note:** You'll need to set the DATABASE_URL environment variable. Get it from Railway dashboard → genki-tcg service → Variables → DATABASE_URL (use the public/external URL)
 
 ## What Gets Created
 
