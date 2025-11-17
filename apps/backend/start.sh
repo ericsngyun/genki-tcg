@@ -35,14 +35,8 @@ echo "  ✅ dist/ directory exists"
 echo "  dist/ contents:"
 ls -la dist/
 
-if [ ! -f "dist/main.js" ]; then
-  echo "  ❌ ERROR: dist/main.js not found!"
-  echo "  Checking for alternative paths..."
-  find . -name "main.js" 2>/dev/null || echo "  main.js not found anywhere"
-  exit 1
-fi
-
-echo "  ✅ dist/main.js exists"
+# Don't validate main.js location here - we check multiple possible locations later
+echo "  ℹ️  Checking for main.js at startup (multiple locations supported)"
 
 # Check for node_modules
 if [ ! -d "../../node_modules" ]; then
