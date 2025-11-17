@@ -17,11 +17,18 @@ RUN npm ci
 # Copy source code
 COPY apps/backend ./apps/backend
 
+# Build workspace packages first (they're dependencies of backend)
+WORKDIR /app/packages/shared-types
+RUN npm run build
+
+WORKDIR /app/packages/tournament-logic
+RUN npm run build
+
 # Generate Prisma Client
 WORKDIR /app/apps/backend
 RUN npx prisma generate
 
-# Build the application
+# Build the backend application
 RUN npm run build
 
 # Verify build output location
@@ -56,9 +63,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package
 RUN npm ci --omit=dev --workspace=apps/backend && \
     npm cache clean --force
 
-# Copy shared package source (needed at runtime for TypeScript imports)
-COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types ./packages/shared-types
-COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic ./packages/tournament-logic
+# Copy compiled workspace packages (dist folders contain compiled JS)
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/package.json
+COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/dist ./packages/tournament-logic/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/package.json
 
 # Copy built application (NestJS builds to dist/apps/backend/src/* when built from monorepo root)
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
