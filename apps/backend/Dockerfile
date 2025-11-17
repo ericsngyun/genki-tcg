@@ -15,6 +15,7 @@ WORKDIR /app
 
 # Copy root package files first
 COPY package*.json ./
+COPY tsconfig.base.json ./
 
 # Copy workspace package files
 COPY packages/shared-types/package.json ./packages/shared-types/
@@ -27,6 +28,13 @@ RUN npm ci || npm install
 # Copy workspace source code
 COPY packages ./packages/
 COPY apps/backend ./apps/backend/
+
+# Build workspace packages first (they're dependencies of backend)
+WORKDIR /app/packages/shared-types
+RUN npm run build
+
+WORKDIR /app/packages/tournament-logic
+RUN npm run build
 
 # Generate Prisma Client
 WORKDIR /app/apps/backend
@@ -50,8 +58,8 @@ RUN npm run build
 RUN echo "=== Build Verification ===" && \
     pwd && \
     ls -la dist/ && \
-    ls -la dist/main.js && \
-    echo "Build completed successfully at $(pwd)/dist"
+    find /app -name "main.js" -type f && \
+    echo "Build completed successfully"
 
 # Production stage
 FROM node:20-slim
@@ -78,8 +86,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.jso
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/package.json ./apps/backend/
 
-# Copy built workspace packages source (they're imported as TypeScript, need source)
-COPY --from=builder --chown=nestjs:nodejs /app/packages ./packages/
+# Copy compiled workspace packages (dist folders contain compiled JS)
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/package.json
+COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/dist ./packages/tournament-logic/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/package.json
 
 # Install production dependencies for all workspaces
 RUN npm ci --omit=dev --workspaces || npm install --omit=dev --workspaces
@@ -101,8 +112,8 @@ RUN echo "=== Production Image Verification ===" && \
     ls -la /app/apps/backend/ && \
     echo "=== Checking dist directory ===" && \
     ls -la /app/apps/backend/dist/ && \
-    echo "=== Checking main.js ===" && \
-    ls -la /app/apps/backend/dist/main.js
+    echo "=== Finding main.js ===" && \
+    find /app/apps/backend/dist -name "main.js" -type f || echo "main.js location check"
 
 # Switch to non-root user
 USER nestjs
