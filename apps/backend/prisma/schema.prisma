@@ -49,7 +49,8 @@ model User {
 
   // Relations
   memberships      OrgMembership[]
-  creditEntries    CreditLedgerEntry[]
+  creditEntries    CreditLedgerEntry[] @relation("CreditLedgerUser")
+  creditEntriesCreated CreditLedgerEntry[] @relation("CreditLedgerCreator")
   creditBalances   CreditBalance[]
   entries          Entry[]
   decklists        Decklist[]
@@ -114,11 +115,13 @@ model CreditLedgerEntry {
 
   // Relations
   org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade, name: "CreditLedgerUser")
+  createdByUser User  @relation(fields: [createdBy], references: [id], onDelete: Cascade, name: "CreditLedgerCreator")
   event Event?       @relation(fields: [relatedEventId], references: [id], onDelete: SetNull)
 
   @@index([orgId, userId])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([createdBy])
   @@index([createdAt(sort: Desc)])
 }
 

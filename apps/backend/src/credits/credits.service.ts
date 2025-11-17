@@ -1,15 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import type { CreditReasonCode } from '@prisma/client';
-
-export interface CreditAdjustDto {
-  userId: string;
-  amount: number; // Positive for credit, negative for debit
-  reasonCode: CreditReasonCode;
-  memo?: string;
-  relatedEventId?: string;
-}
+import { AdjustCreditsDto, GetHistoryDto } from './dto';
 
 @Injectable()
 export class CreditsService {
@@ -24,7 +16,7 @@ export class CreditsService {
    */
   async adjustCredits(
     orgId: string,
-    dto: CreditAdjustDto,
+    dto: AdjustCreditsDto,
     performedBy: string
   ) {
     const { userId, amount, reasonCode, memo, relatedEventId } = dto;
@@ -148,18 +140,69 @@ export class CreditsService {
   }
 
   /**
-   * Get full transaction history for a user
+   * Get full transaction history for a user with pagination and filtering
    */
-  async getTransactionHistory(orgId: string, userId: string) {
-    return this.prisma.creditLedgerEntry.findMany({
-      where: {
-        orgId,
-        userId,
-      },
+  async getTransactionHistory(
+    orgId: string,
+    userId: string,
+    filters?: GetHistoryDto
+  ) {
+    const { limit = 50, cursor, reasonCode, startDate, endDate } = filters || {};
+
+    const where: any = {
+      orgId,
+      userId,
+    };
+
+    if (reasonCode) {
+      where.reasonCode = reasonCode;
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
+
+    const entries = await this.prisma.creditLedgerEntry.findMany({
+      where,
       orderBy: {
         createdAt: 'desc',
       },
+      take: limit + 1, // Take one extra to check if there are more
+      ...(cursor && {
+        skip: 1,
+        cursor: {
+          id: cursor,
+        },
+      }),
+      include: {
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
+
+    const hasMore = entries.length > limit;
+    const transactions = hasMore ? entries.slice(0, limit) : entries;
+    const nextCursor = hasMore ? transactions[transactions.length - 1].id : null;
+
+    return {
+      transactions,
+      pagination: {
+        hasMore,
+        nextCursor,
+        limit,
+      },
+    };
   }
 
   /**
@@ -235,5 +278,74 @@ export class CreditsService {
       },
       staffId
     );
+  }
+
+  /**
+   * Export transaction history to CSV format
+   */
+  async exportTransactionHistory(
+    orgId: string,
+    userId: string,
+    filters?: GetHistoryDto
+  ): Promise<string> {
+    const { transactions } = await this.getTransactionHistory(orgId, userId, {
+      ...filters,
+      limit: 10000, // Export max 10k transactions
+    });
+
+    // CSV header
+    const headers = ['Date', 'Amount', 'Balance After', 'Type', 'Memo', 'Created By'];
+    const csvLines = [headers.join(',')];
+
+    // CSV rows
+    let runningBalance = await this.getBalance(orgId, userId);
+    for (const entry of transactions.reverse()) {
+      const date = entry.createdAt.toISOString();
+      const amount = entry.amount;
+      const reasonCode = entry.reasonCode;
+      const memo = (entry.memo || '').replace(/"/g, '""'); // Escape quotes
+      const createdBy = (entry.createdByUser?.name || 'System').replace(/"/g, '""');
+
+      const row = [
+        date,
+        amount.toString(),
+        runningBalance.toString(),
+        reasonCode,
+        `"${memo}"`,
+        `"${createdBy}"`,
+      ];
+      csvLines.push(row.join(','));
+    }
+
+    return csvLines.join('\n');
+  }
+
+  /**
+   * Get all user balances for an organization
+   */
+  async getAllBalances(orgId: string) {
+    const balances = await this.prisma.creditBalance.findMany({
+      where: { orgId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        balance: 'desc',
+      },
+    });
+
+    return balances.map(b => ({
+      userId: b.userId,
+      userName: b.user.name,
+      userEmail: b.user.email,
+      balance: b.balance,
+      lastTransactionAt: b.lastTransactionAt,
+    }));
   }
 }

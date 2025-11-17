@@ -6,8 +6,14 @@ import {
   UseGuards,
   Query,
   Param,
+  Res,
+  HttpStatus,
+  ValidationPipe,
+  UsePipes,
 } from '@nestjs/common';
-import { CreditsService, CreditAdjustDto } from './credits.service';
+import { Response } from 'express';
+import { CreditsService } from './credits.service';
+import { AdjustCreditsDto, RedeemCreditsDto, GetHistoryDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -40,16 +46,56 @@ export class CreditsController {
   }
 
   /**
-   * Get full transaction history (staff only)
+   * Get full transaction history with pagination and filtering (staff only)
    */
   @Get('history/:userId')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
+  @UsePipes(new ValidationPipe({ transform: true }))
   async getHistory(
     @CurrentUser() user: any,
-    @Param('userId') userId: string
+    @Param('userId') userId: string,
+    @Query() filters: GetHistoryDto
   ) {
-    return this.creditsService.getTransactionHistory(user.orgId, userId);
+    return this.creditsService.getTransactionHistory(user.orgId, userId, filters);
+  }
+
+  /**
+   * Export transaction history to CSV (staff only)
+   */
+  @Get('history/:userId/export')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async exportHistory(
+    @CurrentUser() user: any,
+    @Param('userId') userId: string,
+    @Query() filters: GetHistoryDto,
+    @Res() res: Response
+  ) {
+    const csv = await this.creditsService.exportTransactionHistory(
+      user.orgId,
+      userId,
+      filters
+    );
+
+    // Get user info for filename
+    const userInfo = await this.creditsService.getBalanceWithHistory(user.orgId, userId);
+    const filename = `credits-history-${userId}-${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  }
+
+  /**
+   * Get all user balances for the organization (staff only)
+   */
+  @Get('all-balances')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async getAllBalances(@CurrentUser() user: any) {
+    return this.creditsService.getAllBalances(user.orgId);
   }
 
   /**
@@ -58,7 +104,8 @@ export class CreditsController {
   @Post('adjust')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async adjustCredits(@CurrentUser() user: any, @Body() dto: CreditAdjustDto) {
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async adjustCredits(@CurrentUser() user: any, @Body() dto: AdjustCreditsDto) {
     return this.creditsService.adjustCredits(user.orgId, dto, user.id);
   }
 
@@ -68,16 +115,17 @@ export class CreditsController {
   @Post('redeem')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async redeemCredits(
     @CurrentUser() user: any,
-    @Body() body: { userId: string; amount: number; memo?: string }
+    @Body() dto: RedeemCreditsDto
   ) {
     return this.creditsService.redeemCredits(
       user.orgId,
-      body.userId,
-      body.amount,
+      dto.userId,
+      dto.amount,
       user.id,
-      body.memo
+      dto.memo
     );
   }
 
