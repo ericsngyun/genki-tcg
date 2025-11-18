@@ -25,54 +25,55 @@ genki-tcg/
 └── package.json          # Workspace root
 ```
 
-## Prerequisites
+## Quick Start
+
+**New to the project?** See the [Complete Setup Guide](./SETUP_GUIDE.md) for detailed Windows setup instructions.
+
+### Prerequisites
 
 - Node.js >= 20.0.0
 - npm >= 10.0.0
+
+### Development (Using Railway Backend)
+
+```bash
+# 1. Clone and install
+git clone [YOUR_REPO_URL]
+cd genki-tcg
+npm install
+
+# 2. Configure frontend apps
+# Copy and edit these files with Railway backend URL:
+# - apps/admin-web/.env.local
+# - apps/mobile/.env
+
+# 3. Start admin dashboard
+npm run dev:admin
+# Open http://localhost:3000
+# Login: owner@genki-tcg.com / password123
+
+# 4. Start mobile (optional)
+npm run dev:mobile
+```
+
+### Local Backend Development (Optional)
+
+If you need to run the backend locally:
+
 - PostgreSQL >= 14
 - Redis >= 7
 
-## Setup
-
-### 1. Install Dependencies
-
 ```bash
-npm install
-```
-
-### 2. Configure Environment
-
-```bash
+# Configure backend environment
 cp .env.example .env
-# Edit .env with your database, auth, and service credentials
-```
+# Edit .env with your local database credentials
 
-### 3. Database Setup
-
-```bash
-# Run migrations
+# Setup database
 npm run db:migrate
-
-# Seed initial data (creates Genki org and test users)
 npm run db:seed
 
-# Open Prisma Studio to inspect data
-npm run db:studio
-```
-
-### 4. Development
-
-```bash
-# Run all services in separate terminals:
-
-# Terminal 1: Backend API
+# Start backend
 npm run dev:backend
-
-# Terminal 2: Admin Web
-npm run dev:admin
-
-# Terminal 3: Mobile (requires Expo Go app on your phone)
-npm run dev:mobile
 ```
 
 ## Core Features
@@ -123,6 +124,15 @@ npm run db:migrate       # Run Prisma migrations
 npm run db:studio        # Open Prisma Studio
 npm run db:seed          # Seed database with initial data
 ```
+
+## Documentation
+
+- **[Setup Guide](./SETUP_GUIDE.md)** - Complete setup instructions for Windows
+- **[Backend Architecture](./BACKEND_ARCHITECTURE.md)** - Technical architecture and design decisions
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Production deployment to Railway
+- **[Testing Guide](./TESTING_GUIDE.md)** - Testing strategy and running tests
+- **[Product Roadmap](./PRODUCT_ROADMAP.md)** - Future features and enhancements
+- **[Security Audit](./SECURITY_AUDIT.md)** - Security review and best practices
 
 ## License
 
