@@ -22,7 +22,11 @@ import { SeedModule } from './seed/seed.module';
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../../.env',
+      envFilePath: [
+        '../../.env',      // From apps/backend when running with npm run dev
+        '../../../.env',   // From apps/backend/src if needed
+        '.env',            // Current directory fallback
+      ],
     }),
 
     // Rate limiting
