@@ -1,10 +1,17 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
+interface QueueItem {
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}
+
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: QueueItem[] = [];
 
   constructor() {
     this.client = axios.create({
@@ -14,23 +21,71 @@ class ApiClient {
       },
     });
 
-    // Add auth token to requests
+    // Add access token to requests
     this.client.interceptors.request.use(async (config) => {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const accessToken = await AsyncStorage.getItem('access_token');
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
       }
       return config;
     });
 
-    // Handle auth errors
+    // Handle auth errors and auto-refresh
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (error.response?.status === 401) {
-          await AsyncStorage.removeItem('auth_token');
-          // TODO: Navigate to login screen
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            // Queue this request
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then(async (token) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return this.client(originalRequest);
+              })
+              .catch((err) => {
+                return Promise.reject(err);
+              });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          try {
+            const refreshToken = await AsyncStorage.getItem('refresh_token');
+            if (!refreshToken) {
+              throw new Error('No refresh token available');
+            }
+
+            const { data } = await axios.post(`${API_URL}/auth/refresh`, {
+              refreshToken,
+            });
+
+            const { accessToken } = data;
+            await AsyncStorage.setItem('access_token', accessToken);
+
+            // Retry all queued requests with new token
+            this.failedQueue.forEach((prom) => prom.resolve(accessToken));
+            this.failedQueue = [];
+
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return this.client(originalRequest);
+          } catch (refreshError) {
+            // Refresh failed, clear all tokens and reject queued requests
+            this.failedQueue.forEach((prom) => prom.reject(refreshError));
+            this.failedQueue = [];
+
+            await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
+            // TODO: Navigate to login screen
+            return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
+
         return Promise.reject(error);
       }
     );
@@ -42,9 +97,22 @@ class ApiClient {
       email,
       password,
     });
-    if (data.token) {
-      await AsyncStorage.setItem('auth_token', data.token);
+
+    // Store both tokens from new format
+    if (data.accessToken && data.refreshToken) {
+      await AsyncStorage.multiSet([
+        ['access_token', data.accessToken],
+        ['refresh_token', data.refreshToken],
+      ]);
+      // Remove old token format if it exists
+      await AsyncStorage.removeItem('auth_token');
     }
+    // Backward compatibility: if old format is still returned
+    else if (data.token) {
+      await AsyncStorage.setItem('access_token', data.token);
+      await AsyncStorage.removeItem('auth_token');
+    }
+
     return data;
   }
 
@@ -55,9 +123,22 @@ class ApiClient {
       name,
       inviteCode,
     });
-    if (data.token) {
-      await AsyncStorage.setItem('auth_token', data.token);
+
+    // Store both tokens from new format
+    if (data.accessToken && data.refreshToken) {
+      await AsyncStorage.multiSet([
+        ['access_token', data.accessToken],
+        ['refresh_token', data.refreshToken],
+      ]);
+      // Remove old token format if it exists
+      await AsyncStorage.removeItem('auth_token');
     }
+    // Backward compatibility: if old format is still returned
+    else if (data.token) {
+      await AsyncStorage.setItem('access_token', data.token);
+      await AsyncStorage.removeItem('auth_token');
+    }
+
     return data;
   }
 
@@ -67,7 +148,16 @@ class ApiClient {
   }
 
   async logout() {
-    await AsyncStorage.removeItem('auth_token');
+    try {
+      // Call backend to revoke refresh token
+      await this.client.post('/auth/logout');
+    } catch (error) {
+      // Continue with local logout even if backend call fails
+      console.error('Logout error:', error);
+    } finally {
+      // Clear all tokens from local storage
+      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
+    }
   }
 
   // Events

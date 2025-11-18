@@ -12,8 +12,16 @@ export default function HomeScreen() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (token) {
+      // Check for both new and old token formats
+      const accessToken = await AsyncStorage.getItem('access_token');
+      const oldToken = await AsyncStorage.getItem('auth_token');
+
+      if (accessToken || oldToken) {
+        // Migrate old token to new format if needed
+        if (oldToken && !accessToken) {
+          await AsyncStorage.setItem('access_token', oldToken);
+          await AsyncStorage.removeItem('auth_token');
+        }
         router.replace('/events');
       } else {
         router.replace('/login');
