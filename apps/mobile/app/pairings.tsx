@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '../lib/api';
+import { theme } from '../lib/theme';
 
 interface Pairing {
   id: string;
@@ -127,7 +128,7 @@ export default function PairingsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
@@ -309,59 +310,57 @@ export default function PairingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
     padding: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.colors.background.card,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#E0E7FF',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
   },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.semibold,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
   },
   errorText: {
-    fontSize: 16,
-    color: '#EF4444',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.error.main,
     textAlign: 'center',
   },
   myPairingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.lg,
     margin: 16,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#4F46E5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    borderColor: theme.colors.primary.main,
+    ...theme.shadows.lg,
   },
   myPairingLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
     letterSpacing: 1,
     marginBottom: 12,
   },
@@ -369,23 +368,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tableNumberBadge: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
+    backgroundColor: theme.colors.primary.main,
+    borderRadius: theme.borderRadius.md,
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginBottom: 16,
   },
   tableNumberLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#E0E7FF',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.lightest,
     textAlign: 'center',
     letterSpacing: 1,
   },
   tableNumber: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.foreground,
     textAlign: 'center',
   },
   matchupContainer: {
@@ -393,39 +392,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   playerName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
     marginVertical: 4,
   },
   vsText: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.tertiary,
     marginVertical: 8,
   },
   youLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4F46E5',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
   },
   byeLabel: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontStyle: 'italic',
-    color: '#9CA3AF',
+    color: theme.colors.text.tertiary,
   },
   resultContainer: {
     marginTop: 8,
   },
   resultText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
     textAlign: 'center',
   },
   resultCompleted: {
-    color: '#10B981',
+    color: theme.colors.success.main,
   },
   resultPending: {
-    color: '#F59E0B',
+    color: theme.colors.warning.main,
   },
   roundSelectorContainer: {
     paddingHorizontal: 16,
@@ -434,42 +433,44 @@ const styles = StyleSheet.create({
   roundButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.base,
     marginRight: 8,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border.light,
   },
   roundButtonActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: theme.colors.primary.main,
+    borderColor: theme.colors.primary.main,
   },
   roundButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.secondary,
   },
   roundButtonTextActive: {
-    color: '#FFFFFF',
+    color: theme.colors.primary.foreground,
   },
   allPairingsContainer: {
     padding: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
     marginBottom: 12,
   },
   pairingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.md,
     padding: 16,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   pairingCardHighlight: {
     borderWidth: 2,
-    borderColor: '#4F46E5',
+    borderColor: theme.colors.primary.main,
   },
   pairingHeader: {
     flexDirection: 'row',
@@ -478,19 +479,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pairingTable: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
   },
   pairingStatus: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   pairingStatusCompleted: {
-    color: '#10B981',
+    color: theme.colors.success.main,
   },
   pairingStatusPending: {
-    color: '#F59E0B',
+    color: theme.colors.warning.main,
   },
   pairingMatchup: {
     flexDirection: 'row',
@@ -499,24 +500,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pairingPlayer: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.text.primary,
     flex: 1,
   },
   pairingVs: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
     marginHorizontal: 8,
   },
   pairingResult: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
     fontStyle: 'italic',
   },
   youBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
   },
 });

@@ -224,6 +224,28 @@ export default function EventsScreen() {
 
                   {/* Action Buttons */}
                   <View style={styles.actionsContainer}>
+                    {/* Show "View Match" button for IN_PROGRESS events */}
+                    {event.status === 'IN_PROGRESS' && isCheckedIn(event) && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.primaryActionButton]}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/match-details',
+                            params: {
+                              eventId: event.id,
+                              eventName: event.name,
+                              gameType: event.game,
+                            },
+                          })
+                        }
+                      >
+                        <Ionicons name="trophy" size={20} color={theme.colors.primary.foreground} />
+                        <Text style={[styles.actionButtonText, styles.primaryActionButtonText]}>
+                          View Active Match
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
                     <TouchableOpacity
                       style={styles.actionButton}
                       onPress={() =>
@@ -423,22 +445,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 8,
   },
   actionButton: {
-    flex: 1,
+    flexDirection: 'row',
     backgroundColor: theme.colors.background.elevated,
     borderRadius: theme.borderRadius.base,
     paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.border.main,
+  },
+  primaryActionButton: {
+    backgroundColor: theme.colors.primary.main,
+    borderColor: theme.colors.primary.main,
   },
   actionButtonText: {
     color: theme.colors.text.primary,
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.semibold,
+  },
+  primaryActionButtonText: {
+    color: theme.colors.primary.foreground,
   },
   emptyState: {
     padding: 48,

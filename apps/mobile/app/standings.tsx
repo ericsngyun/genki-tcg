@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { api } from '../lib/api';
+import { theme } from '../lib/theme';
 
 interface Standing {
   userId: string;
@@ -87,7 +88,7 @@ export default function StandingsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
@@ -255,59 +256,57 @@ export default function StandingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
     padding: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: theme.colors.background.card,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#E0E7FF',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
   },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.semibold,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
   },
   errorText: {
-    fontSize: 16,
-    color: '#EF4444',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.error.main,
     textAlign: 'center',
   },
   myStandingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.lg,
     margin: 16,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#4F46E5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    borderColor: theme.colors.primary.main,
+    ...theme.shadows.lg,
   },
   myStandingLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
     letterSpacing: 1,
     marginBottom: 12,
   },
@@ -315,23 +314,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rankBadge: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
+    backgroundColor: theme.colors.primary.main,
+    borderRadius: theme.borderRadius.md,
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginBottom: 16,
   },
   rankLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#E0E7FF',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.lightest,
     textAlign: 'center',
     letterSpacing: 1,
   },
   rankNumber: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.foreground,
     textAlign: 'center',
   },
   statsGrid: {
@@ -347,32 +346,34 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
   },
   standingsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background.card,
     margin: 16,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.md,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background.elevated,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 2,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: theme.colors.border.main,
   },
   headerCell: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -381,39 +382,39 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.colors.border.light,
   },
   tableRowHighlight: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primary.lightest,
   },
   tableRowDropped: {
     opacity: 0.5,
   },
   cell: {
-    fontSize: 13,
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.primary,
   },
   rankCell: {
     width: 50,
   },
   rankText: {
-    fontWeight: '700',
+    fontWeight: theme.typography.fontWeight.bold,
     textAlign: 'center',
   },
   playerCell: {
     flex: 1,
   },
   playerText: {
-    fontWeight: '600',
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   playerTextMe: {
-    color: '#4F46E5',
+    color: theme.colors.primary.main,
   },
   pointsCell: {
     width: 40,
   },
   pointsText: {
-    fontWeight: '700',
+    fontWeight: theme.typography.fontWeight.bold,
     textAlign: 'center',
   },
   recordCell: {
@@ -421,23 +422,23 @@ const styles = StyleSheet.create({
   },
   recordText: {
     textAlign: 'center',
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs,
   },
   tieCell: {
     width: 55,
   },
   tieText: {
     textAlign: 'right',
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs,
   },
   youBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
   },
   droppedBadge: {
-    fontSize: 10,
-    color: '#EF4444',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.error.main,
     marginTop: 2,
   },
   footer: {
@@ -445,14 +446,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   footerText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   footerSubtext: {
-    fontSize: 10,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
   },
 });
