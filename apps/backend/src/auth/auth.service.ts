@@ -2,13 +2,21 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
 import type { User, OrgMembership } from '@prisma/client';
-import { SignupDto, LoginDto } from './dto';
+import {
+  SignupDto,
+  LoginDto,
+  RefreshTokenDto,
+  ForgotPasswordDto,
+  ResetPasswordDto
+} from './dto';
 
 export interface JwtPayload {
   sub: string; // user ID
@@ -70,12 +78,14 @@ export class AuthService {
 
     const membership = user.memberships[0];
 
-    // Generate JWT
-    const token = this.generateToken(user, membership, org.id);
+    // Generate access token and refresh token
+    const accessToken = this.generateToken(user, membership, org.id);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       user: this.sanitizeUser(user),
-      token,
+      accessToken,
+      refreshToken,
       orgMembership: membership,
     };
   }
@@ -109,11 +119,14 @@ export class AuthService {
       throw new UnauthorizedException('No organization membership');
     }
 
-    const token = this.generateToken(user, membership, membership.orgId);
+    // Generate access token and refresh token
+    const accessToken = this.generateToken(user, membership, membership.orgId);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       user: this.sanitizeUser(user),
-      token,
+      accessToken,
+      refreshToken,
       orgMembership: membership,
     };
   }
@@ -145,11 +158,318 @@ export class AuthService {
       role: membership.role,
     };
 
-    return this.jwtService.sign(payload);
+    // Role-based token expiry for enhanced security
+    // Admins get shorter sessions, players get longer sessions
+    const expiresIn = this.getTokenExpiryByRole(membership.role);
+
+    return this.jwtService.sign(payload, { expiresIn });
+  }
+
+  private getTokenExpiryByRole(role: string): string {
+    switch (role) {
+      case 'OWNER':
+        return '1h'; // 1 hour for owners (most sensitive)
+      case 'STAFF':
+        return '4h'; // 4 hours for staff
+      case 'PLAYER':
+      default:
+        return '7d'; // 7 days for players (convenience)
+    }
   }
 
   private sanitizeUser(user: User) {
     const { passwordHash, ...sanitized } = user;
     return sanitized;
+  }
+
+  // ============================================================================
+  // Refresh Token Management
+  // ============================================================================
+
+  async generateRefreshToken(userId: string, deviceInfo?: {
+    deviceName?: string;
+    deviceType?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<string> {
+    // Generate a secure random token
+    const token = crypto.randomBytes(64).toString('hex');
+
+    // Refresh tokens expire in 90 days
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 90);
+
+    // Store refresh token in database
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt,
+        deviceName: deviceInfo?.deviceName,
+        deviceType: deviceInfo?.deviceType,
+        ipAddress: deviceInfo?.ipAddress,
+        userAgent: deviceInfo?.userAgent,
+      },
+    });
+
+    return token;
+  }
+
+  async refreshAccessToken(dto: RefreshTokenDto) {
+    const { refreshToken } = dto;
+
+    // Find and validate refresh token
+    const tokenRecord = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: {
+        user: {
+          include: {
+            memberships: {
+              include: {
+                org: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!tokenRecord) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Check if token is expired
+    if (tokenRecord.expiresAt < new Date()) {
+      await this.prisma.refreshToken.delete({
+        where: { id: tokenRecord.id },
+      });
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    // Check if token is revoked
+    if (tokenRecord.revokedAt) {
+      throw new UnauthorizedException('Refresh token revoked');
+    }
+
+    // Update last used timestamp
+    await this.prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: { lastUsedAt: new Date() },
+    });
+
+    const user = tokenRecord.user;
+    const membership = user.memberships[0];
+
+    if (!membership) {
+      throw new UnauthorizedException('No organization membership');
+    }
+
+    // Generate new access token
+    const accessToken = this.generateToken(user, membership, membership.orgId);
+
+    return {
+      accessToken,
+      user: this.sanitizeUser(user),
+      orgMembership: membership,
+    };
+  }
+
+  async revokeRefreshToken(refreshToken: string) {
+    const tokenRecord = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+    });
+
+    if (!tokenRecord) {
+      throw new NotFoundException('Refresh token not found');
+    }
+
+    await this.prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: { revokedAt: new Date() },
+    });
+
+    return { message: 'Refresh token revoked successfully' };
+  }
+
+  async revokeAllRefreshTokens(userId: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return { message: 'All refresh tokens revoked successfully' };
+  }
+
+  async getUserSessions(userId: string) {
+    const sessions = await this.prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        deviceName: true,
+        deviceType: true,
+        ipAddress: true,
+        createdAt: true,
+        lastUsedAt: true,
+      },
+      orderBy: {
+        lastUsedAt: 'desc',
+      },
+    });
+
+    return sessions;
+  }
+
+  // ============================================================================
+  // Password Reset
+  // ============================================================================
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const { email } = dto;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Don't reveal if user exists or not (security best practice)
+    if (!user) {
+      return {
+        message: 'If an account with that email exists, a password reset link has been sent.',
+      };
+    }
+
+    // Generate reset token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+
+    // Delete any existing unused reset tokens for this user
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+    });
+
+    // Create new reset token
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt,
+      },
+    });
+
+    // TODO: Send email with reset link
+    // For now, we'll just return the token (in production, this should be sent via email)
+    // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    // await this.emailService.sendPasswordResetEmail(user.email, resetLink);
+
+    console.log(`Password reset token for ${email}: ${token}`);
+
+    return {
+      message: 'If an account with that email exists, a password reset link has been sent.',
+      // REMOVE THIS IN PRODUCTION - only for development
+      resetToken: process.env.NODE_ENV === 'development' ? token : undefined,
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { token, newPassword } = dto;
+
+    // Find and validate reset token
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Check if token is expired
+    if (resetToken.expiresAt < new Date()) {
+      await this.prisma.passwordResetToken.delete({
+        where: { id: resetToken.id },
+      });
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    // Check if token was already used
+    if (resetToken.usedAt) {
+      throw new BadRequestException('Reset token has already been used');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update user password and mark token as used
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      // Revoke all refresh tokens for security (force re-login on all devices)
+      this.prisma.refreshToken.updateMany({
+        where: { userId: resetToken.userId },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message: 'Password reset successfully. Please login with your new password.',
+    };
+  }
+
+  // ============================================================================
+  // Email Verification
+  // ============================================================================
+
+  async sendVerificationEmail(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    // Generate verification token (reuse password reset token structure)
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // TODO: Send verification email
+    // For now, we'll just log the token
+    console.log(`Email verification token for ${user.email}: ${token}`);
+
+    return {
+      message: 'Verification email sent',
+      // REMOVE THIS IN PRODUCTION
+      verificationToken: process.env.NODE_ENV === 'development' ? token : undefined,
+    };
+  }
+
+  async verifyEmail(token: string) {
+    // TODO: Implement email verification token lookup
+    // For now, this is a placeholder
+
+    throw new BadRequestException('Email verification not fully implemented');
   }
 }

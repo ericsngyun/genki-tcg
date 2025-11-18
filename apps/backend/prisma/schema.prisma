@@ -16,16 +16,16 @@ datasource db {
 // ============================================================================
 
 model Organization {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  inviteCode    String   @unique
-  logoUrl       String?
-  primaryColor  String?  @default("#4F46E5") // Indigo-600
+  id             String  @id @default(cuid())
+  name           String
+  slug           String  @unique
+  inviteCode     String  @unique
+  logoUrl        String?
+  primaryColor   String? @default("#4F46E5") // Indigo-600
   secondaryColor String? @default("#10B981") // Emerald-500
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   memberships   OrgMembership[]
@@ -38,26 +38,32 @@ model Organization {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String
   passwordHash String?
-  avatarUrl String?
+  avatarUrl    String?
+
+  // Email verification
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships      OrgMembership[]
-  creditEntries    CreditLedgerEntry[] @relation("CreditLedgerUser")
-  creditEntriesCreated CreditLedgerEntry[] @relation("CreditLedgerCreator")
-  creditBalances   CreditBalance[]
-  entries          Entry[]
-  decklists        Decklist[]
-  matchesAsPlayerA Match[]         @relation("MatchPlayerA")
-  matchesAsPlayerB Match[]         @relation("MatchPlayerB")
-  notificationTokens NotificationToken[]
-  auditLogs        AuditLog[]      @relation("AuditPerformer")
+  memberships          OrgMembership[]
+  creditEntries        CreditLedgerEntry[]  @relation("CreditLedgerUser")
+  creditEntriesCreated CreditLedgerEntry[]  @relation("CreditLedgerCreator")
+  creditBalances       CreditBalance[]
+  entries              Entry[]
+  decklists            Decklist[]
+  matchesAsPlayerA     Match[]              @relation("MatchPlayerA")
+  matchesAsPlayerB     Match[]              @relation("MatchPlayerB")
+  notificationTokens   NotificationToken[]
+  auditLogs            AuditLog[]           @relation("AuditPerformer")
+  refreshTokens        RefreshToken[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@index([email])
 }
@@ -87,6 +93,51 @@ model OrgMembership {
 }
 
 // ============================================================================
+// Authentication & Security
+// ============================================================================
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+
+  // Device information for session management
+  deviceName String?
+  deviceType String? // "mobile", "web", "desktop"
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ============================================================================
 // Credits System
 // ============================================================================
 
@@ -101,23 +152,23 @@ enum CreditReasonCode {
 }
 
 model CreditLedgerEntry {
-  id        String           @id @default(cuid())
-  orgId     String
-  userId    String
-  amount    Int              // Signed: positive = credit, negative = debit
+  id         String           @id @default(cuid())
+  orgId      String
+  userId     String
+  amount     Int // Signed: positive = credit, negative = debit
   reasonCode CreditReasonCode
-  memo      String?
+  memo       String?
 
   relatedEventId String?
-  createdBy      String   // User ID of staff/owner
+  createdBy      String // User ID of staff/owner
 
   createdAt DateTime @default(now())
 
   // Relations
-  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade, name: "CreditLedgerUser")
-  createdByUser User  @relation(fields: [createdBy], references: [id], onDelete: Cascade, name: "CreditLedgerCreator")
-  event Event?       @relation(fields: [relatedEventId], references: [id], onDelete: SetNull)
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade, name: "CreditLedgerUser")
+  createdByUser User         @relation(fields: [createdBy], references: [id], onDelete: Cascade, name: "CreditLedgerCreator")
+  event         Event?       @relation(fields: [relatedEventId], references: [id], onDelete: SetNull)
 
   @@index([orgId, userId])
   @@index([userId, createdAt(sort: Desc)])
@@ -127,10 +178,10 @@ model CreditLedgerEntry {
 
 // Derived balance table for performance
 model CreditBalance {
-  id        String @id @default(cuid())
-  orgId     String
-  userId    String
-  balance   Int    @default(0)
+  id      String @id @default(cuid())
+  orgId   String
+  userId  String
+  balance Int    @default(0)
 
   lastTransactionAt DateTime?
   updatedAt         DateTime  @updatedAt
@@ -179,33 +230,33 @@ model Event {
   status      EventStatus @default(DRAFT)
   description String?
 
-  startAt     DateTime
-  endAt       DateTime?
-  maxPlayers  Int?
+  startAt       DateTime
+  endAt         DateTime?
+  maxPlayers    Int?
   entryFeeCents Int?      @default(0)
 
   requiresDecklist      Boolean @default(false)
   allowLateRegistration Boolean @default(true)
 
-  roundsPlanned  Int?
-  currentRound   Int?        @default(0)
+  roundsPlanned Int?
+  currentRound  Int? @default(0)
 
   // Prize distribution
-  totalPrizeCredits    Int?     @default(0)
-  prizesDistributed    Boolean  @default(false)
-  prizesDistributedAt  DateTime?
-  prizesDistributedBy  String?
+  totalPrizeCredits   Int?      @default(0)
+  prizesDistributed   Boolean   @default(false)
+  prizesDistributedAt DateTime?
+  prizesDistributedBy String?
 
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  org              Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  entries          Entry[]
-  rounds           Round[]
+  org               Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entries           Entry[]
+  rounds            Round[]
   standingSnapshots StandingSnapshot[]
-  creditEntries    CreditLedgerEntry[]
+  creditEntries     CreditLedgerEntry[]
 
   @@index([orgId, status])
   @@index([orgId, startAt])
@@ -217,19 +268,19 @@ model Event {
 // ============================================================================
 
 model Entry {
-  id          String    @id @default(cuid())
-  eventId     String
-  userId      String
+  id      String @id @default(cuid())
+  eventId String
+  userId  String
 
-  registeredAt DateTime  @default(now())
-  checkedInAt  DateTime?
-  droppedAt    DateTime?
+  registeredAt      DateTime  @default(now())
+  checkedInAt       DateTime?
+  droppedAt         DateTime?
   droppedAfterRound Int?
 
   // Payment tracking
-  paidAt      DateTime?
-  paidAmount  Int?      // Amount paid in cents
-  paidBy      String?   // Staff user ID who confirmed payment
+  paidAt     DateTime?
+  paidAmount Int? // Amount paid in cents
+  paidBy     String? // Staff user ID who confirmed payment
 
   decklistId String?
 
@@ -245,13 +296,13 @@ model Entry {
 }
 
 model Decklist {
-  id       String @id @default(cuid())
-  entryId  String @unique
-  userId   String
+  id      String @id @default(cuid())
+  entryId String @unique
+  userId  String
 
-  deckName      String?
-  mainDeckUrl   String?
-  mainDeckJson  Json?
+  deckName     String?
+  mainDeckUrl  String?
+  mainDeckJson Json?
 
   lockedAt  DateTime?
   createdAt DateTime  @default(now())
@@ -283,7 +334,7 @@ model Round {
 
   startAt      DateTime?
   endAt        DateTime?
-  timerSeconds Int?       @default(3000) // 50 minutes default
+  timerSeconds Int?      @default(3000) // 50 minutes default
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -307,7 +358,7 @@ enum MatchResult {
 }
 
 model Match {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   roundId     String
   tableNumber Int
 
@@ -315,23 +366,23 @@ model Match {
   playerBId String? // Null for bye
 
   result    MatchResult?
-  gamesWonA Int?        @default(0)
-  gamesWonB Int?        @default(0)
+  gamesWonA Int?         @default(0)
+  gamesWonB Int?         @default(0)
 
-  reportedBy  String?   // User ID
-  confirmedBy String?   // User ID (for player self-report)
+  reportedBy  String? // User ID
+  confirmedBy String? // User ID (for player self-report)
   reportedAt  DateTime?
 
-  overriddenBy String?   // Staff user ID
+  overriddenBy String? // Staff user ID
   overriddenAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  round    Round  @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  playerA  User   @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
-  playerB  User?  @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  round   Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerA User  @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB User? @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
 
   @@unique([roundId, tableNumber])
   @@index([roundId])
@@ -406,7 +457,7 @@ model AuditLog {
   id          String      @id @default(cuid())
   orgId       String
   action      AuditAction
-  performedBy String      // User ID
+  performedBy String // User ID
 
   targetUserId  String?
   targetEventId String?
