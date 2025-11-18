@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function DashboardLayout({
   children,
@@ -21,7 +22,7 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -32,37 +33,44 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200" role="banner">
+      <header className="bg-card border-b border-border backdrop-blur-sm sticky top-0 z-50" role="banner">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <Link
                 href="/dashboard"
-                className="text-xl font-bold text-gray-900"
+                className="flex items-center"
                 aria-label="Genki TCG Home"
               >
-                Genki TCG
+                <Image
+                  src="/genki-logo.svg"
+                  alt="Genki TCG"
+                  width={140}
+                  height={42}
+                  priority
+                  className="h-8 w-auto"
+                />
               </Link>
-              <nav className="hidden md:flex space-x-6" aria-label="Main navigation">
+              <nav className="hidden md:flex space-x-1" aria-label="Main navigation">
                 <Link
                   href="/dashboard"
-                  className="text-gray-700 hover:text-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
                   aria-label="Events management"
                 >
                   Events
                 </Link>
                 <Link
                   href="/dashboard/players"
-                  className="text-gray-700 hover:text-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
                   aria-label="Players management"
                 >
                   Players
                 </Link>
                 <Link
                   href="/dashboard/credits"
-                  className="text-gray-700 hover:text-primary transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
                   aria-label="Credits management"
                 >
                   Credits
@@ -71,12 +79,12 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-700" role="status" aria-label={`Logged in as ${user.name}`}>
+              <div className="text-sm text-foreground" role="status" aria-label={`Logged in as ${user.name}`}>
                 <span className="font-medium">{user.name}</span>
               </div>
               <button
                 onClick={logout}
-                className="text-sm text-gray-600 hover:text-gray-900 transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-3 py-1"
+                className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-lg px-3 py-2 font-medium"
                 aria-label="Sign out of your account"
               >
                 Sign Out

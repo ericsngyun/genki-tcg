@@ -327,14 +327,14 @@ export default function EventDetailPage() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading event...</p>
+        <p className="mt-4 text-muted-foreground">Loading event...</p>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+      <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-lg">
         {error || 'Event not found'}
       </div>
     );
@@ -345,13 +345,13 @@ export default function EventDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-card rounded-lg border border-border p-6 mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               {event.name}
             </h1>
-            <div className="flex items-center space-x-6 text-sm text-gray-600">
+            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
               <span>🎮 {formatGameName(event.game)}</span>
               <span>📋 {formatEventFormat(event.format)}</span>
               <span>
@@ -365,19 +365,19 @@ export default function EventDetailPage() {
                 })}
               </span>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                event.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' :
-                event.status === 'IN_PROGRESS' ? 'bg-green-100 text-green-800' :
-                'bg-gray-100 text-gray-800'
+                event.status === 'SCHEDULED' ? 'bg-blue-500/10 text-blue-400' :
+                event.status === 'IN_PROGRESS' ? 'bg-green-500/10 text-green-400' :
+                'bg-muted text-muted-foreground'
               }`}>
                 {event.status.replace('_', ' ')}
               </span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {checkedInCount}
             </div>
-            <div className="text-sm text-gray-600">Checked In</div>
+            <div className="text-sm text-muted-foreground">Checked In</div>
           </div>
         </div>
 
@@ -393,15 +393,15 @@ export default function EventDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="border-b border-gray-200">
+      <div className="bg-card rounded-lg border border-border">
+        <div className="border-b border-border">
           <div className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('players')}
               className={`py-4 border-b-2 font-medium transition ${
                 activeTab === 'players'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Players ({event.entries.length})
@@ -411,7 +411,7 @@ export default function EventDetailPage() {
               className={`py-4 border-b-2 font-medium transition ${
                 activeTab === 'rounds'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Rounds ({event.rounds.length})
@@ -421,7 +421,7 @@ export default function EventDetailPage() {
               className={`py-4 border-b-2 font-medium transition ${
                 activeTab === 'standings'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Standings
@@ -434,7 +434,7 @@ export default function EventDetailPage() {
           {activeTab === 'players' && (
             <div>
               {event.entries.length === 0 ? (
-                <p className="text-center text-gray-600 py-8">
+                <p className="text-center text-muted-foreground py-8">
                   No players registered yet
                 </p>
               ) : (
@@ -459,53 +459,53 @@ export default function EventDetailPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-gray-200 text-left">
-                          <th className="pb-3 font-medium text-gray-700">Name</th>
-                          <th className="pb-3 font-medium text-gray-700">Email</th>
-                          <th className="pb-3 font-medium text-gray-700">Registered</th>
-                          <th className="pb-3 font-medium text-gray-700">Payment</th>
-                          <th className="pb-3 font-medium text-gray-700">Status</th>
-                          <th className="pb-3 font-medium text-gray-700">Actions</th>
+                        <tr className="border-b border-border text-left">
+                          <th className="pb-3 font-medium text-muted-foreground">Name</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Email</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Registered</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Payment</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {event.entries.map((entry) => {
                           const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
                           return (
-                          <tr key={entry.id} className="border-b border-gray-100">
-                            <td className="py-3 font-medium text-gray-900">
+                          <tr key={entry.id} className="border-b border-border/50">
+                            <td className="py-3 font-medium text-foreground">
                               {entry.user.name}
                             </td>
-                            <td className="py-3 text-gray-600">
+                            <td className="py-3 text-muted-foreground">
                               {entry.user.email}
                             </td>
-                            <td className="py-3 text-gray-600 text-sm">
+                            <td className="py-3 text-muted-foreground text-sm">
                               {new Date(entry.registeredAt).toLocaleString()}
                             </td>
                             <td className="py-3">
                               {!requiresPayment ? (
-                                <span className="text-xs text-gray-500">Free</span>
+                                <span className="text-xs text-muted-foreground">Free</span>
                               ) : entry.paidAt ? (
-                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-xs font-medium">
                                   Paid
                                 </span>
                               ) : (
-                                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 rounded-full text-xs font-medium">
                                   Unpaid
                                 </span>
                               )}
                             </td>
                             <td className="py-3">
                               {entry.droppedAt ? (
-                                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                <span className="px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-xs font-medium">
                                   Dropped
                                 </span>
                               ) : entry.checkedInAt ? (
-                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-xs font-medium">
                                   Checked In
                                 </span>
                               ) : (
-                                <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+                                <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
                                   Registered
                                 </span>
                               )}
@@ -556,20 +556,20 @@ export default function EventDetailPage() {
           {activeTab === 'rounds' && (
             <div>
               {event.rounds.length === 0 ? (
-                <p className="text-center text-gray-600 py-8">
+                <p className="text-center text-muted-foreground py-8">
                   No rounds created yet. Click "Create Round 1" to start the tournament.
                 </p>
               ) : (
                 <div>
                   {/* Round Selector */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                       Select Round
                     </label>
                     <select
                       value={selectedRound || ''}
                       onChange={(e) => setSelectedRound(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      className="px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                     >
                       {event.rounds.map((round) => (
                         <option key={round.id} value={round.id}>
@@ -581,36 +581,36 @@ export default function EventDetailPage() {
 
                   {/* Pairings */}
                   {pairings.length === 0 ? (
-                    <p className="text-center text-gray-600 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                       Loading pairings...
                     </p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
-                          <tr className="border-b border-gray-200 text-left">
-                            <th className="pb-3 font-medium text-gray-700">Table</th>
-                            <th className="pb-3 font-medium text-gray-700">Player A</th>
-                            <th className="pb-3 font-medium text-gray-700">Player B</th>
-                            <th className="pb-3 font-medium text-gray-700">Result</th>
-                            <th className="pb-3 font-medium text-gray-700">Actions</th>
+                          <tr className="border-b border-border text-left">
+                            <th className="pb-3 font-medium text-muted-foreground">Table</th>
+                            <th className="pb-3 font-medium text-muted-foreground">Player A</th>
+                            <th className="pb-3 font-medium text-muted-foreground">Player B</th>
+                            <th className="pb-3 font-medium text-muted-foreground">Result</th>
+                            <th className="pb-3 font-medium text-muted-foreground">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {pairings.map((pairing) => (
-                            <tr key={pairing.id} className="border-b border-gray-100">
-                              <td className="py-3 font-bold text-gray-900">
+                            <tr key={pairing.id} className="border-b border-border/50">
+                              <td className="py-3 font-bold text-foreground">
                                 {pairing.tableNumber}
                               </td>
-                              <td className="py-3 text-gray-900">
+                              <td className="py-3 text-foreground">
                                 {pairing.playerA.name}
                               </td>
-                              <td className="py-3 text-gray-900">
+                              <td className="py-3 text-foreground">
                                 {pairing.playerB ? pairing.playerB.name : '— BYE —'}
                               </td>
                               <td className="py-3">
                                 {pairing.result ? (
-                                  <span className="text-sm text-gray-700">
+                                  <span className="text-sm text-muted-foreground">
                                     {pairing.result.replace('PLAYER_A_WIN', 'A Wins')
                                       .replace('PLAYER_B_WIN', 'B Wins')
                                       .replace('DRAW', 'Draw')
@@ -619,7 +619,7 @@ export default function EventDetailPage() {
                                       ` (${pairing.gamesWonA}-${pairing.gamesWonB})`}
                                   </span>
                                 ) : (
-                                  <span className="text-sm text-gray-500">Not reported</span>
+                                  <span className="text-sm text-muted-foreground">Not reported</span>
                                 )}
                               </td>
                               <td className="py-3">
@@ -632,7 +632,7 @@ export default function EventDetailPage() {
                                   </button>
                                 )}
                                 {!pairing.result && !pairing.playerB && (
-                                  <span className="text-sm text-gray-400">Auto Win</span>
+                                  <span className="text-sm text-muted-foreground">Auto Win</span>
                                 )}
                               </td>
                             </tr>
@@ -650,7 +650,7 @@ export default function EventDetailPage() {
           {activeTab === 'standings' && (
             <div>
               {standings.length === 0 ? (
-                <p className="text-center text-gray-600 py-8">
+                <p className="text-center text-muted-foreground py-8">
                   No standings available yet. Create a round to start the tournament.
                 </p>
               ) : (
@@ -673,45 +673,45 @@ export default function EventDetailPage() {
                     </button>
                   </div>
                   {event.prizesDistributed && (
-                    <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+                    <div className="mb-4 bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg">
                       ✅ Prize credits have been distributed{event.prizesDistributedAt && ` on ${new Date(event.prizesDistributedAt).toLocaleDateString()}`}
                     </div>
                   )}
                   <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-200 text-left">
-                        <th className="pb-3 font-medium text-gray-700">Rank</th>
-                        <th className="pb-3 font-medium text-gray-700">Player</th>
-                        <th className="pb-3 font-medium text-gray-700 text-right">Points</th>
-                        <th className="pb-3 font-medium text-gray-700 text-right">Record</th>
-                        <th className="pb-3 font-medium text-gray-700 text-right">OMW%</th>
-                        <th className="pb-3 font-medium text-gray-700 text-right">GW%</th>
-                        <th className="pb-3 font-medium text-gray-700 text-right">OOMW%</th>
+                      <tr className="border-b border-border text-left">
+                        <th className="pb-3 font-medium text-muted-foreground">Rank</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Player</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">Points</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">Record</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">OMW%</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">GW%</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">OOMW%</th>
                       </tr>
                     </thead>
                     <tbody>
                       {standings.map((standing) => (
-                        <tr key={standing.userId} className="border-b border-gray-100">
-                          <td className="py-3 font-bold text-gray-900">
+                        <tr key={standing.userId} className="border-b border-border/50">
+                          <td className="py-3 font-bold text-foreground">
                             {standing.rank}
                           </td>
-                          <td className="py-3 text-gray-900">
+                          <td className="py-3 text-foreground">
                             {standing.userName}
                           </td>
-                          <td className="py-3 font-bold text-gray-900 text-right">
+                          <td className="py-3 font-bold text-foreground text-right">
                             {standing.points}
                           </td>
-                          <td className="py-3 text-gray-700 text-right">
+                          <td className="py-3 text-muted-foreground text-right">
                             {standing.matchWins}-{standing.matchLosses}-{standing.matchDraws}
                           </td>
-                          <td className="py-3 text-gray-700 text-right">
+                          <td className="py-3 text-muted-foreground text-right">
                             {(standing.omwPercent * 100).toFixed(1)}%
                           </td>
-                          <td className="py-3 text-gray-700 text-right">
+                          <td className="py-3 text-muted-foreground text-right">
                             {(standing.gwPercent * 100).toFixed(1)}%
                           </td>
-                          <td className="py-3 text-gray-700 text-right">
+                          <td className="py-3 text-muted-foreground text-right">
                             {(standing.oomwPercent * 100).toFixed(1)}%
                           </td>
                         </tr>
@@ -754,22 +754,22 @@ export default function EventDetailPage() {
       {/* Late Add Player Modal */}
       {lateAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Add Late Player</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-foreground">Add Late Player</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Player will be automatically checked in upon addition.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Select Player
               </label>
               {loadingUsers ? (
-                <p className="text-sm text-gray-500">Loading players...</p>
+                <p className="text-sm text-muted-foreground">Loading players...</p>
               ) : (
                 <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                 >
                   <option value="">Choose a player...</option>
                   {orgUsers.map((user) => (
@@ -786,7 +786,7 @@ export default function EventDetailPage() {
                   setLateAddModalOpen(false);
                   setSelectedUserId('');
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                className="px-4 py-2 border border-border rounded-lg text-muted-foreground hover:bg-muted/50 transition"
               >
                 Cancel
               </button>
