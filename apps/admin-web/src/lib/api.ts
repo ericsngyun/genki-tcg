@@ -152,6 +152,21 @@ class ApiClient {
     return data;
   }
 
+  async forgotPassword(email: string) {
+    const { data } = await this.client.post('/auth/forgot-password', {
+      email,
+    });
+    return data;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const { data } = await this.client.post('/auth/reset-password', {
+      token,
+      newPassword,
+    });
+    return data;
+  }
+
   // Events
   async getEvents(status?: string) {
     const { data } = await this.client.get('/events', {
