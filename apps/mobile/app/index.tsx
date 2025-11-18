@@ -22,7 +22,7 @@ export default function HomeScreen() {
           await AsyncStorage.setItem('access_token', oldToken);
           await AsyncStorage.removeItem('auth_token');
         }
-        router.replace('/events');
+        router.replace('/(tabs)/events');
       } else {
         router.replace('/login');
       }

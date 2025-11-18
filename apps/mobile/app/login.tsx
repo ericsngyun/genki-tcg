@@ -30,7 +30,7 @@ export default function LoginScreen() {
 
     try {
       await api.login(email, password);
-      router.replace('/events');
+      router.replace('/(tabs)/events');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials');
     } finally {

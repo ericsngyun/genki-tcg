@@ -10,8 +10,11 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { api } from '../lib/api';
-import { formatGameName, formatEventFormat } from '../lib/formatters';
+import { api } from '../../lib/api';
+import { formatGameName, formatEventFormat } from '../../lib/formatters';
+import { theme } from '../../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'react-native';
 
 interface Event {
   id: string;
@@ -43,24 +46,6 @@ export default function EventsScreen() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await api.logout();
-            router.replace('/login');
-          },
-        },
-      ]
-    );
-  };
 
   const loadData = async () => {
     try {
@@ -136,7 +121,7 @@ export default function EventsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
@@ -145,24 +130,23 @@ export default function EventsScreen() {
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.colors.primary.main}
+        />
       }
     >
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.title}>Upcoming Events</Text>
-            <Text style={styles.subtitle}>
-              Register for tournaments and track your matches
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+        <Image
+          source={require('../../assets/images/genki-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.title}>Upcoming Events</Text>
+        <Text style={styles.subtitle}>
+          Register for tournaments and track your matches
+        </Text>
       </View>
 
       {events.length === 0 ? (
@@ -294,53 +278,45 @@ function getStatusStyle(status: string) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#4F46E5',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.background.card,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+    alignItems: 'center',
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  logo: {
+    width: 140,
+    height: 42,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#E0E7FF',
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   eventList: {
     padding: 16,
   },
   eventCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.md,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    ...theme.shadows.base,
   },
   eventHeader: {
     flexDirection: 'row',
@@ -349,39 +325,39 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.md,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.info.dark,
   },
   eventDetails: {
     marginBottom: 16,
   },
   detailText: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
     marginBottom: 4,
   },
   registerButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary.main,
+    borderRadius: theme.borderRadius.base,
     paddingVertical: 12,
     alignItems: 'center',
   },
   registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.primary.foreground,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   statusRow: {
     marginBottom: 12,
@@ -452,22 +428,24 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#4F46E5',
-    borderRadius: 8,
+    backgroundColor: theme.colors.background.elevated,
+    borderRadius: theme.borderRadius.base,
     paddingVertical: 10,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.main,
   },
   actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   emptyState: {
     padding: 48,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.tertiary,
   },
 });

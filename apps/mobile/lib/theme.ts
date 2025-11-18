@@ -7,13 +7,13 @@
 
 // Color Palette
 export const colors = {
-  // Primary Brand Colors
+  // Primary Brand Colors (Genki Red)
   primary: {
-    main: '#4F46E5',      // Indigo
-    light: '#6366F1',
-    lighter: '#818CF8',
-    lightest: '#E0E7FF',
-    dark: '#4338CA',
+    main: '#DC2626',      // Red-600
+    light: '#EF4444',     // Red-500
+    lighter: '#F87171',   // Red-400
+    lightest: '#FEE2E2',  // Red-100
+    dark: '#B91C1C',      // Red-700
     foreground: '#FFFFFF',
   },
 
@@ -61,27 +61,30 @@ export const colors = {
     900: '#000000',
   },
 
-  // Background Colors
+  // Background Colors (Dark Theme)
   background: {
-    primary: '#FFFFFF',
-    secondary: '#F9FAFB',
-    tertiary: '#F3F4F6',
+    primary: '#000000',      // Pure black
+    secondary: '#09090B',    // Zinc-950
+    tertiary: '#18181B',     // Zinc-900
+    card: '#18181B',         // Zinc-900
+    elevated: '#27272A',     // Zinc-800
   },
 
-  // Text Colors
+  // Text Colors (Dark Theme)
   text: {
-    primary: '#1F2937',
-    secondary: '#6B7280',
-    tertiary: '#9CA3AF',
-    inverse: '#FFFFFF',
-    disabled: '#D1D5DB',
+    primary: '#FAFAFA',      // Zinc-50
+    secondary: '#A1A1AA',    // Zinc-400
+    tertiary: '#71717A',     // Zinc-500
+    inverse: '#09090B',      // Zinc-950
+    disabled: '#52525B',     // Zinc-600
+    muted: '#71717A',        // Zinc-500
   },
 
-  // Border Colors
+  // Border Colors (Dark Theme)
   border: {
-    light: '#E5E7EB',
-    main: '#D1D5DB',
-    dark: '#9CA3AF',
+    light: '#27272A',        // Zinc-800
+    main: '#3F3F46',         // Zinc-700
+    dark: '#52525B',         // Zinc-600
   },
 };
 

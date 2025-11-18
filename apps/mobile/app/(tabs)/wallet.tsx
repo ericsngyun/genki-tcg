@@ -7,7 +7,10 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { api } from '../lib/api';
+import { api } from '../../lib/api';
+import { theme } from '../../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'react-native';
 
 interface Transaction {
   id: string;
@@ -48,7 +51,7 @@ export default function WalletScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
@@ -57,10 +60,19 @@ export default function WalletScreen() {
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.colors.primary.main}
+        />
       }
     >
       <View style={styles.header}>
+        <Image
+          source={require('../../assets/images/genki-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>Credits Wallet</Text>
         <Text style={styles.subtitle}>Track your tournament credits</Text>
       </View>
@@ -111,98 +123,110 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#4F46E5',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.background.card,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 140,
+    height: 42,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#E0E7FF',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   balanceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.lg,
     padding: 32,
     margin: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    ...theme.shadows.base,
   },
   balanceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
     marginBottom: 8,
   },
   balanceAmount: {
     fontSize: 48,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
   },
   balanceUnit: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.tertiary,
     marginTop: 4,
   },
   transactionsSection: {
     padding: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
     marginBottom: 12,
   },
   transactionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.md,
     padding: 16,
     marginBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   transactionLeft: {
     flex: 1,
   },
   transactionAmount: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.semibold,
     marginBottom: 4,
   },
   positive: {
-    color: '#10B981',
+    color: theme.colors.success.main,
   },
   negative: {
-    color: '#EF4444',
+    color: theme.colors.error.main,
   },
   transactionReason: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
     marginBottom: 2,
   },
   transactionMemo: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
   },
   transactionDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
   },
   emptyText: {
     textAlign: 'center',
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.tertiary,
     paddingVertical: 32,
   },
 });
