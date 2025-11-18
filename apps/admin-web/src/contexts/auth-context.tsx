@@ -29,13 +29,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
+      // Check for both new and old token formats for backward compatibility
+      const accessToken = localStorage.getItem('access_token');
+      const oldToken = localStorage.getItem('auth_token');
+
+      if (accessToken || oldToken) {
+        // Migrate old token to new format if needed
+        if (oldToken && !accessToken) {
+          localStorage.setItem('access_token', oldToken);
+          localStorage.removeItem('auth_token');
+        }
+
         const { user } = await api.getMe();
         setUser(user);
       }
     } catch (error) {
+      // Clear all token variants
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
     } finally {
       setLoading(false);
     }
@@ -46,8 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(user);
   };
 
-  const logout = () => {
-    localStorage.removeItem('auth_token');
+  const logout = async () => {
+    await api.logout();
     setUser(null);
     window.location.href = '/login';
   };

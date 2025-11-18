@@ -1,9 +1,14 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value?: any) => void;
+    reject: (error?: any) => void;
+  }> = [];
 
   constructor() {
     this.client = axios.create({
@@ -13,23 +18,80 @@ class ApiClient {
       },
     });
 
-    // Add auth token to requests
+    // Add access token to requests
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const accessToken = localStorage.getItem('access_token');
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
       }
       return config;
     });
 
-    // Handle auth errors
+    // Handle auth errors and auto-refresh
     this.client.interceptors.response.use(
       (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('auth_token');
-          window.location.href = '/login';
+      async (error) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        // If 401 and we haven't tried to refresh yet
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            // Already refreshing, queue this request
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                if (originalRequest.headers) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`;
+                }
+                return this.client(originalRequest);
+              })
+              .catch((err) => Promise.reject(err));
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          try {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken) {
+              throw new Error('No refresh token');
+            }
+
+            // Call refresh endpoint
+            const { data } = await axios.post(`${API_URL}/auth/refresh`, {
+              refreshToken,
+            });
+
+            const { accessToken } = data;
+
+            // Save new access token
+            localStorage.setItem('access_token', accessToken);
+
+            // Retry all queued requests
+            this.failedQueue.forEach((prom) => prom.resolve(accessToken));
+            this.failedQueue = [];
+
+            // Retry original request
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            }
+            return this.client(originalRequest);
+          } catch (refreshError) {
+            // Refresh failed, logout
+            this.failedQueue.forEach((prom) => prom.reject(refreshError));
+            this.failedQueue = [];
+
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+
+            return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
+
         return Promise.reject(error);
       }
     );
@@ -41,8 +103,12 @@ class ApiClient {
       email,
       password,
     });
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token);
+    // New token format: accessToken + refreshToken
+    if (data.accessToken) {
+      localStorage.setItem('access_token', data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem('refresh_token', data.refreshToken);
     }
     return data;
   }
@@ -54,10 +120,31 @@ class ApiClient {
       name,
       inviteCode,
     });
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token);
+    // New token format: accessToken + refreshToken
+    if (data.accessToken) {
+      localStorage.setItem('access_token', data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem('refresh_token', data.refreshToken);
     }
     return data;
+  }
+
+  async logout() {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        // Revoke refresh token on server
+        await this.client.post('/auth/logout', { refreshToken });
+      }
+    } catch (error) {
+      // Ignore errors during logout
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local storage
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+    }
   }
 
   async getMe() {
