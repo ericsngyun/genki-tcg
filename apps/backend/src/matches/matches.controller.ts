@@ -1,5 +1,10 @@
 import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
-import { MatchesService, ReportMatchResultDto } from './matches.service';
+import {
+  MatchesService,
+  ReportMatchResultDto,
+  PlayerReportResultDto,
+  ConfirmMatchResultDto,
+} from './matches.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -38,5 +43,29 @@ export class MatchesController {
       user.id,
       user.orgId,
     );
+  }
+
+  /**
+   * Player reports their match result (requires opponent confirmation)
+   */
+  @Post(':id/report-result')
+  async playerReportResult(
+    @Param('id') matchId: string,
+    @CurrentUser() user: any,
+    @Body() dto: PlayerReportResultDto,
+  ) {
+    return this.matchesService.playerReportResult(matchId, dto, user.id, user.orgId);
+  }
+
+  /**
+   * Player confirms or disputes opponent's reported result
+   */
+  @Post(':id/confirm-result')
+  async confirmResult(
+    @Param('id') matchId: string,
+    @CurrentUser() user: any,
+    @Body() dto: ConfirmMatchResultDto,
+  ) {
+    return this.matchesService.confirmMatchResult(matchId, dto, user.id, user.orgId);
   }
 }

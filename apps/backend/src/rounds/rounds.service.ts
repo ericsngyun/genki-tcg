@@ -142,4 +142,74 @@ export class RoundsService {
       },
     });
   }
+
+  /**
+   * Get all matches for a round with full details (admin use)
+   */
+  async getMatches(roundId: string, userOrgId: string) {
+    // Fetch round with event to validate organization
+    const round = await this.prisma.round.findUnique({
+      where: { id: roundId },
+      include: {
+        event: true,
+        matches: {
+          include: {
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            tableNumber: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!round) {
+      throw new NotFoundException('Round not found');
+    }
+
+    // Validate organization
+    if (round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this round');
+    }
+
+    // Add status indicators to each match
+    const matchesWithStatus = round.matches.map((match) => {
+      let status: 'pending' | 'reported' | 'confirmed' | 'admin_override' = 'pending';
+
+      if (match.overriddenBy) {
+        status = 'admin_override';
+      } else if (match.confirmedBy) {
+        status = 'confirmed';
+      } else if (match.reportedBy) {
+        status = 'reported';
+      }
+
+      return {
+        ...match,
+        status,
+      };
+    });
+
+    return {
+      round: {
+        id: round.id,
+        roundNumber: round.roundNumber,
+        status: round.status,
+        startAt: round.startAt,
+        endAt: round.endAt,
+      },
+      matches: matchesWithStatus,
+    };
+  }
 }

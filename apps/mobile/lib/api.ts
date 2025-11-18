@@ -200,6 +200,39 @@ class ApiClient {
     const { data } = await this.client.get('/credits/me');
     return data;
   }
+
+  // Matches - Player Self-Reporting
+  async reportMatchResult(matchId: string, result: string, gamesWonA: number, gamesWonB: number) {
+    const { data } = await this.client.post(`/matches/${matchId}/report-result`, {
+      result,
+      gamesWonA,
+      gamesWonB,
+    });
+    return data;
+  }
+
+  async confirmMatchResult(matchId: string, confirm: boolean, counterResult?: string, counterGamesWonA?: number, counterGamesWonB?: number) {
+    const { data } = await this.client.post(`/matches/${matchId}/confirm-result`, {
+      confirm,
+      counterResult,
+      counterGamesWonA,
+      counterGamesWonB,
+    });
+    return data;
+  }
+
+  async getActiveMatch(eventId: string) {
+    const { data } = await this.client.get(`/events/${eventId}/my-active-match`);
+    return data;
+  }
+
+  // Player Drop
+  async dropFromEvent(eventId: string, currentRound?: number) {
+    const { data } = await this.client.post(`/events/${eventId}/drop`, {
+      currentRound,
+    });
+    return data;
+  }
 }
 
 export const api = new ApiClient();

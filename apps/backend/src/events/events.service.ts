@@ -487,4 +487,124 @@ export class EventsService {
 
     return matches;
   }
+
+  /**
+   * Get player's active match for the current/latest round
+   */
+  async getMyActiveMatch(eventId: string, userId: string, userOrgId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        rounds: {
+          where: {
+            status: 'ACTIVE',
+          },
+          include: {
+            matches: {
+              where: {
+                OR: [{ playerAId: userId }, { playerBId: userId }],
+              },
+              include: {
+                playerA: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                playerB: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            roundNumber: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Cannot view matches for events in other organizations');
+    }
+
+    // Check if there's an active round with a match for this player
+    if (event.rounds.length === 0 || event.rounds[0].matches.length === 0) {
+      return null; // No active match
+    }
+
+    const round = event.rounds[0];
+    const match = round.matches[0];
+
+    // Determine if user is playerA or playerB
+    const iAmPlayerA = match.playerAId === userId;
+
+    return {
+      match: {
+        id: match.id,
+        roundId: round.id,
+        roundNumber: round.roundNumber,
+        tableNumber: match.tableNumber,
+        opponent: iAmPlayerA ? match.playerB : match.playerA,
+        result: match.result,
+        gamesWonA: match.gamesWonA,
+        gamesWonB: match.gamesWonB,
+        reportedBy: match.reportedBy,
+        confirmedBy: match.confirmedBy,
+        iAmPlayerA,
+      },
+    };
+  }
+
+  /**
+   * Player drops themselves from the tournament
+   */
+  async playerDrop(eventId: string, userId: string, userOrgId: string, currentRound?: number) {
+    // Validate event exists
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Cannot drop from events in other organizations');
+    }
+
+    // Find the user's entry
+    const entry = await this.prisma.entry.findFirst({
+      where: {
+        eventId,
+        userId,
+      },
+    });
+
+    if (!entry) {
+      throw new NotFoundException('Entry not found - you are not registered for this event');
+    }
+
+    if (entry.droppedAt) {
+      throw new BadRequestException('You have already dropped from this event');
+    }
+
+    return this.prisma.entry.update({
+      where: { id: entry.id },
+      data: {
+        droppedAt: new Date(),
+        droppedAfterRound: currentRound ?? event.currentRound,
+      },
+    });
+  }
 }

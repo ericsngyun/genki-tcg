@@ -92,4 +92,14 @@ export class EventsController {
   async getMyMatches(@CurrentUser() user: any, @Param('id') eventId: string) {
     return this.eventsService.getMyMatches(eventId, user.id, user.orgId);
   }
+
+  @Get(':id/my-active-match')
+  async getMyActiveMatch(@CurrentUser() user: any, @Param('id') eventId: string) {
+    return this.eventsService.getMyActiveMatch(eventId, user.id, user.orgId);
+  }
+
+  @Post(':id/drop')
+  async playerDrop(@CurrentUser() user: any, @Param('id') eventId: string, @Body() body?: { currentRound?: number }) {
+    return this.eventsService.playerDrop(eventId, user.id, user.orgId, body?.currentRound);
+  }
 }

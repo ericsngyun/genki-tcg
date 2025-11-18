@@ -21,4 +21,11 @@ export class RoundsController {
   async getPairings(@CurrentUser() user: any, @Param('roundId') roundId: string) {
     return this.roundsService.getPairings(roundId, user.orgId);
   }
+
+  @Get(':roundId/matches')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async getMatches(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+    return this.roundsService.getMatches(roundId, user.orgId);
+  }
 }
