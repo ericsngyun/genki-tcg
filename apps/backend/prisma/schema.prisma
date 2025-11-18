@@ -193,6 +193,27 @@ model CreditBalance {
   @@index([userId])
 }
 
+// Reward templates for quick credit distribution
+model CreditRewardTemplate {
+  id          String           @id @default(cuid())
+  orgId       String
+  name        String // e.g., "Tournament Winner", "Daily Login"
+  description String?
+  amount      Int // Credit amount
+  reasonCode  CreditReasonCode
+  isActive    Boolean          @default(true)
+  createdBy   String // User ID of staff/owner
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdByUser User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([createdBy])
+}
+
 // ============================================================================
 // Events & Tournaments
 // ============================================================================

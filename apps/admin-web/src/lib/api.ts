@@ -361,10 +361,71 @@ class ApiClient {
   }
 
   async redeemCredits(userId: string, amount: number, memo?: string) {
-    const { data } = await this.client.post('/credits/redeem', {
+    const { data} = await this.client.post('/credits/redeem', {
       userId,
       amount,
       memo,
+    });
+    return data;
+  }
+
+  async bulkAdjustCredits(adjustments: Array<{ userId: string; amount: number; memo?: string }>, reasonCode: string, globalMemo?: string, relatedEventId?: string) {
+    const { data } = await this.client.post('/credits/bulk-adjust', {
+      adjustments,
+      reasonCode,
+      globalMemo,
+      relatedEventId,
+    });
+    return data;
+  }
+
+  async getCreditAnalytics(params?: { period?: string; startDate?: string; endDate?: string }) {
+    const { data } = await this.client.get('/credits/analytics', { params });
+    return data;
+  }
+
+  // Reward Templates
+  async getRewardTemplates(activeOnly: boolean = false) {
+    const { data } = await this.client.get('/credits/templates', {
+      params: { activeOnly: activeOnly ? 'true' : 'false' },
+    });
+    return data;
+  }
+
+  async getRewardTemplate(templateId: string) {
+    const { data } = await this.client.get(`/credits/templates/${templateId}`);
+    return data;
+  }
+
+  async createRewardTemplate(template: { name: string; description?: string; amount: number; reasonCode: string; isActive?: boolean }) {
+    const { data } = await this.client.post('/credits/templates', template);
+    return data;
+  }
+
+  async updateRewardTemplate(templateId: string, updates: { name?: string; description?: string; amount?: number; reasonCode?: string; isActive?: boolean }) {
+    const { data } = await this.client.put(`/credits/templates/${templateId}`, updates);
+    return data;
+  }
+
+  async deleteRewardTemplate(templateId: string) {
+    const { data } = await this.client.delete(`/credits/templates/${templateId}`);
+    return data;
+  }
+
+  async applyRewardTemplate(templateId: string, userId: string, memo?: string) {
+    const { data } = await this.client.post('/credits/templates/apply', {
+      templateId,
+      userId,
+      memo,
+    });
+    return data;
+  }
+
+  async bulkApplyRewardTemplate(templateId: string, userIds: string[], globalMemo?: string) {
+    const { data } = await this.client.post('/credits/templates/bulk-apply', {
+      templateId,
+      userIds,
+      globalMemo,
     });
     return data;
   }
