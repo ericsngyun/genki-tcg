@@ -45,7 +45,7 @@ export default function DashboardLayout({
                 aria-label="Genki TCG Home"
               >
                 <Image
-                  src="/genki-logo.svg"
+                  src="/genki-logo.png"
                   alt="Genki TCG"
                   width={140}
                   height={42}

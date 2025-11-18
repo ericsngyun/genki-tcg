@@ -40,7 +40,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <Image
-                src="/genki-logo.svg"
+                src="/genki-logo.png"
                 alt="Genki TCG Logo"
                 width={180}
                 height={54}
