@@ -542,7 +542,8 @@ export default function EventDetailPage() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        );
+                        })}
                       </tbody>
                     </table>
                   </div>
