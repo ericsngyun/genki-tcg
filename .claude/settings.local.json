@@ -6,7 +6,9 @@
       "WebSearch",
       "Bash(del _ctx.web.js)",
       "Bash(npm dedupe:*)",
-      "Bash(del nul:*)"
+      "Bash(del nul:*)",
+      "Bash(npx expo-doctor)",
+      "WebFetch(domain:docs.expo.dev)"
     ],
     "deny": [],
     "ask": []
