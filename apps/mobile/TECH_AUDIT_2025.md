@@ -58,26 +58,9 @@ This audit reviews all technologies and libraries used in the Genki TCG mobile a
 
 ## 2. Configuration Files Audit
 
-### 2.1 babel.config.js ⚠️
+### 2.1 babel.config.js ✅
 
 **Current Configuration:**
-```javascript
-module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: ['babel-preset-expo'],
-    plugins: ['expo-router/babel'],
-  };
-};
-```
-
-**Status:** ⚠️ **Needs Review**
-
-**Issues:**
-1. The `expo-router/babel` plugin may not be necessary for SDK 50 as it should be handled by `babel-preset-expo`
-2. Missing React Native Paper babel plugin for production optimization
-
-**2025 Best Practice Recommendation:**
 ```javascript
 module.exports = function (api) {
   api.cache(true);
@@ -92,7 +75,14 @@ module.exports = function (api) {
 };
 ```
 
-**Note:** The `expo-router/babel` plugin was added to fix EXPO_ROUTER_APP_ROOT Metro errors. Monitor if removing it causes issues. If errors return, it may still be needed for SDK 50.
+**Status:** ✅ **Correct for SDK 50**
+
+**Key Points:**
+1. ✅ `babel-preset-expo` automatically handles Expo Router transformations in SDK 50
+2. ✅ `expo-router/babel` is **deprecated** and should NOT be used in SDK 50
+3. ✅ React Native Paper babel plugin added for production bundle optimization
+
+**Note:** In SDK 50, `babel-preset-expo` includes all necessary transformations for Expo Router, including EXPO_ROUTER_APP_ROOT handling. The separate `expo-router/babel` plugin is no longer needed and will cause deprecation errors.
 
 ### 2.2 metro.config.js ✅
 
