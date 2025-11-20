@@ -5,13 +5,15 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4F46E5"
+      "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.genkitcg.app"
@@ -19,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4F46E5"
+        "backgroundColor": "#DC2626"
       },
       "package": "com.genkitcg.app"
     },
@@ -32,9 +34,10 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#4F46E5"
+          "color": "#DC2626"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "genki-tcg",
     "extra": {

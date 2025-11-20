@@ -219,7 +219,7 @@ export const ShimmerView: React.FC<{
     <Animated.View
       style={[
         {
-          width,
+          width: width as any,
           height,
           borderRadius,
           backgroundColor: '#27272A',

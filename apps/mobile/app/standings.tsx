@@ -146,7 +146,7 @@ export default function StandingsScreen() {
               <Text style={styles.rankLabel}>RANK</Text>
               <Text style={styles.rankNumber}>
                 {typeof getRankDisplay(myStanding.rank) === 'string' &&
-                getRankDisplay(myStanding.rank).includes('🥇') ? (
+                String(getRankDisplay(myStanding.rank)).includes('🥇') ? (
                   <Text style={{ fontSize: 48 }}>
                     {getRankDisplay(myStanding.rank)}
                   </Text>
@@ -211,9 +211,10 @@ export default function StandingsScreen() {
             <Text style={[styles.cell, styles.rankCell, styles.rankText]}>
               {getRankDisplay(standing.rank)}
             </Text>
-            <View style={[styles.cell, styles.playerCell]}>
+            <View style={styles.playerCell}>
               <Text
                 style={[
+                  styles.cell,
                   styles.playerText,
                   standing.userId === myUserId && styles.playerTextMe,
                 ]}

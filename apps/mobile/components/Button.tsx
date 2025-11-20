@@ -1,13 +1,17 @@
 import React from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  Animated,
+  Pressable,
+  Platform,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../lib/theme';
+import { usePressAnimation } from '../lib/animations';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -40,44 +44,64 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityHint,
 }) => {
   const isDisabled = disabled || loading;
+  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+
+  const handlePress = () => {
+    if (!isDisabled) {
+      // Haptic feedback on press (iOS and Android only, not web)
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      onPress();
+    }
+  };
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.base,
-        styles[variant],
-        styles[`${size}Container`],
-        fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
-        style,
-      ]}
-      onPress={onPress}
+    <Pressable
+      onPress={handlePress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       disabled={isDisabled}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || children}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'outline' || variant === 'ghost' ? theme.colors.primary.main : theme.colors.neutral.white}
-          size="small"
-        />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            styles[`${variant}Text`],
-            styles[`${size}Text`],
-            isDisabled && styles.disabledText,
-            textStyle,
-          ]}
-        >
-          {children}
-        </Text>
-      )}
-    </TouchableOpacity>
+      <Animated.View
+        style={[
+          styles.base,
+          styles[variant],
+          styles[`${size}Container`],
+          fullWidth && styles.fullWidth,
+          isDisabled && styles.disabled,
+          animatedStyle,
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator
+            color={
+              variant === 'outline' || variant === 'ghost'
+                ? theme.colors.primary.main
+                : theme.colors.neutral.white
+            }
+            size="small"
+          />
+        ) : (
+          <Text
+            style={[
+              styles.text,
+              styles[`${variant}Text`],
+              styles[`${size}Text`],
+              isDisabled && styles.disabledText,
+              textStyle,
+            ]}
+          >
+            {children}
+          </Text>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 };
 

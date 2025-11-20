@@ -2,16 +2,17 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
+import { Button, Card, Input } from '../components';
+import { theme } from '../lib/theme';
+import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function SignupScreen() {
 
     try {
       await api.signup(email, password, name, inviteCode);
-      router.replace('/events');
+      router.replace('/(tabs)/events');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create account');
     } finally {
@@ -45,97 +46,125 @@ export default function SignupScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      accessibilityRole="none"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join Genki TCG tournaments</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        accessibilityRole="none"
+        showsVerticalScrollIndicator={false}
+      >
+        <FadeInView style={styles.header}>
+          <ScaleInView delay={100}>
+            <Image
+              source={require('../assets/images/genki-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </ScaleInView>
+          <SlideUpView delay={200}>
+            <Text
+              style={styles.title}
+              accessibilityRole="header"
+              accessibilityLabel="Create Account"
+            >
+              Create Account
+            </Text>
+            <Text
+              style={styles.subtitle}
+              accessibilityRole="text"
+            >
+              Join the Genki TCG tournament community
+            </Text>
+          </SlideUpView>
+        </FadeInView>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
+        <SlideUpView delay={300}>
+          <Card variant="elevated" padding="xl">
+            <Input
+              label="Name"
               placeholder="Your name"
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
               editable={!loading}
+              error={error && !name ? 'Name is required' : undefined}
+              accessibilityLabel="Full name"
+              accessibilityHint="Enter your full name"
             />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Email"
               placeholder="you@example.com"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!loading}
+              error={error && !email ? 'Email is required' : undefined}
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter your email address"
             />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
+            <Input
+              label="Password"
+              placeholder="Create a strong password"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               editable={!loading}
+              error={error && !password ? 'Password is required' : undefined}
+              accessibilityLabel="Password"
+              accessibilityHint="Create a password for your account"
             />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Invite Code</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Invite Code"
               placeholder="Enter shop invite code"
               value={inviteCode}
               onChangeText={setInviteCode}
               autoCapitalize="characters"
               editable={!loading}
+              error={error && !inviteCode ? 'Invite code is required' : error ? error : undefined}
+              accessibilityLabel="Invite code"
+              accessibilityHint="Enter the shop's invite code"
             />
-          </View>
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+            <Button
+              onPress={handleSignup}
+              loading={loading}
+              fullWidth
+              style={{ marginTop: theme.spacing.lg }}
+              accessibilityLabel="Create account"
+              accessibilityHint="Double tap to create your account"
+            >
+              Create Account
+            </Button>
+
+            <Button
+              onPress={() => router.back()}
+              variant="ghost"
+              disabled={loading}
+              fullWidth
+              style={{ marginTop: theme.spacing.md }}
+              accessibilityLabel="Sign in"
+              accessibilityHint="Double tap to return to sign in"
+            >
+              Already have an account? Sign In
+            </Button>
+
+            <View
+              style={styles.infoBox}
+              accessibilityRole="summary"
+              accessibilityLabel="Invite code information"
+            >
+              <Text style={styles.infoText}>
+                💡 Use invite code{' '}
+                <Text style={styles.infoCodeText}>GENKI</Text>
+                {' '}to join Genki TCG
+              </Text>
             </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.loginLink}
-            onPress={() => router.back()}
-            disabled={loading}
-          >
-            <Text style={styles.loginLinkText}>
-              Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text>
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              💡 Use invite code <Text style={styles.infoCodeText}>GENKI</Text> to join Genki TCG
-            </Text>
-          </View>
-        </View>
+          </Card>
+        </SlideUpView>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -144,108 +173,51 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background.primary,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing.xl,
+    paddingTop: theme.spacing['5xl'],
   },
   header: {
-    marginBottom: 40,
+    marginBottom: theme.spacing['4xl'],
     alignItems: 'center',
+  },
+  logo: {
+    width: 180,
+    height: 54,
+    marginBottom: theme.spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#4F46E5',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  form: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#FFFFFF',
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: '#991B1B',
-    fontSize: 14,
-  },
-  button: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loginLink: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  loginLinkText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  loginLinkBold: {
-    color: '#4F46E5',
-    fontWeight: '600',
-  },
-  infoBox: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#4338CA',
+    fontSize: theme.typography.fontSize['3xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
+  subtitle: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: theme.typography.lineHeight.relaxed * theme.typography.fontSize.base,
+  },
+  infoBox: {
+    marginTop: theme.spacing['2xl'],
+    paddingTop: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border.light,
+  },
+  infoText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: theme.typography.lineHeight.relaxed * theme.typography.fontSize.sm,
+  },
   infoCodeText: {
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });

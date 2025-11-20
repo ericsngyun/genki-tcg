@@ -49,20 +49,12 @@ export const Input: React.FC<InputProps> = ({
         ]}
         placeholderTextColor={theme.colors.text.tertiary}
         accessibilityLabel={inputProps.accessibilityLabel || label}
-        accessibilityRequired={required}
-        accessibilityInvalid={hasError}
-        accessibilityLabelledBy={label ? `${inputId}-label` : undefined}
-        accessibilityDescribedBy={
-          error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
-        }
         {...inputProps}
       />
 
       {error && (
         <Text
           style={styles.errorText}
-          accessibilityRole="alert"
-          accessibilityLive="polite"
           nativeID={`${inputId}-error`}
         >
           {error}

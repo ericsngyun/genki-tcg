@@ -1,24 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)",
+      "Bash(git add:*)",
       "Bash(npm install:*)",
-      "Bash(taskkill:*)",
-      "Bash(ping:*)",
-      "Bash(nul)",
-      "Bash(npm run web:*)",
-      "Bash(netstat:*)",
-      "Bash(while read pid)",
-      "Bash(do taskkill //F //PID $pid)",
-      "Bash(done)",
-      "Bash(do [ $pid != 0 ])",
-      "Bash([ $pid != PID ])",
-      "Bash(xargs:*)",
-      "Bash(npm run dev:*)",
-      "Bash(curl:*)",
-      "Bash(npx expo start --help:*)",
-      "Bash(findstr:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 10288 -Force; Stop-Process -Id 22212 -Force\")"
+      "WebSearch",
+      "Bash(del _ctx.web.js)",
+      "Bash(npm dedupe:*)",
+      "Bash(del nul:*)"
     ],
     "deny": [],
     "ask": []
