@@ -17,9 +17,6 @@ module.exports = async function (env, argv) {
     'react/jsx-dev-runtime': path.join(reactPath, 'jsx-dev-runtime'),
   };
 
-  // Ensure single React instance
-  config.resolve.dedupe = ['react', 'react-dom'];
-
   // Add fallback for Node.js modules that don't exist in browser
   config.resolve.fallback = {
     ...config.resolve.fallback,
