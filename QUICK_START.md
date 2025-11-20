@@ -1,5 +1,8 @@
 # Quick Start Guide - Testing the Mobile App
 
+> **📱 For detailed mobile app setup, troubleshooting, and architecture:**
+> See [apps/mobile/MOBILE_SETUP_GUIDE.md](apps/mobile/MOBILE_SETUP_GUIDE.md)
+
 ## Prerequisites Check
 
 Before starting, ensure you have:
