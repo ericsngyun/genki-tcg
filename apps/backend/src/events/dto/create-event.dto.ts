@@ -19,8 +19,8 @@ export class CreateEventDto {
   @MaxLength(100, { message: 'Event name must not exceed 100 characters' })
   name: string;
 
-  @IsEnum(['OPTCG', 'AZUKI', 'RIFTBOUND', 'OTHER'], {
-    message: 'Game must be one of: OPTCG, AZUKI, RIFTBOUND, OTHER',
+  @IsEnum(['ONE_PIECE_TCG', 'AZUKI_TCG', 'RIFTBOUND'], {
+    message: 'Game must be one of: ONE_PIECE_TCG, AZUKI_TCG, RIFTBOUND',
   })
   game: GameType;
 
