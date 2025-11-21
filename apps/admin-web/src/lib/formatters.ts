@@ -2,11 +2,14 @@
 
 export function formatGameName(gameType: string): string {
   const gameNames: Record<string, string> = {
+    // Current values
+    OPTCG: 'One Piece TCG',
+    AZUKI: 'Azuki TCG',
+    RIFTBOUND: 'Riftbound',
+    OTHER: 'Other',
+    // Legacy support (in case any old data exists)
     ONE_PIECE_TCG: 'One Piece TCG',
     AZUKI_TCG: 'Azuki TCG',
-    RIFTBOUND: 'Riftbound',
-    // Legacy support (in case any old data exists)
-    OPTCG: 'One Piece TCG',
     ONEPIECE: 'One Piece TCG',
     UNIONARENA: 'Union Arena',
     DIGIMON: 'Digimon',
