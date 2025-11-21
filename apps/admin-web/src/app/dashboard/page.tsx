@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatGameName, formatEventFormat } from '@/lib/formatters';
@@ -19,29 +19,25 @@ interface Event {
 }
 
 export default function DashboardPage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | undefined>(undefined);
+  const [showPastEvents, setShowPastEvents] = useState(false);
 
   useEffect(() => {
     loadEvents();
-  }, [filter]);
+  }, []);
 
   const loadEvents = async () => {
     try {
-      const data = await api.getEvents(filter);
-      setEvents(data);
+      // Load all events to properly categorize them
+      const [scheduled, inProgress, completed] = await Promise.all([
+        api.getEvents('SCHEDULED'),
+        api.getEvents('IN_PROGRESS'),
+        api.getEvents('COMPLETED'),
+      ]);
 
-      // Load upcoming events separately for the upcoming section
-      if (!filter) {
-        const upcoming = await api.getEvents('SCHEDULED');
-        const sortedUpcoming = upcoming
-          .filter((e: Event) => new Date(e.startAt) > new Date())
-          .sort((a: Event, b: Event) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-          .slice(0, 3);
-        setUpcomingEvents(sortedUpcoming);
-      }
+      setAllEvents([...scheduled, ...inProgress, ...completed]);
     } catch (error) {
       console.error('Failed to load events:', error);
     } finally {
@@ -49,18 +45,123 @@ export default function DashboardPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  // Smart event categorization based on status and time
+  const { activeEvents, upcomingEvents, pastEvents, filteredEvents } = useMemo(() => {
+    const now = new Date();
+
+    // Active tournaments - IN_PROGRESS status
+    const active = allEvents.filter(e => e.status === 'IN_PROGRESS');
+
+    // Upcoming events - SCHEDULED and start time is in the future
+    const upcoming = allEvents
+      .filter(e => {
+        if (e.status !== 'SCHEDULED') return false;
+        const startTime = new Date(e.startAt);
+        return startTime > now;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+    // Past events - COMPLETED, CANCELLED, or start time passed without starting
+    const past = allEvents
+      .filter(e => {
+        if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return true;
+        // Also include SCHEDULED events that are past their start time by 24+ hours
+        if (e.status === 'SCHEDULED') {
+          const startTime = new Date(e.startAt);
+          const hoursPastStart = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          return hoursPastStart > 24;
+        }
+        return false;
+      })
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+
+    // Apply filter for the main list view
+    // When "All Events" is selected (no filter), show active + upcoming, NOT past events
+    // Past events are shown in the collapsible Past Events section
+    let filtered: Event[];
+    if (filter === 'IN_PROGRESS') {
+      filtered = active;
+    } else if (filter === 'SCHEDULED') {
+      filtered = upcoming;
+    } else if (filter === 'COMPLETED') {
+      filtered = past;
+    } else {
+      // "All Events" = active + upcoming (excludes past from main list)
+      filtered = [...active, ...upcoming].sort((a, b) =>
+        new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+      );
+    }
+
+    return {
+      activeEvents: active,
+      upcomingEvents: upcoming,
+      pastEvents: past,
+      filteredEvents: filtered,
+    };
+  }, [allEvents, filter]);
+
+  // Helper to determine effective status considering time
+  const getEffectiveStatus = (event: Event): string => {
+    const now = new Date();
+    const startTime = new Date(event.startAt);
+    const hoursPastStart = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+
+    // If database says SCHEDULED but time has passed significantly, mark as missed/past
+    if (event.status === 'SCHEDULED' && hoursPastStart > 0) {
+      if (hoursPastStart > 24) {
+        return 'MISSED'; // More than 24 hours past - definitely missed
+      } else {
+        return 'STARTING_SOON'; // Within window, might be starting
+      }
+    }
+
+    return event.status;
+  };
+
+  const getStatusColor = (event: Event) => {
+    const effectiveStatus = getEffectiveStatus(event);
+    switch (effectiveStatus) {
       case 'SCHEDULED':
         return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+      case 'STARTING_SOON':
+        return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+      case 'REGISTRATION_CLOSED':
+        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
       case 'IN_PROGRESS':
-        return 'bg-green-500/10 text-green-400 border border-green-500/20';
+        return 'bg-green-500/10 text-green-400 border border-green-500/20 animate-pulse';
       case 'COMPLETED':
         return 'bg-muted text-muted-foreground border border-border';
       case 'CANCELLED':
+      case 'MISSED':
         return 'bg-destructive/10 text-destructive border border-destructive/20';
+      case 'DRAFT':
+        return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
       default:
         return 'bg-muted text-muted-foreground border border-border';
+    }
+  };
+
+  const getStatusText = (event: Event) => {
+    const effectiveStatus = getEffectiveStatus(event);
+    switch (effectiveStatus) {
+      case 'SCHEDULED':
+        return 'Upcoming';
+      case 'STARTING_SOON':
+        return 'Starting Soon';
+      case 'REGISTRATION_CLOSED':
+        return 'Reg. Closed';
+      case 'IN_PROGRESS':
+        return 'LIVE';
+      case 'COMPLETED':
+        return 'Completed';
+      case 'CANCELLED':
+        return 'Cancelled';
+      case 'MISSED':
+        return 'Past';
+      case 'DRAFT':
+        return 'Draft';
+      default:
+        return effectiveStatus.replace('_', ' ');
     }
   };
 
@@ -117,11 +218,72 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Active Tournaments Section - Most Important */}
+      {!filter && !loading && activeEvents.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+              <h2 className="text-xl font-bold text-foreground">Active Tournaments</h2>
+              <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full text-xs font-bold">
+                {activeEvents.length} LIVE
+              </span>
+            </div>
+            <button
+              onClick={() => setFilter('IN_PROGRESS')}
+              className="text-sm text-green-400 hover:text-green-300 font-medium transition"
+            >
+              View all active →
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeEvents.slice(0, 3).map((event) => (
+              <Link
+                key={event.id}
+                href={`/dashboard/events/${event.id}`}
+                className="bg-gradient-to-br from-green-500/5 to-green-500/15 rounded-xl border-2 border-green-500/30 p-6 hover:shadow-xl hover:shadow-green-500/10 hover:border-green-500/50 transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="px-3 py-1 rounded-full text-xs font-bold border-2 bg-green-500/20 text-green-400 border-green-500 animate-pulse">
+                    LIVE NOW
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-green-400">
+                      {event._count.entries}
+                      {event.maxPlayers && `/${event.maxPlayers}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">players</div>
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-2">
+                  {event.name}
+                </h3>
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <div className="flex items-center">
+                    <span className="mr-2">🎮</span>
+                    <span>{formatGameName(event.game)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="mr-2">📋</span>
+                    <span>{formatEventFormat(event.format)}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Upcoming Events Section */}
       {!filter && !loading && upcomingEvents.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-foreground">Upcoming Events</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-foreground">Upcoming Events</h2>
+              <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full text-xs font-medium">
+                {upcomingEvents.length}
+              </span>
+            </div>
             <button
               onClick={() => setFilter('SCHEDULED')}
               className="text-sm text-primary hover:text-primary/80 font-medium transition"
@@ -130,7 +292,7 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingEvents.map((event) => (
+            {upcomingEvents.slice(0, 3).map((event) => (
               <Link
                 key={event.id}
                 href={`/dashboard/events/${event.id}`}
@@ -226,7 +388,7 @@ export default function DashboardPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading events...</p>
         </div>
-      ) : events.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="bg-card rounded-lg border border-border p-12 text-center">
           <p className="text-muted-foreground mb-4">No events found</p>
           <Link
@@ -238,11 +400,15 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <Link
               key={event.id}
               href={`/dashboard/events/${event.id}`}
-              className="bg-card rounded-lg border border-border p-6 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30 transition"
+              className={`bg-card rounded-lg border p-6 hover:shadow-lg transition ${
+                event.status === 'IN_PROGRESS'
+                  ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10'
+                  : 'border-border hover:border-primary/30 hover:shadow-primary/5'
+              }`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -252,10 +418,10 @@ export default function DashboardPage() {
                     </h3>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        event.status
+                        event
                       )}`}
                     >
-                      {event.status.replace('_', ' ')}
+                      {getStatusText(event)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-6 text-sm text-muted-foreground">
@@ -283,6 +449,82 @@ export default function DashboardPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Past Events Section - Collapsible */}
+      {!filter && !loading && pastEvents.length > 0 && (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowPastEvents(!showPastEvents)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition mb-4"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showPastEvents ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <h2 className="text-lg font-semibold">Past Events</h2>
+            <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-medium">
+              {pastEvents.length}
+            </span>
+          </button>
+          {showPastEvents && (
+            <div className="grid gap-3 opacity-75">
+              {pastEvents.slice(0, 10).map((event) => (
+                <Link
+                  key={event.id}
+                  href={`/dashboard/events/${event.id}`}
+                  className="bg-card rounded-lg border border-border p-4 hover:shadow-md transition"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h3 className="text-base font-medium text-foreground">
+                          {event.name}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            event
+                          )}`}
+                        >
+                          {getStatusText(event)}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
+                        <span>🎮 {formatGameName(event.game)}</span>
+                        <span>
+                          📅{' '}
+                          {new Date(event.startAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-muted-foreground">
+                        {event._count.entries}
+                      </div>
+                      <div className="text-xs text-muted-foreground">players</div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              {pastEvents.length > 10 && (
+                <button
+                  onClick={() => setFilter('COMPLETED')}
+                  className="text-sm text-muted-foreground hover:text-foreground font-medium transition py-2"
+                >
+                  View all {pastEvents.length} past events →
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -65,7 +65,8 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  const port = process.env.API_PORT || process.env.PORT || 3001;
+  // Railway provides PORT, prefer it over API_PORT for cloud deployments
+  const port = process.env.PORT || process.env.API_PORT || 3001;
   const host = '0.0.0.0';
 
   console.log('🌐 Starting server...');
