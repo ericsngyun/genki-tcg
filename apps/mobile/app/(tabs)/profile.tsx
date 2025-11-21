@@ -68,16 +68,16 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: theme.colors.background.card,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
   },
   logo: {
-    width: 140,
-    height: 42,
+    width: 120,
+    height: 36,
   },
   profileCard: {
     backgroundColor: theme.colors.background.card,

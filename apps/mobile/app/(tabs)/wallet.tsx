@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.primary,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: theme.colors.background.card,
     borderBottomWidth: 1,
@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 140,
-    height: 42,
+    width: 120,
+    height: 36,
     marginBottom: 16,
   },
   title: {
