@@ -8,7 +8,8 @@
       "Bash(npm dedupe:*)",
       "Bash(del nul:*)",
       "Bash(npx expo-doctor)",
-      "WebFetch(domain:docs.expo.dev)"
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
