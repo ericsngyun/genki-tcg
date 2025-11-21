@@ -942,8 +942,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border.light,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 140,
+    height: 42,
     marginBottom: 12,
   },
   title: {
