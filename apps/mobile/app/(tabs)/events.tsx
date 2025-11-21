@@ -767,13 +767,13 @@ const EventCard: React.FC<EventCardProps> = ({
 
   const getPlayerStatusBadge = () => {
     if (isDropped) {
-      return { text: 'Dropped', bg: theme.colors.error.lightest, color: theme.colors.error.main };
+      return { text: 'Dropped', bg: 'rgba(239, 68, 68, 0.2)', color: theme.colors.error.light };
     }
     if (isCheckedIn) {
-      return { text: 'Checked In', bg: theme.colors.success.lightest, color: theme.colors.success.dark };
+      return { text: 'Checked In', bg: 'rgba(16, 185, 129, 0.2)', color: theme.colors.success.light };
     }
     if (isRegistered) {
-      return { text: 'Registered', bg: theme.colors.info.lightest, color: theme.colors.info.dark };
+      return { text: 'Registered', bg: 'rgba(59, 130, 246, 0.2)', color: theme.colors.info.light };
     }
     return null;
   };
@@ -811,14 +811,14 @@ const EventCard: React.FC<EventCardProps> = ({
           </View>
           <View style={[
             styles.statusBadge,
-            isPast ? { backgroundColor: theme.colors.neutral[100] } :
-              isStartingSoon ? { backgroundColor: theme.colors.warning.lightest } :
+            isPast ? { backgroundColor: theme.colors.background.elevated } :
+              isStartingSoon ? { backgroundColor: 'rgba(245, 158, 11, 0.2)' } :
                 getStatusStyle(event.status)
           ]}>
             <Text style={[
               styles.statusText,
               isPast ? { color: theme.colors.text.tertiary } :
-                isStartingSoon ? { color: theme.colors.warning.dark } :
+                isStartingSoon ? { color: theme.colors.warning.light } :
                   getStatusTextStyle(event.status)
             ]}>
               {isPast ? 'Past' : isStartingSoon ? 'Starting Soon' : formatStatus(event.status)}
@@ -869,28 +869,28 @@ const EventCard: React.FC<EventCardProps> = ({
 const getStatusStyle = (status: string) => {
   switch (status) {
     case 'IN_PROGRESS':
-      return { backgroundColor: theme.colors.success.lightest };
+      return { backgroundColor: 'rgba(16, 185, 129, 0.2)' };
     case 'SCHEDULED':
-      return { backgroundColor: theme.colors.info.lightest };
+      return { backgroundColor: 'rgba(59, 130, 246, 0.2)' };
     case 'COMPLETED':
-      return { backgroundColor: theme.colors.neutral[100] };
+      return { backgroundColor: theme.colors.background.elevated };
     case 'CANCELLED':
-      return { backgroundColor: theme.colors.error.lightest };
+      return { backgroundColor: 'rgba(239, 68, 68, 0.2)' };
     default:
-      return { backgroundColor: theme.colors.neutral[100] };
+      return { backgroundColor: theme.colors.background.elevated };
   }
 };
 
 const getStatusTextStyle = (status: string) => {
   switch (status) {
     case 'IN_PROGRESS':
-      return { color: theme.colors.success.dark };
+      return { color: theme.colors.success.light };
     case 'SCHEDULED':
-      return { color: theme.colors.info.dark };
+      return { color: theme.colors.info.light };
     case 'COMPLETED':
       return { color: theme.colors.text.tertiary };
     case 'CANCELLED':
-      return { color: theme.colors.error.dark };
+      return { color: theme.colors.error.light };
     default:
       return { color: theme.colors.text.tertiary };
   }
@@ -914,13 +914,13 @@ const formatStatus = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB', // Lighter background for better contrast
+    backgroundColor: theme.colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.background.primary,
   },
   loadingText: {
     marginTop: 12,
@@ -937,9 +937,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.colors.border.light,
   },
   logo: {
     width: 40,
@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   countBadge: {
-    backgroundColor: theme.colors.neutral[200],
+    backgroundColor: theme.colors.background.elevated,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.text.tertiary,
-    backgroundColor: theme.colors.neutral[100],
+    backgroundColor: theme.colors.background.tertiary,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -1018,16 +1018,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   eventCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background.card,
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: theme.colors.border.light,
   },
   eventCardLive: {
     borderColor: theme.colors.success.light,
@@ -1039,11 +1034,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   eventCardMuted: {
-    opacity: 0.8,
-    backgroundColor: '#F9FAFB',
-    shadowOpacity: 0,
+    opacity: 0.7,
+    backgroundColor: theme.colors.background.secondary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border.main,
   },
   liveIndicator: {
     flexDirection: 'row',
