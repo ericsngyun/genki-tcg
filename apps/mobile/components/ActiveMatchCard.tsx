@@ -35,29 +35,60 @@ interface ActiveMatchCardProps {
   gameType: 'ONE_PIECE_TCG' | 'AZUKI_TCG' | 'RIFTBOUND';
 }
 
-export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType }: ActiveMatchCardProps) {
+export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUserId }: ActiveMatchCardProps & { myUserId: string }) {
   const [reporting, setReporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   const isBo3 = gameType === 'RIFTBOUND';
   const iReported = match.reportedBy !== null;
-  const opponentReported = iReported && match.reportedBy !== null;
+  // FIX: Check if opponent reported (not me) - was incorrectly always true when iReported was true
+  const iAmTheReporter = match.reportedBy === myUserId;
+  const opponentReported = iReported && !iAmTheReporter;
   const waitingForConfirmation = iReported && !match.confirmedBy;
   const matchConfirmed = match.confirmedBy !== null;
+
+  // Bo3 score validation helper
+  const validateBo3Score = (myGames: number, oppGames: number, isWin: boolean): string | null => {
+    // Check for negative numbers
+    if (myGames < 0 || oppGames < 0) {
+      return 'Game scores cannot be negative';
+    }
+    // Check max games in Bo3 (first to 2)
+    if (myGames > 2 || oppGames > 2) {
+      return 'Maximum games in Bo3 is 2';
+    }
+    // Check for impossible scores like 2-2
+    if (myGames === 2 && oppGames === 2) {
+      return 'Invalid score: both players cannot win 2 games in Bo3';
+    }
+    // Check that winner has 2 wins
+    if (isWin && myGames !== 2) {
+      return 'You must have won 2 games to report a win';
+    }
+    if (!isWin && oppGames !== 2) {
+      return 'Opponent must have won 2 games to report a loss';
+    }
+    // Total games should be valid (2, 3)
+    const totalGames = myGames + oppGames;
+    if (totalGames < 2 || totalGames > 3) {
+      return 'Invalid score: total games must be 2 or 3';
+    }
+    return null;
+  };
 
   const handleReportWin = async () => {
     if (isBo3) {
       // For Bo3, show game entry UI
       Alert.prompt(
         'Report Games Won',
-        'Enter games won (e.g., "2-1" for 2-1 victory)',
+        'Enter games won (e.g., "2-1" or "2-0" for your victory)',
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Submit',
             onPress: async (score) => {
               if (!score) return;
-              const parts = score.split('-');
+              const parts = score.trim().split('-');
               if (parts.length !== 2) {
                 Alert.alert('Invalid format', 'Please enter score like "2-1"');
                 return;
@@ -67,6 +98,13 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType }: Act
 
               if (isNaN(myGames) || isNaN(oppGames)) {
                 Alert.alert('Invalid format', 'Please enter valid numbers');
+                return;
+              }
+
+              // Validate Bo3 score
+              const validationError = validateBo3Score(myGames, oppGames, true);
+              if (validationError) {
+                Alert.alert('Invalid Score', validationError);
                 return;
               }
 
@@ -94,14 +132,14 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType }: Act
     if (isBo3) {
       Alert.prompt(
         'Report Games Won',
-        'Enter games won (e.g., "1-2" for 1-2 loss)',
+        'Enter games won (e.g., "1-2" or "0-2" for your loss)',
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Submit',
             onPress: async (score) => {
               if (!score) return;
-              const parts = score.split('-');
+              const parts = score.trim().split('-');
               if (parts.length !== 2) {
                 Alert.alert('Invalid format', 'Please enter score like "1-2"');
                 return;
@@ -111,6 +149,13 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType }: Act
 
               if (isNaN(myGames) || isNaN(oppGames)) {
                 Alert.alert('Invalid format', 'Please enter valid numbers');
+                return;
+              }
+
+              // Validate Bo3 score for a loss
+              const validationError = validateBo3Score(myGames, oppGames, false);
+              if (validationError) {
+                Alert.alert('Invalid Score', validationError);
                 return;
               }
 
@@ -236,7 +281,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType }: Act
           <Text style={styles.resultText}>{getResultDisplay()}</Text>
         </View>
       ) : waitingForConfirmation ? (
-        opponentReported && match.reportedBy !== null ? (
+        opponentReported ? (
           // Opponent reported, I need to confirm
           <View style={styles.confirmationContainer}>
             <View style={styles.pendingBadge}>

@@ -21,6 +21,7 @@ interface Event {
 export default function DashboardPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | undefined>(undefined);
   const [showPastEvents, setShowPastEvents] = useState(false);
 
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   }, []);
 
   const loadEvents = async () => {
+    setError(null);
     try {
       // Load all events to properly categorize them
       const [scheduled, inProgress, completed] = await Promise.all([
@@ -38,8 +40,9 @@ export default function DashboardPage() {
       ]);
 
       setAllEvents([...scheduled, ...inProgress, ...completed]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load events:', error);
+      setError(error.response?.data?.message || 'Failed to load events. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -387,6 +390,17 @@ export default function DashboardPage() {
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading events...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-8 text-center">
+          <div className="text-destructive text-lg font-medium mb-2">Error Loading Events</div>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button
+            onClick={loadEvents}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 transition"
+          >
+            Try Again
+          </button>
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="bg-card rounded-lg border border-border p-12 text-center">

@@ -24,21 +24,57 @@ export default function NewEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validation
+    if (!formData.name.trim()) {
+      setError('Event name is required');
+      return;
+    }
+
+    if (formData.name.length > 100) {
+      setError('Event name must be 100 characters or less');
+      return;
+    }
+
+    if (!formData.startAt) {
+      setError('Start date/time is required');
+      return;
+    }
+
+    const startDate = new Date(formData.startAt);
+    const now = new Date();
+    if (startDate <= now) {
+      setError('Start date must be in the future');
+      return;
+    }
+
+    const maxPlayers = formData.maxPlayers ? parseInt(formData.maxPlayers) : undefined;
+    if (maxPlayers !== undefined && (maxPlayers < 2 || maxPlayers > 256)) {
+      setError('Max players must be between 2 and 256');
+      return;
+    }
+
+    const entryFee = formData.entryFeeCents ? parseInt(formData.entryFeeCents) : undefined;
+    if (entryFee !== undefined && entryFee < 0) {
+      setError('Entry fee cannot be negative');
+      return;
+    }
+
+    const prizeCredits = formData.totalPrizeCredits ? parseInt(formData.totalPrizeCredits) : undefined;
+    if (prizeCredits !== undefined && prizeCredits < 0) {
+      setError('Prize credits cannot be negative');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const payload = {
         ...formData,
-        startAt: new Date(formData.startAt),
-        maxPlayers: formData.maxPlayers
-          ? parseInt(formData.maxPlayers)
-          : undefined,
-        entryFeeCents: formData.entryFeeCents
-          ? parseInt(formData.entryFeeCents)
-          : undefined,
-        totalPrizeCredits: formData.totalPrizeCredits
-          ? parseInt(formData.totalPrizeCredits)
-          : undefined,
+        startAt: startDate,
+        maxPlayers,
+        entryFeeCents: entryFee,
+        totalPrizeCredits: prizeCredits,
       };
 
       const event = await api.createEvent(payload);
