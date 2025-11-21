@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../lib/api';
 import { formatGameName, formatEventFormat } from '../../lib/formatters';
 import { theme } from '../../lib/theme';
@@ -105,6 +106,7 @@ export default function EventsScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadData();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   // Categorize events based on status, date, and user participation
@@ -606,74 +608,88 @@ const ActiveMatchBanner: React.FC<ActiveMatchBannerProps> = ({
   };
 
   return (
-    <View style={styles.activeMatchBanner}>
-      {/* Animated Live Indicator */}
-      <View style={styles.liveHeader}>
-        <View style={styles.liveIndicatorLarge}>
-          <View style={styles.liveDotAnimated} />
-          <Text style={styles.liveTextLarge}>LIVE</Text>
-        </View>
-        <Text style={styles.roundText}>
-          Round {event.currentRound || 1}
-        </Text>
-      </View>
-
-      <Text style={styles.activeMatchTitle}>{event.name}</Text>
-
-      <View style={styles.activeMatchMeta}>
-        <View style={styles.metaChip}>
-          <Ionicons name="game-controller" size={14} color={theme.colors.text.secondary} />
-          <Text style={styles.metaChipText}>{formatGameName(event.game)}</Text>
-        </View>
-        <View style={styles.metaChip}>
-          <Ionicons name="people" size={14} color={theme.colors.text.secondary} />
-          <Text style={styles.metaChipText}>{event._count.entries} players</Text>
-        </View>
-      </View>
-
-      {/* Primary Action - Go to Match */}
-      <TouchableOpacity
-        style={styles.goToMatchButton}
-        onPress={() => {
-          handleHaptic();
-          onPress();
-        }}
-        activeOpacity={0.8}
+    <View style={styles.activeMatchContainer}>
+      <LinearGradient
+        colors={['#1a2e05', '#0f1a03']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.activeMatchGradient}
       >
-        <Ionicons name="flash" size={20} color={theme.colors.primary.foreground} />
-        <Text style={styles.goToMatchText}>Go to Active Match</Text>
-        <Ionicons name="arrow-forward" size={20} color={theme.colors.primary.foreground} />
-      </TouchableOpacity>
+        {/* Animated Live Indicator */}
+        <View style={styles.liveHeader}>
+          <View style={styles.liveIndicatorLarge}>
+            <View style={styles.liveDotAnimated} />
+            <Text style={styles.liveTextLarge}>LIVE</Text>
+          </View>
+          <Text style={styles.roundText}>
+            Round {event.currentRound || 1}
+          </Text>
+        </View>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
+        <Text style={styles.activeMatchTitle}>{event.name}</Text>
+
+        <View style={styles.activeMatchMeta}>
+          <View style={styles.metaChip}>
+            <Ionicons name="game-controller" size={14} color="#A3E635" />
+            <Text style={styles.metaChipText}>{formatGameName(event.game)}</Text>
+          </View>
+          <View style={styles.metaChip}>
+            <Ionicons name="people" size={14} color="#A3E635" />
+            <Text style={styles.metaChipText}>{event._count.entries} players</Text>
+          </View>
+        </View>
+
+        {/* Primary Action - Go to Match */}
         <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={onViewPairings}
-          activeOpacity={0.7}
+          style={styles.goToMatchButton}
+          onPress={() => {
+            handleHaptic();
+            onPress();
+          }}
+          activeOpacity={0.8}
         >
-          <Ionicons name="grid" size={18} color={theme.colors.text.primary} />
-          <Text style={styles.quickActionText}>Pairings</Text>
+          <LinearGradient
+            colors={[theme.colors.primary.main, theme.colors.primary.dark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.goToMatchGradient}
+          >
+            <Ionicons name="flash" size={20} color={theme.colors.primary.foreground} />
+            <Text style={styles.goToMatchText}>Go to Active Match</Text>
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.primary.foreground} />
+          </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={onViewStandings}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="podium" size={18} color={theme.colors.text.primary} />
-          <Text style={styles.quickActionText}>Standings</Text>
-        </TouchableOpacity>
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={onViewPairings}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="grid" size={18} color="#E5E7EB" />
+            <Text style={styles.quickActionTextDark}>Pairings</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.quickActionButton, styles.quickActionDanger]}
-          onPress={onDrop}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="exit" size={18} color={theme.colors.error.main} />
-          <Text style={[styles.quickActionText, styles.quickActionTextDanger]}>Drop</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={onViewStandings}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="podium" size={18} color="#E5E7EB" />
+            <Text style={styles.quickActionTextDark}>Standings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.quickActionDanger]}
+            onPress={onDrop}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="exit" size={18} color={theme.colors.error.light} />
+            <Text style={[styles.quickActionTextDark, styles.quickActionTextDanger]}>Drop</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -796,93 +812,66 @@ const EventCard: React.FC<EventCardProps> = ({
           <View style={[
             styles.statusBadge,
             isPast ? { backgroundColor: theme.colors.neutral[100] } :
-            isStartingSoon ? { backgroundColor: theme.colors.warning.lightest } :
-            getStatusStyle(event.status)
+              isStartingSoon ? { backgroundColor: theme.colors.warning.lightest } :
+                getStatusStyle(event.status)
           ]}>
             <Text style={[
               styles.statusText,
-              isPast ? { color: theme.colors.neutral[600] } :
-              isStartingSoon ? { color: theme.colors.warning.dark } :
-              getStatusTextStyle(event.status)
+              isPast ? { color: theme.colors.text.tertiary } :
+                isStartingSoon ? { color: theme.colors.warning.dark } :
+                  getStatusTextStyle(event.status)
             ]}>
-              {isPast ? 'PAST' : isLive ? 'LIVE' : isStartingSoon ? 'STARTING' : 'UPCOMING'}
+              {isPast ? 'Past' : isStartingSoon ? 'Starting Soon' : formatStatus(event.status)}
             </Text>
           </View>
         </View>
 
         {/* Event Details */}
-        {!compact && (
-          <View style={styles.eventDetails}>
-            <View style={styles.detailRow}>
-              <Ionicons name="game-controller" size={16} color={theme.colors.text.tertiary} />
-              <Text style={styles.detailText}>{formatGameName(event.game)}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar" size={16} color={theme.colors.text.tertiary} />
-              <Text style={styles.detailText}>
-                {new Date(event.startAt).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="people" size={16} color={theme.colors.text.tertiary} />
-              <Text style={styles.detailText}>
-                {event._count.entries}
-                {event.maxPlayers ? `/${event.maxPlayers}` : ''} players
-              </Text>
-            </View>
+        <View style={styles.eventDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="game-controller-outline" size={14} color={theme.colors.text.secondary} />
+            <Text style={styles.detailText}>{formatGameName(event.game)}</Text>
           </View>
-        )}
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
+            <Text style={styles.detailText}>
+              {new Date(event.startAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="people-outline" size={14} color={theme.colors.text.secondary} />
+            <Text style={styles.detailText}>
+              {event._count.entries}
+              {event.maxPlayers ? `/${event.maxPlayers}` : ''} players
+            </Text>
+          </View>
+        </View>
 
-        {/* Compact Details */}
-        {compact && (
-          <View style={styles.compactDetails}>
-            <Text style={styles.compactDetailText}>
-              {formatGameName(event.game)} • {new Date(event.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        {/* Player Status Badge */}
+        {showMyStatus && playerStatus && (
+          <View style={[styles.playerStatusBadge, { backgroundColor: playerStatus.bg }]}>
+            <Text style={[styles.playerStatusText, { color: playerStatus.color }]}>
+              {playerStatus.text}
             </Text>
           </View>
         )}
-
-        {/* Player Status & Action Hint */}
-        <View style={[styles.cardFooter, compact && styles.cardFooterCompact]}>
-          {(showMyStatus || !compact) && playerStatus ? (
-            <View style={[styles.playerBadge, { backgroundColor: playerStatus.bg }]}>
-              <Ionicons
-                name={isCheckedIn ? 'checkmark-circle' : isDropped ? 'close-circle' : 'person'}
-                size={14}
-                color={playerStatus.color}
-              />
-              <Text style={[styles.playerBadgeText, { color: playerStatus.color }]}>
-                {playerStatus.text}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.tapHint}>
-              <Text style={styles.tapHintText}>{isPast ? 'View details' : 'Tap to apply'}</Text>
-            </View>
-          )}
-
-          <View style={styles.chevronContainer}>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
-          </View>
-        </View>
       </Animated.View>
     </Pressable>
   );
 };
 
-// Status badge style helpers
-function getStatusStyle(status: string) {
+// Helper functions for styles
+const getStatusStyle = (status: string) => {
   switch (status) {
-    case 'SCHEDULED':
-      return { backgroundColor: theme.colors.info.lightest };
     case 'IN_PROGRESS':
       return { backgroundColor: theme.colors.success.lightest };
+    case 'SCHEDULED':
+      return { backgroundColor: theme.colors.info.lightest };
     case 'COMPLETED':
       return { backgroundColor: theme.colors.neutral[100] };
     case 'CANCELLED':
@@ -890,94 +879,102 @@ function getStatusStyle(status: string) {
     default:
       return { backgroundColor: theme.colors.neutral[100] };
   }
-}
+};
 
-function getStatusTextStyle(status: string) {
+const getStatusTextStyle = (status: string) => {
   switch (status) {
-    case 'SCHEDULED':
-      return { color: theme.colors.info.dark };
     case 'IN_PROGRESS':
       return { color: theme.colors.success.dark };
+    case 'SCHEDULED':
+      return { color: theme.colors.info.dark };
     case 'COMPLETED':
-      return { color: theme.colors.neutral[600] };
+      return { color: theme.colors.text.tertiary };
     case 'CANCELLED':
-      return { color: theme.colors.error.main };
+      return { color: theme.colors.error.dark };
     default:
-      return { color: theme.colors.neutral[600] };
+      return { color: theme.colors.text.tertiary };
   }
-}
+};
+
+const formatStatus = (status: string) => {
+  switch (status) {
+    case 'IN_PROGRESS':
+      return 'Live';
+    case 'SCHEDULED':
+      return 'Upcoming';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    default:
+      return status.replace('_', ' ');
+  }
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
+    backgroundColor: '#F9FAFB', // Lighter background for better contrast
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
-    gap: 12,
+    backgroundColor: '#F9FAFB',
   },
   loadingText: {
-    fontSize: theme.typography.fontSize.base,
+    marginTop: 12,
     color: theme.colors.text.secondary,
+    fontSize: 16,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   header: {
+    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.background.card,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-    alignItems: 'center',
+    borderBottomColor: '#F3F4F6',
   },
   logo: {
-    width: 120,
-    height: 36,
+    width: 40,
+    height: 40,
     marginBottom: 12,
   },
   title: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 32,
+    fontWeight: '800',
     color: theme.colors.text.primary,
-    marginBottom: 4,
-    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 16,
     color: theme.colors.text.secondary,
-    textAlign: 'center',
+    marginTop: 4,
   },
-
-  // Sections
   section: {
-    marginTop: 16,
-    paddingHorizontal: 16,
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    paddingHorizontal: 4,
   },
   sectionHeaderContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   sectionHeaderRight: {
     flexDirection: 'row',
@@ -985,175 +982,80 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 18,
+    fontWeight: '700',
     color: theme.colors.text.primary,
+    marginLeft: 8,
   },
   sectionTitleMuted: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.tertiary,
+    marginLeft: 8,
   },
   countBadge: {
-    backgroundColor: theme.colors.background.elevated,
+    backgroundColor: theme.colors.neutral[200],
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   countBadgeText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.text.secondary,
   },
   countBadgeMuted: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.text.tertiary,
-  },
-  collapsibleHeader: {
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    backgroundColor: theme.colors.neutral[100],
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   cardList: {
-    gap: 10,
-  },
-
-  // Active Match Banner
-  activeMatchBanner: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: theme.colors.success.main,
-    ...theme.shadows.md,
-  },
-  liveHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  liveIndicatorLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.success.main + '20',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  liveDotAnimated: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.success.main,
-  },
-  liveTextLarge: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.success.main,
-    letterSpacing: 1,
-  },
-  roundText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-  },
-  activeMatchTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 12,
-  },
-  activeMatchMeta: {
-    flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.background.elevated,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  metaChipText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-  },
-  goToMatchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  goToMatchText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.primary.foreground,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  quickActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.background.elevated,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  quickActionDanger: {
-    backgroundColor: theme.colors.error.main + '15',
-  },
-  quickActionText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
-    color: theme.colors.text.primary,
-  },
-  quickActionTextDanger: {
-    color: theme.colors.error.main,
-  },
-
-  // Event Card
   eventCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...theme.shadows.base,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   eventCardLive: {
-    borderColor: theme.colors.success.main,
-    borderWidth: 2,
-  },
-  eventCardMuted: {
-    opacity: 0.7,
+    borderColor: theme.colors.success.light,
+    borderWidth: 1,
+    shadowColor: theme.colors.success.main,
+    shadowOpacity: 0.1,
   },
   eventCardCompact: {
     padding: 12,
   },
+  eventCardMuted: {
+    opacity: 0.8,
+    backgroundColor: '#F9FAFB',
+    shadowOpacity: 0,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: theme.colors.success.main,
+    marginRight: 6,
   },
   liveDotSmall: {
     width: 6,
@@ -1163,27 +1065,26 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   liveText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 12,
+    fontWeight: '700',
     color: theme.colors.success.main,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
-    gap: 12,
   },
   eventTitleContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 12,
   },
   eventName: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.colors.text.primary,
     lineHeight: 22,
   },
@@ -1192,96 +1093,198 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 11,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   eventDetails: {
-    gap: 6,
-    marginBottom: 12,
-  },
-  compactDetails: {
-    marginBottom: 8,
-  },
-  compactDetailText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   detailText: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 13,
     color: theme.colors.text.secondary,
+    marginLeft: 4,
+    fontWeight: '500',
   },
-  cardFooter: {
+  playerStatusBadge: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  playerStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    marginTop: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  collapsibleHeader: {
+    marginBottom: 12,
+  },
+  moreText: {
+    textAlign: 'center',
+    color: theme.colors.text.tertiary,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+
+  // Active Match Banner Styles
+  activeMatchContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: theme.colors.success.dark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  activeMatchGradient: {
+    padding: 24,
+  },
+  liveHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border.light,
+    marginBottom: 16,
   },
-  cardFooterCompact: {
-    paddingTop: 8,
-  },
-  playerBadge: {
+  liveIndicatorLarge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(163, 230, 53, 0.2)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(163, 230, 53, 0.3)',
+  },
+  liveDotAnimated: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
+    backgroundColor: '#A3E635',
+    marginRight: 6,
   },
-  playerBadgeText: {
-    fontSize: 11,
-    fontWeight: theme.typography.fontWeight.semibold,
+  liveTextLarge: {
+    color: '#A3E635',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
-  tapHint: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  roundText: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.8,
   },
-  tapHintText: {
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    fontStyle: 'italic',
+  activeMatchTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    lineHeight: 30,
   },
-  chevronContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.background.elevated,
+  activeMatchMeta: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  metaChipText: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  goToMatchButton: {
+    marginBottom: 20,
+    shadowColor: theme.colors.primary.main,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  goToMatchGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
   },
-
-  // Empty State
-  emptyState: {
-    padding: 48,
+  goToMatchText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
-  emptyTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+  quickActionDanger: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  quickActionText: {
     color: theme.colors.text.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
-  emptyText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
+  quickActionTextDark: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  moreText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-    paddingVertical: 12,
+  quickActionTextDanger: {
+    color: theme.colors.error.light,
   },
 });
