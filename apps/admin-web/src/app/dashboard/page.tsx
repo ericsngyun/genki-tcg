@@ -49,7 +49,7 @@ export default function DashboardPage() {
   };
 
   // Smart event categorization based on status and time
-  const { activeEvents, upcomingEvents, pastEvents, filteredEvents } = useMemo(() => {
+  const { activeEvents, upcomingEvents, pastEvents, filteredEvents, totalPlayers } = useMemo(() => {
     const now = new Date();
 
     // Active tournaments - IN_PROGRESS status
@@ -78,6 +78,9 @@ export default function DashboardPage() {
       })
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
+    // Calculate total unique players across active and upcoming events (approximation using entries count)
+    const total = [...active, ...upcoming].reduce((acc, event) => acc + event._count.entries, 0);
+
     // Apply filter for the main list view
     // When "All Events" is selected (no filter), show active + upcoming, NOT past events
     // Past events are shown in the collapsible Past Events section
@@ -100,6 +103,7 @@ export default function DashboardPage() {
       upcomingEvents: upcoming,
       pastEvents: past,
       filteredEvents: filtered,
+      totalPlayers: total,
     };
   }, [allEvents, filter]);
 
@@ -205,70 +209,124 @@ export default function DashboardPage() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
+    <div className="animate-in fade-in duration-500">
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-4xl font-bold text-foreground tracking-tight">Events</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
             Manage tournaments and player check-ins
           </p>
         </div>
         <Link
           href="/dashboard/events/new"
-          className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition shadow-lg shadow-primary/20"
+          className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0"
         >
-          Create Event
+          + Create Event
         </Link>
       </div>
 
+      {/* Hero Stats Row */}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {/* Active Stats */}
+          <div className="relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-green-500/5 p-6 backdrop-blur-sm shadow-xl shadow-green-500/5 transition-all hover:shadow-green-500/10 hover:border-green-500/30 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-400 uppercase tracking-wider">Active Now</p>
+                <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{activeEvents.length}</h3>
+              </div>
+              <div className="rounded-full bg-green-500/20 p-3 text-green-400 animate-pulse">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Stats */}
+          <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-6 backdrop-blur-sm shadow-xl shadow-blue-500/5 transition-all hover:shadow-blue-500/10 hover:border-blue-500/30 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-400 uppercase tracking-wider">Upcoming</p>
+                <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{upcomingEvents.length}</h3>
+              </div>
+              <div className="rounded-full bg-blue-500/20 p-3 text-blue-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Player Stats */}
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-6 backdrop-blur-sm shadow-xl shadow-purple-500/5 transition-all hover:shadow-purple-500/10 hover:border-purple-500/30 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-400 uppercase tracking-wider">Total Players</p>
+                <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{totalPlayers}</h3>
+              </div>
+              <div className="rounded-full bg-purple-500/20 p-3 text-purple-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Active Tournaments Section - Most Important */}
       {!filter && !loading && activeEvents.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-10 animate-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-              <h2 className="text-xl font-bold text-foreground">Active Tournaments</h2>
-              <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full text-xs font-bold">
-                {activeEvents.length} LIVE
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">Active Tournaments</h2>
             </div>
             <button
               onClick={() => setFilter('IN_PROGRESS')}
-              className="text-sm text-green-400 hover:text-green-300 font-medium transition"
+              className="text-sm text-green-400 hover:text-green-300 font-medium transition flex items-center gap-1"
             >
-              View all active →
+              View all active <span className="text-lg">→</span>
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeEvents.slice(0, 3).map((event) => (
               <Link
                 key={event.id}
                 href={`/dashboard/events/${event.id}`}
-                className="bg-gradient-to-br from-green-500/5 to-green-500/15 rounded-xl border-2 border-green-500/30 p-6 hover:shadow-xl hover:shadow-green-500/10 hover:border-green-500/50 transition-all"
+                className="group relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-green-500/5 p-6 backdrop-blur-sm transition-all hover:border-green-500/40 hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="px-3 py-1 rounded-full text-xs font-bold border-2 bg-green-500/20 text-green-400 border-green-500 animate-pulse">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-green-500/10 blur-2xl transition-all group-hover:bg-green-500/20"></div>
+
+                <div className="flex items-start justify-between mb-4 relative">
+                  <div className="px-3 py-1 rounded-full text-xs font-bold border bg-green-500/20 text-green-400 border-green-500/30 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                     LIVE NOW
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-green-400">
+                    <div className="text-3xl font-bold text-green-400 tracking-tight">
                       {event._count.entries}
-                      {event.maxPlayers && `/${event.maxPlayers}`}
+                      {event.maxPlayers && <span className="text-lg text-green-500/50">/{event.maxPlayers}</span>}
                     </div>
-                    <div className="text-xs text-muted-foreground">players</div>
+                    <div className="text-xs font-medium text-green-500/70 uppercase tracking-wider">players</div>
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-2">
+
+                <h3 className="text-xl font-bold text-foreground mb-3 line-clamp-2 group-hover:text-green-400 transition-colors relative">
                   {event.name}
                 </h3>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <div className="flex items-center">
-                    <span className="mr-2">🎮</span>
-                    <span>{formatGameName(event.game)}</span>
+
+                <div className="space-y-2 text-sm text-muted-foreground relative">
+                  <div className="flex items-center bg-background/30 rounded-lg p-2 backdrop-blur-sm">
+                    <span className="mr-3 text-lg">🎮</span>
+                    <span className="font-medium">{formatGameName(event.game)}</span>
                   </div>
-                  <div className="flex items-center">
-                    <span className="mr-2">📋</span>
-                    <span>{formatEventFormat(event.format)}</span>
+                  <div className="flex items-center bg-background/30 rounded-lg p-2 backdrop-blur-sm">
+                    <span className="mr-3 text-lg">📋</span>
+                    <span className="font-medium">{formatEventFormat(event.format)}</span>
                   </div>
                 </div>
               </Link>
@@ -279,50 +337,49 @@ export default function DashboardPage() {
 
       {/* Upcoming Events Section */}
       {!filter && !loading && upcomingEvents.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-10 animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-foreground">Upcoming Events</h2>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full text-xs font-medium">
-                {upcomingEvents.length}
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">Upcoming Events</h2>
             <button
               onClick={() => setFilter('SCHEDULED')}
-              className="text-sm text-primary hover:text-primary/80 font-medium transition"
+              className="text-sm text-primary hover:text-primary/80 font-medium transition flex items-center gap-1"
             >
-              View all upcoming →
+              View all upcoming <span className="text-lg">→</span>
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingEvents.slice(0, 3).map((event) => (
               <Link
                 key={event.id}
                 href={`/dashboard/events/${event.id}`}
-                className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border-2 border-primary/20 p-6 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getTimeUntilColor(event.startAt)}`}>
+                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getTimeUntilColor(event.startAt)}`}>
                     {getTimeUntilEvent(event.startAt)}
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">
+                    <div className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
                       {event._count.entries}
-                      {event.maxPlayers && `/${event.maxPlayers}`}
+                      {event.maxPlayers && <span className="text-sm text-muted-foreground">/{event.maxPlayers}</span>}
                     </div>
-                    <div className="text-xs text-muted-foreground">players</div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">players</div>
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-2">
+
+                <h3 className="text-lg font-bold text-foreground mb-3 line-clamp-2 group-hover:text-primary transition-colors">
                   {event.name}
                 </h3>
-                <div className="space-y-1 text-sm text-muted-foreground">
+
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center">
-                    <span className="mr-2">🎮</span>
+                    <span className="mr-2 w-5 text-center">🎮</span>
                     <span>{formatGameName(event.game)}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="mr-2">📅</span>
+                    <span className="mr-2 w-5 text-center">📅</span>
                     <span>
                       {new Date(event.startAt).toLocaleDateString('en-US', {
                         month: 'short',
@@ -340,109 +397,112 @@ export default function DashboardPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-card rounded-lg border border-border p-4 mb-6">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setFilter(undefined)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === undefined
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                : 'bg-muted text-foreground hover:bg-muted/80'
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border p-1.5 mb-6 inline-flex shadow-sm animate-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both">
+        <button
+          onClick={() => setFilter(undefined)}
+          className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === undefined
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
-          >
-            All Events
-          </button>
-          <button
-            onClick={() => setFilter('SCHEDULED')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'SCHEDULED'
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                : 'bg-muted text-foreground hover:bg-muted/80'
+        >
+          All Events
+        </button>
+        <button
+          onClick={() => setFilter('SCHEDULED')}
+          className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'SCHEDULED'
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
-          >
-            Upcoming
-          </button>
-          <button
-            onClick={() => setFilter('IN_PROGRESS')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'IN_PROGRESS'
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                : 'bg-muted text-foreground hover:bg-muted/80'
+        >
+          Upcoming
+        </button>
+        <button
+          onClick={() => setFilter('IN_PROGRESS')}
+          className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'IN_PROGRESS'
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
-          >
-            Active
-          </button>
-          <button
-            onClick={() => setFilter('COMPLETED')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'COMPLETED'
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                : 'bg-muted text-foreground hover:bg-muted/80'
+        >
+          Active
+        </button>
+        <button
+          onClick={() => setFilter('COMPLETED')}
+          className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'COMPLETED'
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
-          >
-            Completed
-          </button>
-        </div>
+        >
+          Completed
+        </button>
       </div>
 
       {/* Events List */}
       {loading ? (
-        <div className="text-center py-12">
+        <div className="text-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading events...</p>
+          <p className="mt-4 text-muted-foreground animate-pulse">Loading events...</p>
         </div>
       ) : error ? (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-8 text-center">
-          <div className="text-destructive text-lg font-medium mb-2">Error Loading Events</div>
-          <p className="text-muted-foreground mb-4">{error}</p>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-8 text-center backdrop-blur-sm">
+          <div className="text-destructive text-lg font-bold mb-2">Error Loading Events</div>
+          <p className="text-muted-foreground mb-6">{error}</p>
           <button
             onClick={loadEvents}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 transition"
+            className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition shadow-lg shadow-primary/20"
           >
             Try Again
           </button>
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-12 text-center">
-          <p className="text-muted-foreground mb-4">No events found</p>
+        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border border-dashed p-16 text-center animate-in fade-in duration-500">
+          <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <span className="text-3xl">📅</span>
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">No events found</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            There are no events matching your criteria. Why not create a new one?
+          </p>
           <Link
             href="/dashboard/events/new"
-            className="text-primary hover:text-primary/80 font-medium transition"
+            className="text-primary hover:text-primary/80 font-bold transition flex items-center justify-center gap-2"
           >
-            Create your first event
+            Create your first event <span aria-hidden="true">→</span>
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 animate-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both">
           {filteredEvents.map((event) => (
             <Link
               key={event.id}
               href={`/dashboard/events/${event.id}`}
-              className={`bg-card rounded-lg border p-6 hover:shadow-lg transition ${
-                event.status === 'IN_PROGRESS'
+              className={`group bg-card/50 backdrop-blur-sm rounded-xl border p-6 hover:shadow-lg transition-all hover:-translate-y-0.5 ${event.status === 'IN_PROGRESS'
                   ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10'
                   : 'border-border hover:border-primary/30 hover:shadow-primary/5'
-              }`}
+                }`}
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-xl font-semibold text-foreground">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                       {event.name}
                     </h3>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(
                         event
                       )}`}
                     >
                       {getStatusText(event)}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                    <span>🎮 {formatGameName(event.game)}</span>
-                    <span>📋 {formatEventFormat(event.format)}</span>
-                    <span>
-                      📅{' '}
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-base">🎮</span> {formatGameName(event.game)}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-base">📋</span> {formatEventFormat(event.format)}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-base">📅</span>{' '}
                       {new Date(event.startAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -453,12 +513,12 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-foreground">
+                <div className="text-right pl-4 border-l border-border/50 ml-4">
+                  <div className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
                     {event._count.entries}
-                    {event.maxPlayers && `/${event.maxPlayers}`}
+                    {event.maxPlayers && <span className="text-sm text-muted-foreground font-normal">/{event.maxPlayers}</span>}
                   </div>
-                  <div className="text-sm text-muted-foreground">Players</div>
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Players</div>
                 </div>
               </div>
             </Link>
@@ -468,71 +528,74 @@ export default function DashboardPage() {
 
       {/* Past Events Section - Collapsible */}
       {!filter && !loading && pastEvents.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-12 border-t border-border pt-8">
           <button
             onClick={() => setShowPastEvents(!showPastEvents)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition mb-4"
+            className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition mb-6 group w-full"
           >
-            <svg
-              className={`w-4 h-4 transition-transform ${showPastEvents ? 'rotate-90' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-lg font-semibold">Past Events</h2>
-            <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-medium">
-              {pastEvents.length}
-            </span>
+            <div className={`p-2 rounded-full bg-muted group-hover:bg-muted/80 transition-transform duration-300 ${showPastEvents ? 'rotate-90' : ''}`}>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold">Past Events</h2>
+              <span className="bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs font-bold">
+                {pastEvents.length}
+              </span>
+            </div>
           </button>
+
           {showPastEvents && (
-            <div className="grid gap-3 opacity-75">
+            <div className="grid gap-3 animate-in slide-in-from-top-2 duration-300">
               {pastEvents.slice(0, 10).map((event) => (
                 <Link
                   key={event.id}
                   href={`/dashboard/events/${event.id}`}
-                  className="bg-card rounded-lg border border-border p-4 hover:shadow-md transition"
+                  className="bg-card/30 rounded-lg border border-border/50 p-4 hover:bg-card/50 hover:border-border transition flex justify-between items-center group"
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="text-base font-medium text-foreground">
-                          {event.name}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            event
-                          )}`}
-                        >
-                          {getStatusText(event)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                        <span>🎮 {formatGameName(event.game)}</span>
-                        <span>
-                          📅{' '}
-                          {new Date(event.startAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-base font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                        {event.name}
+                      </h3>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStatusColor(
+                          event
+                        )}`}
+                      >
+                        {getStatusText(event)}
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-muted-foreground">
-                        {event._count.entries}
-                      </div>
-                      <div className="text-xs text-muted-foreground">players</div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                      <span>{formatGameName(event.game)}</span>
+                      <span>•</span>
+                      <span>
+                        {new Date(event.startAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
                     </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                      {event._count.entries}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">players</div>
                   </div>
                 </Link>
               ))}
               {pastEvents.length > 10 && (
                 <button
                   onClick={() => setFilter('COMPLETED')}
-                  className="text-sm text-muted-foreground hover:text-foreground font-medium transition py-2"
+                  className="text-sm text-muted-foreground hover:text-foreground font-medium transition py-4 text-center border border-dashed border-border rounded-lg hover:bg-muted/30"
                 >
                   View all {pastEvents.length} past events →
                 </button>

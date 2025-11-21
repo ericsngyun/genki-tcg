@@ -11,7 +11,7 @@ export default function NewEventPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    game: 'OPTCG',
+    game: 'ONE_PIECE_TCG',
     format: 'CONSTRUCTED',
     startAt: '',
     maxPlayers: '',
@@ -130,10 +130,9 @@ export default function NewEventPage() {
                 }
                 className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
               >
-                <option value="OPTCG">One Piece TCG</option>
-                <option value="AZUKI">Azuki TCG</option>
+                <option value="ONE_PIECE_TCG">One Piece TCG</option>
+                <option value="AZUKI_TCG">Azuki TCG</option>
                 <option value="RIFTBOUND">Riftbound</option>
-                <option value="OTHER">Other</option>
               </select>
             </div>
 
