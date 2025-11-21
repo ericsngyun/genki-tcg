@@ -2,7 +2,7 @@
   "name": "@genki-tcg/mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.js",
   "overrides": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
