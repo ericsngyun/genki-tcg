@@ -15,21 +15,29 @@ const reactDomPath = path.resolve(__dirname, 'node_modules/react-dom');
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Force all React imports to use the same instance
-  if (moduleName === 'react' || moduleName.startsWith('react/')) {
-    return {
-      filePath: path.join(reactPath, moduleName.replace('react/', '')),
-      type: 'sourceFile',
-    };
+  if (moduleName === 'react') {
+    // Main React package
+    return context.resolveRequest(context, reactPath, platform);
   }
 
-  if (moduleName === 'react-dom' || moduleName.startsWith('react-dom/')) {
-    return {
-      filePath: path.join(reactDomPath, moduleName.replace('react-dom/', '')),
-      type: 'sourceFile',
-    };
+  if (moduleName.startsWith('react/')) {
+    // React subpath imports (jsx-runtime, jsx-dev-runtime, etc.)
+    const subpath = moduleName.slice('react/'.length);
+    return context.resolveRequest(context, path.join(reactPath, subpath), platform);
   }
 
-  // Default resolver
+  if (moduleName === 'react-dom') {
+    // Main ReactDOM package
+    return context.resolveRequest(context, reactDomPath, platform);
+  }
+
+  if (moduleName.startsWith('react-dom/')) {
+    // ReactDOM subpath imports
+    const subpath = moduleName.slice('react-dom/'.length);
+    return context.resolveRequest(context, path.join(reactDomPath, subpath), platform);
+  }
+
+  // Default resolver for everything else
   return context.resolveRequest(context, moduleName, platform);
 };
 
