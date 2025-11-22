@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,60 @@ import {
   Platform,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
 import { Button, Card, Input } from '../components';
 import { theme } from '../lib/theme';
 import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
+import { useDiscordAuth, exchangeCodeForTokens } from '../lib/discord-auth';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [discordLoading, setDiscordLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Discord OAuth hook
+  const { request, response, promptAsync, redirectUri } = useDiscordAuth();
+
+  // Handle Discord OAuth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      handleDiscordCallback(code);
+    } else if (response?.type === 'error') {
+      setError(response.error?.message || 'Discord sign in failed');
+      setDiscordLoading(false);
+    } else if (response?.type === 'cancel' || response?.type === 'dismiss') {
+      setDiscordLoading(false);
+    }
+  }, [response]);
+
+  const handleDiscordCallback = async (code: string) => {
+    try {
+      await exchangeCodeForTokens(code, redirectUri);
+      router.replace('/(tabs)/events');
+    } catch (err: any) {
+      setError(err.message || 'Failed to complete Discord sign in');
+    } finally {
+      setDiscordLoading(false);
+    }
+  };
+
+  const handleDiscordLogin = async () => {
+    setError('');
+    setDiscordLoading(true);
+    try {
+      await promptAsync();
+    } catch (err: any) {
+      setError(err.message || 'Failed to start Discord sign in');
+      setDiscordLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -114,10 +155,32 @@ export default function LoginScreen() {
               Sign In
             </Button>
 
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Discord Login */}
+            <Button
+              onPress={handleDiscordLogin}
+              loading={discordLoading}
+              disabled={!request || loading}
+              fullWidth
+              variant="outline"
+              style={styles.discordButton}
+              textStyle={styles.discordButtonText}
+              accessibilityLabel="Sign in with Discord"
+              accessibilityHint="Double tap to sign in using your Discord account"
+            >
+              Continue with Discord
+            </Button>
+
             <Button
               onPress={() => router.push('/signup')}
               variant="ghost"
-              disabled={loading}
+              disabled={loading || discordLoading}
               fullWidth
               style={{ marginTop: theme.spacing.md }}
               accessibilityLabel="Sign up"
@@ -199,5 +262,28 @@ const styles = StyleSheet.create({
     color: theme.colors.primary.main,
     marginTop: theme.spacing.sm,
     fontWeight: theme.typography.fontWeight.semibold,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: theme.spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border.light,
+  },
+  dividerText: {
+    marginHorizontal: theme.spacing.md,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.tertiary,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  discordButton: {
+    borderColor: '#5865F2',
+    backgroundColor: 'transparent',
+  },
+  discordButtonText: {
+    color: '#5865F2',
   },
 });

@@ -381,6 +381,15 @@ class ApiClient {
     });
     return data;
   }
+
+  // Generic HTTP methods for flexibility
+  async get<T = any>(url: string, config?: any) {
+    return this.client.get<T>(url, config);
+  }
+
+  async post<T = any>(url: string, data?: any, config?: any) {
+    return this.client.post<T>(url, data, config);
+  }
 }
 
 export const api = new ApiClient();

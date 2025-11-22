@@ -233,6 +233,45 @@ class ApiClient {
     });
     return data;
   }
+
+  // Discord OAuth
+  async getDiscordAuthUrl(redirectUri: string, state?: string) {
+    const { data } = await this.client.post('/auth/discord/url', {
+      redirectUri,
+      state,
+    });
+    return data;
+  }
+
+  async discordCallback(code: string, redirectUri: string) {
+    const { data } = await this.client.post('/auth/discord/callback', {
+      code,
+      redirectUri,
+    });
+
+    // Store tokens from Discord login
+    if (data.accessToken && data.refreshToken) {
+      await AsyncStorage.multiSet([
+        ['access_token', data.accessToken],
+        ['refresh_token', data.refreshToken],
+      ]);
+    }
+
+    return data;
+  }
+
+  async linkDiscord(code: string, redirectUri: string) {
+    const { data } = await this.client.post('/auth/discord/link', {
+      code,
+      redirectUri,
+    });
+    return data;
+  }
+
+  async unlinkDiscord() {
+    const { data } = await this.client.post('/auth/discord/unlink');
+    return data;
+  }
 }
 
 export const api = new ApiClient();

@@ -6,6 +6,10 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
+  },
   "scripts": {
     "dev:backend": "npm run dev --workspace=apps/backend",
     "dev:admin": "npm run dev --workspace=apps/admin-web",

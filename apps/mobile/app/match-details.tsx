@@ -43,10 +43,21 @@ export default function MatchDetailsScreen() {
   const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [dropping, setDropping] = useState(false);
+  const [myUserId, setMyUserId] = useState<string>('');
 
   useEffect(() => {
+    loadCurrentUser();
     loadActiveMatch();
   }, [eventId]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const data = await api.getMe();
+      setMyUserId(data.user?.id || '');
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+    }
+  };
 
   const loadActiveMatch = async () => {
     try {
@@ -131,6 +142,7 @@ export default function MatchDetailsScreen() {
             match={activeMatch.match}
             onMatchUpdate={loadActiveMatch}
             gameType={gameType}
+            myUserId={myUserId}
           />
 
           {/* Additional Actions */}

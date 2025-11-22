@@ -38,7 +38,7 @@ export const Card: React.FC<CardProps> = ({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole={accessibilityRole}
       >
-        {children}
+        {children as any}
       </LinearGradient>
     );
   }
@@ -54,7 +54,7 @@ export const Card: React.FC<CardProps> = ({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}
     >
-      {children}
+      {children as any}
     </View>
   );
 };

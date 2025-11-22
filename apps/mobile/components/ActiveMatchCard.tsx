@@ -87,7 +87,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Submit',
-            onPress: async (score) => {
+            onPress: async (score: string | undefined) => {
               if (!score) return;
               const parts = score.trim().split('-');
               if (parts.length !== 2) {
@@ -138,7 +138,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Submit',
-            onPress: async (score) => {
+            onPress: async (score: string | undefined) => {
               if (!score) return;
               const parts = score.trim().split('-');
               if (parts.length !== 2) {

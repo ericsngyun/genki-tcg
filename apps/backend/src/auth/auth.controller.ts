@@ -85,7 +85,6 @@ export class AuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
-}
 
   // ============================================================================
   // Discord OAuth Endpoints
@@ -93,16 +92,14 @@ export class AuthController {
 
   @Post('discord/url')
   async getDiscordAuthUrl(
-    @Body() body: { redirectUri: string; state?: string }
+    @Body() body: { redirectUri: string; state?: string },
   ) {
     return this.authService.getDiscordAuthUrl(body.redirectUri, body.state);
   }
 
   @Post('discord/callback')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
-  async discordCallback(
-    @Body() body: { code: string; redirectUri: string }
-  ) {
+  async discordCallback(@Body() body: { code: string; redirectUri: string }) {
     return this.authService.handleDiscordCallback(body.code, body.redirectUri);
   }
 
@@ -110,12 +107,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async linkDiscord(
     @CurrentUser() user: User,
-    @Body() body: { code: string; redirectUri: string }
+    @Body() body: { code: string; redirectUri: string },
   ) {
     return this.authService.linkDiscordAccount(
       user.id,
       body.code,
-      body.redirectUri
+      body.redirectUri,
     );
   }
 

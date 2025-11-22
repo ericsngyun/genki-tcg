@@ -16,6 +16,7 @@ interface Event {
   status: string;
   startAt: string;
   maxPlayers?: number;
+  entryFeeCents?: number;
   totalPrizeCredits?: number;
   prizesDistributed?: boolean;
   prizesDistributedAt?: string;

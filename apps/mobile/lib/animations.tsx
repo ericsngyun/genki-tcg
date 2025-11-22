@@ -39,7 +39,7 @@ export const FadeInView: React.FC<AnimatedViewProps> = ({
 
   return (
     <Animated.View style={[style, { opacity }]}>
-      {children}
+      {children as any}
     </Animated.View>
   );
 };
@@ -77,7 +77,7 @@ export const SlideUpView: React.FC<AnimatedViewProps> = ({
 
   return (
     <Animated.View style={[style, { transform: [{ translateY }], opacity }]}>
-      {children}
+      {children as any}
     </Animated.View>
   );
 };
@@ -116,7 +116,7 @@ export const ScaleInView: React.FC<AnimatedViewProps> = ({
 
   return (
     <Animated.View style={[style, { transform: [{ scale }], opacity }]}>
-      {children}
+      {children as any}
     </Animated.View>
   );
 };
@@ -150,7 +150,7 @@ export const PulseView: React.FC<{
 
   return (
     <Animated.View style={[style, { opacity }]}>
-      {children}
+      {children as any}
     </Animated.View>
   );
 };
