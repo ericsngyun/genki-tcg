@@ -33,9 +33,10 @@ interface ActiveMatchCardProps {
   match: ActiveMatch;
   onMatchUpdate: () => void;
   gameType: 'ONE_PIECE_TCG' | 'AZUKI_TCG' | 'RIFTBOUND';
+  myUserId: string;
 }
 
-export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUserId }: ActiveMatchCardProps & { myUserId: string }) {
+export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUserId }: ActiveMatchCardProps) {
   const [reporting, setReporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
