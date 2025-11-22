@@ -44,6 +44,11 @@ model User {
   passwordHash String?
   avatarUrl    String?
 
+  // Discord OAuth
+  discordId       String? @unique
+  discordUsername String?
+  discordAvatar   String?
+
   // Email verification
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?

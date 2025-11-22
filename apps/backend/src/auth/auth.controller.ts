@@ -86,3 +86,42 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 }
+
+  // ============================================================================
+  // Discord OAuth Endpoints
+  // ============================================================================
+
+  @Post('discord/url')
+  async getDiscordAuthUrl(
+    @Body() body: { redirectUri: string; state?: string }
+  ) {
+    return this.authService.getDiscordAuthUrl(body.redirectUri, body.state);
+  }
+
+  @Post('discord/callback')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
+  async discordCallback(
+    @Body() body: { code: string; redirectUri: string }
+  ) {
+    return this.authService.handleDiscordCallback(body.code, body.redirectUri);
+  }
+
+  @Post('discord/link')
+  @UseGuards(JwtAuthGuard)
+  async linkDiscord(
+    @CurrentUser() user: User,
+    @Body() body: { code: string; redirectUri: string }
+  ) {
+    return this.authService.linkDiscordAccount(
+      user.id,
+      body.code,
+      body.redirectUri
+    );
+  }
+
+  @Post('discord/unlink')
+  @UseGuards(JwtAuthGuard)
+  async unlinkDiscord(@CurrentUser() user: User) {
+    return this.authService.unlinkDiscordAccount(user.id);
+  }
+}

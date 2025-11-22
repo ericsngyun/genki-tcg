@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -471,5 +472,290 @@ export class AuthService {
     // For now, this is a placeholder
 
     throw new BadRequestException('Email verification not fully implemented');
+  }
+
+  // ============================================================================
+  // Discord OAuth
+  // ============================================================================
+
+  async getDiscordAuthUrl(redirectUri: string, state?: string) {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) {
+      throw new BadRequestException('Discord OAuth not configured');
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'identify email',
+      ...(state && { state }),
+    });
+
+    return {
+      url: `https://discord.com/api/oauth2/authorize?${params.toString()}`,
+    };
+  }
+
+  async handleDiscordCallback(code: string, redirectUri: string) {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      throw new BadRequestException('Discord OAuth not configured');
+    }
+
+    // Exchange code for tokens
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error('Discord token exchange failed:', error);
+      throw new BadRequestException('Failed to exchange Discord authorization code');
+    }
+
+    const tokens = await tokenResponse.json();
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      throw new BadRequestException('Failed to fetch Discord user info');
+    }
+
+    const discordUser = await userResponse.json();
+
+    // Find or create user
+    return this.findOrCreateDiscordUser(discordUser);
+  }
+
+  private async findOrCreateDiscordUser(discordUser: {
+    id: string;
+    username: string;
+    global_name?: string;
+    avatar?: string;
+    email?: string;
+  }) {
+    // First, try to find user by Discord ID
+    let user = await this.prisma.user.findUnique({
+      where: { discordId: discordUser.id },
+      include: {
+        memberships: {
+          include: { org: true },
+        },
+      },
+    });
+
+    if (!user && discordUser.email) {
+      // Try to find by email and link Discord account
+      user = await this.prisma.user.findUnique({
+        where: { email: discordUser.email },
+        include: {
+          memberships: {
+            include: { org: true },
+          },
+        },
+      });
+
+      if (user) {
+        // Link Discord to existing account
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            discordId: discordUser.id,
+            discordUsername: discordUser.username,
+            discordAvatar: discordUser.avatar,
+            avatarUrl: discordUser.avatar
+              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+              : user.avatarUrl,
+          },
+          include: {
+            memberships: {
+              include: { org: true },
+            },
+          },
+        });
+      }
+    }
+
+    if (!user) {
+      // Create new user - find default organization for OAuth users
+      const defaultOrg = await this.prisma.organization.findFirst({
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!defaultOrg) {
+        throw new BadRequestException(
+          'No organization available. Please contact support.'
+        );
+      }
+
+      const displayName = discordUser.global_name || discordUser.username;
+      const email = discordUser.email || `${discordUser.id}@discord.user`;
+
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          name: displayName,
+          discordId: discordUser.id,
+          discordUsername: discordUser.username,
+          discordAvatar: discordUser.avatar,
+          avatarUrl: discordUser.avatar
+            ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+            : null,
+          emailVerified: !!discordUser.email,
+          memberships: {
+            create: {
+              orgId: defaultOrg.id,
+              role: 'PLAYER',
+            },
+          },
+        },
+        include: {
+          memberships: {
+            include: { org: true },
+          },
+        },
+      });
+    }
+
+    const membership = user.memberships[0];
+    if (!membership) {
+      throw new UnauthorizedException('No organization membership');
+    }
+
+    // Generate tokens
+    const accessToken = this.generateToken(user, membership, membership.orgId);
+    const refreshToken = await this.generateRefreshToken(user.id, {
+      deviceType: 'mobile',
+      deviceName: 'Discord OAuth',
+    });
+
+    return {
+      user: this.sanitizeUser(user),
+      accessToken,
+      refreshToken,
+      orgMembership: membership,
+    };
+  }
+
+  async linkDiscordAccount(userId: string, code: string, redirectUri: string) {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      throw new BadRequestException('Discord OAuth not configured');
+    }
+
+    // Exchange code for tokens
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new BadRequestException('Failed to exchange Discord authorization code');
+    }
+
+    const tokens = await tokenResponse.json();
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      throw new BadRequestException('Failed to fetch Discord user info');
+    }
+
+    const discordUser = await userResponse.json();
+
+    // Check if Discord account is already linked to another user
+    const existingUser = await this.prisma.user.findUnique({
+      where: { discordId: discordUser.id },
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new BadRequestException(
+        'This Discord account is already linked to another user'
+      );
+    }
+
+    // Link Discord to user
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        discordId: discordUser.id,
+        discordUsername: discordUser.username,
+        discordAvatar: discordUser.avatar,
+        avatarUrl: discordUser.avatar
+          ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+          : undefined,
+      },
+    });
+
+    return {
+      message: 'Discord account linked successfully',
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  async unlinkDiscordAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.discordId) {
+      throw new BadRequestException('No Discord account linked');
+    }
+
+    // Ensure user has a password before unlinking (so they can still log in)
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'Cannot unlink Discord without setting a password first'
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        discordId: null,
+        discordUsername: null,
+        discordAvatar: null,
+      },
+    });
+
+    return { message: 'Discord account unlinked successfully' };
   }
 }
