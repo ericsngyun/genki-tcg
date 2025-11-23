@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,7 +16,7 @@ import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
-import { Button, Card, Input } from '../components';
+import { Card } from '../components';
 import { theme } from '../lib/theme';
 import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
 
@@ -30,10 +31,7 @@ const DISCORD_REDIRECT_URI = makeRedirectUri({
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [discordLoading, setDiscordLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Handle deep link for Discord callback
@@ -60,7 +58,7 @@ export default function LoginScreen() {
 
   const handleDiscordCallback = async (url: string) => {
     try {
-      setDiscordLoading(true);
+      setLoading(true);
       setError('');
 
       // Parse the callback URL
@@ -84,13 +82,13 @@ export default function LoginScreen() {
       console.error('Discord callback error:', err);
       setError(err.response?.data?.message || err.message || 'Discord login failed');
     } finally {
-      setDiscordLoading(false);
+      setLoading(false);
     }
   };
 
   const handleDiscordLogin = async () => {
     try {
-      setDiscordLoading(true);
+      setLoading(true);
       setError('');
 
       // Get the Discord auth URL from backend
@@ -114,30 +112,9 @@ export default function LoginScreen() {
       console.error('Discord login error:', err);
       setError(err.response?.data?.message || err.message || 'Discord login failed');
     } finally {
-      setDiscordLoading(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Please enter email and password');
-      return;
-    }
-
-    setError('');
-    setLoading(true);
-
-    try {
-      await api.login(email, password);
-      router.replace('/(tabs)/events');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid credentials');
-    } finally {
       setLoading(false);
     }
   };
-
-  const isLoading = loading || discordLoading;
 
   return (
     <KeyboardAvoidingView
@@ -162,15 +139,15 @@ export default function LoginScreen() {
             <Text
               style={styles.title}
               accessibilityRole="header"
-              accessibilityLabel="Welcome Back"
+              accessibilityLabel="Welcome to Genki TCG"
             >
-              Welcome Back
+              Welcome to Genki TCG
             </Text>
             <Text
               style={styles.subtitle}
               accessibilityRole="text"
             >
-              Sign in to continue your tournament journey
+              Sign in with Discord to join tournaments and track your progress
             </Text>
           </SlideUpView>
         </FadeInView>
@@ -179,94 +156,54 @@ export default function LoginScreen() {
           <Card variant="elevated" padding="xl">
             {/* Discord OAuth Button */}
             <TouchableOpacity
-              style={[styles.discordButton, isLoading && styles.discordButtonDisabled]}
+              style={[styles.discordButton, loading && styles.discordButtonDisabled]}
               onPress={handleDiscordLogin}
-              disabled={isLoading}
+              disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Sign in with Discord"
               accessibilityHint="Double tap to sign in using your Discord account"
             >
-              <View style={styles.discordButtonContent}>
-                <Ionicons name="logo-discord" size={24} color="#FFFFFF" style={styles.discordIcon} />
-                <Text style={styles.discordButtonText}>
-                  {discordLoading ? 'Connecting...' : 'Sign in with Discord'}
-                </Text>
-              </View>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <View style={styles.discordButtonContent}>
+                  <Ionicons name="logo-discord" size={24} color="#FFFFFF" style={styles.discordIcon} />
+                  <Text style={styles.discordButtonText}>Sign in with Discord</Text>
+                </View>
+              )}
             </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={theme.colors.error.main} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-            {/* Email/Password Login */}
-            <Input
-              label="Email"
-              placeholder="player1@test.com"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-              error={error && !password ? error : undefined}
-              accessibilityLabel="Email address"
-              accessibilityHint="Enter your email address to sign in"
-            />
-
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!isLoading}
-              error={error && password ? error : undefined}
-              accessibilityLabel="Password"
-              accessibilityHint="Enter your password to sign in"
-            />
-
-            {error && !email && !password && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
-
-            <Button
-              onPress={handleLogin}
-              loading={loading}
-              disabled={isLoading}
-              fullWidth
-              style={{ marginTop: theme.spacing.lg }}
-              accessibilityLabel="Sign in"
-              accessibilityHint="Double tap to sign in to your account"
-            >
-              Sign In
-            </Button>
-
-            <Button
-              onPress={() => router.push('/signup')}
-              variant="ghost"
-              disabled={isLoading}
-              fullWidth
-              style={{ marginTop: theme.spacing.md }}
-              accessibilityLabel="Sign up"
-              accessibilityHint="Double tap to create a new account"
-            >
-              Don't have an account? Sign Up
-            </Button>
-
-            <View
-              style={styles.testAccounts}
-              accessibilityRole="summary"
-              accessibilityLabel="Test account information"
-            >
-              <Text style={styles.testAccountsTitle}>Test Accounts:</Text>
-              <Text style={styles.testAccountsText}>player1@test.com / password123</Text>
-              <Text style={styles.testAccountsText}>player2@test.com / password123</Text>
-              <Text style={styles.testAccountsInfo}>Use invite code: GENKI</Text>
+            {/* Info Section */}
+            <View style={styles.infoSection}>
+              <View style={styles.infoItem}>
+                <Ionicons name="shield-checkmark" size={20} color={theme.colors.success.main} />
+                <Text style={styles.infoText}>Secure authentication via Discord</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Ionicons name="people" size={20} color={theme.colors.info.light} />
+                <Text style={styles.infoText}>Join your local tournament community</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Ionicons name="trophy" size={20} color={theme.colors.warning.main} />
+                <Text style={styles.infoText}>Track matches, standings & prizes</Text>
+              </View>
             </View>
           </Card>
         </SlideUpView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            By signing in, you agree to our Terms of Service and Privacy Policy
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -284,16 +221,16 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing['5xl'],
   },
   header: {
-    marginBottom: theme.spacing['4xl'],
+    marginBottom: theme.spacing['3xl'],
     alignItems: 'center',
   },
   logo: {
-    width: 180,
-    height: 54,
+    width: 200,
+    height: 60,
     marginBottom: theme.spacing.xl,
   },
   title: {
-    fontSize: theme.typography.fontSize['3xl'],
+    fontSize: theme.typography.fontSize['2xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.sm,
@@ -304,16 +241,20 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: theme.typography.lineHeight.relaxed * theme.typography.fontSize.base,
+    paddingHorizontal: theme.spacing.md,
   },
   discordButton: {
     backgroundColor: '#5865F2',
     borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.lg,
+    minHeight: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   discordButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   discordButtonContent: {
     flexDirection: 'row',
@@ -325,52 +266,46 @@ const styles = StyleSheet.create({
   },
   discordButtonText: {
     color: '#FFFFFF',
-    fontSize: theme.typography.fontSize.base,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.semibold,
   },
-  divider: {
+  errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.error.lightest,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.lg,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border.light,
-  },
-  dividerText: {
-    paddingHorizontal: theme.spacing.md,
-    color: theme.colors.text.tertiary,
-    fontSize: theme.typography.fontSize.sm,
-  },
   errorText: {
-    color: theme.colors.error.main,
+    color: theme.colors.error.dark,
     fontSize: theme.typography.fontSize.sm,
-    marginTop: theme.spacing.sm,
-    textAlign: 'center',
+    marginLeft: theme.spacing.sm,
+    flex: 1,
   },
-  testAccounts: {
-    marginTop: theme.spacing['2xl'],
+  infoSection: {
     paddingTop: theme.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border.light,
   },
-  testAccountsTitle: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
-  testAccountsText: {
+  infoText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.md,
+  },
+  footer: {
+    marginTop: theme.spacing['2xl'],
+    paddingHorizontal: theme.spacing.xl,
+  },
+  footerText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.text.tertiary,
-    marginBottom: theme.spacing.xs,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  testAccountsInfo: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.primary.main,
-    marginTop: theme.spacing.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
+    textAlign: 'center',
+    lineHeight: theme.typography.lineHeight.relaxed * theme.typography.fontSize.xs,
   },
 });
