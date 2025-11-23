@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
   },
   errorText: {
-    color: theme.colors.status.error,
+    color: theme.colors.error.main,
     fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.sm,
     textAlign: 'center',
