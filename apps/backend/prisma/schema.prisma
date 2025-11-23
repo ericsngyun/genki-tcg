@@ -443,6 +443,21 @@ model NotificationToken {
 }
 
 // ============================================================================
+// OAuth State (CSRF Protection)
+// ============================================================================
+
+model OAuthState {
+  id          String   @id @default(cuid())
+  state       String   @unique
+  redirectUri String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([state])
+  @@index([expiresAt])
+}
+
+// ============================================================================
 // Audit Log
 // ============================================================================
 

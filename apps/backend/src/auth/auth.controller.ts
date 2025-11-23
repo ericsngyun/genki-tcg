@@ -92,17 +92,19 @@ export class AuthController {
 
   @Post('discord/url')
   async getDiscordAuthUrl(
-    @Body() body: { redirectUri: string; state?: string }
+    @Body() body: { redirectUri: string }
   ) {
-    return this.authService.getDiscordAuthUrl(body.redirectUri, body.state);
+    // State is now generated server-side for security
+    return this.authService.getDiscordAuthUrl(body.redirectUri);
   }
 
   @Post('discord/callback')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
   async discordCallback(
-    @Body() body: { code: string; redirectUri: string }
+    @Body() body: { code: string; state: string; redirectUri: string }
   ) {
-    return this.authService.handleDiscordCallback(body.code, body.redirectUri);
+    // State validation happens in service
+    return this.authService.handleDiscordCallback(body.code, body.state, body.redirectUri);
   }
 
   @Post('discord/link')

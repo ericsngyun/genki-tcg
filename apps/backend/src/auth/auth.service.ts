@@ -55,7 +55,8 @@ export class AuthService {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // SECURITY: Use 12 rounds for bcrypt (OWASP recommended minimum)
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Create user and membership
     const user = await this.prisma.user.create({
@@ -252,10 +253,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token revoked');
     }
 
-    // Update last used timestamp
+    // SECURITY: Implement refresh token rotation
+    // Revoke the old token and generate a new one
     await this.prisma.refreshToken.update({
       where: { id: tokenRecord.id },
-      data: { lastUsedAt: new Date() },
+      data: { revokedAt: new Date() },
     });
 
     const user = tokenRecord.user;
@@ -265,11 +267,20 @@ export class AuthService {
       throw new UnauthorizedException('No organization membership');
     }
 
+    // Generate new refresh token (rotation)
+    const newRefreshToken = await this.generateRefreshToken(user.id, {
+      deviceName: tokenRecord.deviceName || undefined,
+      deviceType: tokenRecord.deviceType || undefined,
+      ipAddress: tokenRecord.ipAddress || undefined,
+      userAgent: tokenRecord.userAgent || undefined,
+    });
+
     // Generate new access token
     const accessToken = this.generateToken(user, membership, membership.orgId);
 
     return {
       accessToken,
+      refreshToken: newRefreshToken, // Return new refresh token
       user: this.sanitizeUser(user),
       orgMembership: membership,
     };
@@ -411,8 +422,8 @@ export class AuthService {
       throw new BadRequestException('Reset token has already been used');
     }
 
-    // Hash new password
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    // SECURITY: Hash new password with 12 rounds (OWASP recommended minimum)
+    const passwordHash = await bcrypt.hash(newPassword, 12);
 
     // Update user password and mark token as used
     await this.prisma.$transaction([
@@ -478,31 +489,108 @@ export class AuthService {
   // Discord OAuth
   // ============================================================================
 
-  async getDiscordAuthUrl(redirectUri: string, state?: string) {
+  // Whitelist of allowed redirect URIs for security
+  private getAllowedRedirectUris(): string[] {
+    const configuredUris = process.env.DISCORD_ALLOWED_REDIRECTS;
+    if (configuredUris) {
+      return configuredUris.split(',').map(uri => uri.trim());
+    }
+    // Default allowed URIs
+    return [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8081',
+      'genki-tcg://',
+      process.env.DISCORD_CALLBACK_URL || '',
+    ].filter(Boolean);
+  }
+
+  private validateRedirectUri(redirectUri: string): boolean {
+    const allowed = this.getAllowedRedirectUris();
+    return allowed.some(uri => {
+      // Exact match or starts with (for scheme handlers)
+      if (uri === redirectUri) return true;
+      if (uri.endsWith('://') && redirectUri.startsWith(uri)) return true;
+      // Allow subpaths of allowed origins
+      if (redirectUri.startsWith(uri + '/')) return true;
+      return false;
+    });
+  }
+
+  async getDiscordAuthUrl(redirectUri: string) {
     const clientId = process.env.DISCORD_CLIENT_ID;
     if (!clientId) {
       throw new BadRequestException('Discord OAuth not configured');
     }
+
+    // SECURITY: Validate redirect URI against whitelist
+    if (!this.validateRedirectUri(redirectUri)) {
+      throw new BadRequestException('Invalid redirect URI');
+    }
+
+    // SECURITY: Generate state server-side for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
+
+    // Store state with 5 minute expiration
+    await this.prisma.oAuthState.create({
+      data: {
+        state,
+        redirectUri,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      },
+    });
+
+    // Clean up expired states
+    await this.prisma.oAuthState.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
 
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'identify email',
-      ...(state && { state }),
+      state,
     });
 
     return {
       url: `https://discord.com/api/oauth2/authorize?${params.toString()}`,
+      state, // Return state for client to verify
     };
   }
 
-  async handleDiscordCallback(code: string, redirectUri: string) {
+  async handleDiscordCallback(code: string, state: string, redirectUri: string) {
     const clientId = process.env.DISCORD_CLIENT_ID;
     const clientSecret = process.env.DISCORD_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
       throw new BadRequestException('Discord OAuth not configured');
+    }
+
+    // SECURITY: Validate state parameter (CSRF protection)
+    const oauthState = await this.prisma.oAuthState.findUnique({
+      where: { state },
+    });
+
+    if (!oauthState) {
+      throw new BadRequestException('Invalid or expired state parameter');
+    }
+
+    if (oauthState.expiresAt < new Date()) {
+      await this.prisma.oAuthState.delete({ where: { state } });
+      throw new BadRequestException('State parameter expired');
+    }
+
+    if (oauthState.redirectUri !== redirectUri) {
+      throw new BadRequestException('Redirect URI mismatch');
+    }
+
+    // Delete used state (one-time use)
+    await this.prisma.oAuthState.delete({ where: { state } });
+
+    // SECURITY: Validate redirect URI again
+    if (!this.validateRedirectUri(redirectUri)) {
+      throw new BadRequestException('Invalid redirect URI');
     }
 
     // Exchange code for tokens
@@ -521,8 +609,6 @@ export class AuthService {
     });
 
     if (!tokenResponse.ok) {
-      const error = await tokenResponse.text();
-      console.error('Discord token exchange failed:', error);
       throw new BadRequestException('Failed to exchange Discord authorization code');
     }
 
