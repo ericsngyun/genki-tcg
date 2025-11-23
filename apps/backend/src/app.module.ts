@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -29,13 +30,17 @@ import { SeedModule } from './seed/seed.module';
       ],
     }),
 
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
-      },
-    ]),
+    // Rate limiting - configurable via environment
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ([
+        {
+          ttl: parseInt(config.get('THROTTLE_TTL', '60000'), 10),
+          limit: parseInt(config.get('THROTTLE_LIMIT', '100'), 10),
+        },
+      ]),
+    }),
 
     // Core modules
     PrismaModule,
@@ -52,6 +57,13 @@ import { SeedModule } from './seed/seed.module';
     AuditModule,
     RealtimeModule,
     SeedModule,
+  ],
+  providers: [
+    // SECURITY: Enable global rate limiting
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

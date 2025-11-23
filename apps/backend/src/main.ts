@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -13,6 +15,15 @@ async function bootstrap() {
   });
 
   console.log('✅ NestJS application created');
+
+  // SECURITY: Add Helmet for HTTP security headers
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+    crossOriginEmbedderPolicy: false, // Required for mobile apps
+  }));
+
+  // Performance: Enable compression
+  app.use(compression());
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -32,7 +43,7 @@ async function bootstrap() {
 
   // CORS configuration
   const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',')
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
     : [
         'http://localhost:3000',  // Admin web (dev)
         'http://localhost:8081',  // Expo dev
@@ -41,28 +52,34 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
+      // Allow requests with no origin (mobile apps, server-to-server)
       if (!origin) return callback(null, true);
 
       // Check if origin is in allowed list or matches a pattern
       const isAllowed = allowedOrigins.some(allowed => {
-        if (allowed.endsWith('*')) {
-          // Wildcard matching (e.g., "https://*.vercel.app")
-          const pattern = allowed.replace('*', '.*');
-          return new RegExp(pattern).test(origin);
+        // Exact match
+        if (origin === allowed) return true;
+        // Custom scheme handler (mobile apps)
+        if (allowed.endsWith('://') && origin.startsWith(allowed)) return true;
+        // Subdomain wildcard (e.g., "https://*.vercel.app")
+        if (allowed.includes('*')) {
+          const escapedPattern = allowed.replace(/\./g, '\\.').replace('*', '[^.]+');
+          return new RegExp(`^${escapedPattern}$`).test(origin);
         }
-        return origin === allowed || origin.startsWith(allowed);
+        return false;
       });
 
       if (isAllowed) {
         callback(null, true);
       } else {
+        console.warn(`CORS blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // 24 hours
   });
 
   // Railway provides PORT, prefer it over API_PORT for cloud deployments

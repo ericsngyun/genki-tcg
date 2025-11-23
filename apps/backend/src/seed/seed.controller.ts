@@ -1,4 +1,5 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Controller, Post, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -7,23 +8,20 @@ import { SeedService } from './seed.service';
 /**
  * DEVELOPMENT ONLY - Seed Controller
  * Provides an HTTP endpoint to seed the database
- * Remove this in production or protect with strict authentication
+ * Protected with authentication and only works in development
  */
 @Controller('seed')
 export class SeedController {
   constructor(private readonly seedService: SeedService) {}
 
   @Post()
-  // Uncomment these lines to require authentication:
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('OWNER')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER')
+  @Throttle({ default: { limit: 1, ttl: 86400000 } }) // 1 per day
   async seed() {
-    // Only allow in development
+    // SECURITY: Only allow in development environment
     if (process.env.NODE_ENV === 'production') {
-      return {
-        success: false,
-        message: 'Seeding is disabled in production. Use the CLI instead.',
-      };
+      throw new ForbiddenException('Seeding is disabled in production');
     }
 
     try {
