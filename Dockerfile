@@ -13,7 +13,8 @@ COPY apps/backend/package*.json ./apps/backend/
 COPY packages ./packages/
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci
+# Using --legacy-peer-deps to handle React 18/19 version conflicts between admin-web and mobile
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY apps/backend ./apps/backend
@@ -61,7 +62,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package*.js
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package*.json ./packages/tournament-logic/
 
 # Install production dependencies only
-RUN npm ci --omit=dev --workspace=apps/backend && \
+RUN npm ci --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy compiled workspace packages (dist folders contain compiled JS)

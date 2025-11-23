@@ -526,7 +526,7 @@ export class AuthService {
       throw new BadRequestException('Failed to exchange Discord authorization code');
     }
 
-    const tokens = await tokenResponse.json();
+    const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string };
 
     // Get user info from Discord
     const userResponse = await fetch('https://discord.com/api/users/@me', {
@@ -539,7 +539,13 @@ export class AuthService {
       throw new BadRequestException('Failed to fetch Discord user info');
     }
 
-    const discordUser = await userResponse.json();
+    const discordUser = await userResponse.json() as {
+      id: string;
+      username: string;
+      global_name?: string;
+      avatar?: string;
+      email?: string;
+    };
 
     // Find or create user
     return this.findOrCreateDiscordUser(discordUser);
@@ -682,7 +688,7 @@ export class AuthService {
       throw new BadRequestException('Failed to exchange Discord authorization code');
     }
 
-    const tokens = await tokenResponse.json();
+    const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string };
 
     // Get user info from Discord
     const userResponse = await fetch('https://discord.com/api/users/@me', {
@@ -695,7 +701,13 @@ export class AuthService {
       throw new BadRequestException('Failed to fetch Discord user info');
     }
 
-    const discordUser = await userResponse.json();
+    const discordUser = await userResponse.json() as {
+      id: string;
+      username: string;
+      global_name?: string;
+      avatar?: string;
+      email?: string;
+    };
 
     // Check if Discord account is already linked to another user
     const existingUser = await this.prisma.user.findUnique({
