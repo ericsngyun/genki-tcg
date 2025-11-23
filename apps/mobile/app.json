@@ -38,7 +38,8 @@
           "color": "#DC2626"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "scheme": "genki-tcg",
     "extra": {
