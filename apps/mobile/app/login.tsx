@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { makeRedirectUri } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 import { Button, Card, Input } from '../components';
@@ -21,7 +22,14 @@ import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
 
-const DISCORD_REDIRECT_URI = Linking.createURL('discord/callback');
+// Create redirect URI that works on all platforms (native and web)
+const DISCORD_REDIRECT_URI = makeRedirectUri({
+  scheme: 'genki-tcg',
+  path: 'discord/callback',
+});
+
+// Debug: log the redirect URI
+console.log('Discord redirect URI:', DISCORD_REDIRECT_URI);
 
 export default function LoginScreen() {
   const router = useRouter();
