@@ -96,11 +96,22 @@ export default function LoginScreen() {
       setDiscordLoading(true);
       setError('');
 
+      console.log('Starting Discord login with redirect URI:', DISCORD_REDIRECT_URI);
+
       // Get the Discord auth URL from backend
-      const { authUrl } = await api.getDiscordAuthUrl(DISCORD_REDIRECT_URI);
+      const response = await api.getDiscordAuthUrl(DISCORD_REDIRECT_URI);
+      console.log('Backend response:', response);
+
+      // Backend returns { url, state }
+      const { url } = response;
+      if (!url) {
+        throw new Error('No url returned from backend');
+      }
+
+      console.log('Opening Discord auth URL:', url);
 
       // Open Discord login in browser
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, DISCORD_REDIRECT_URI);
+      const result = await WebBrowser.openAuthSessionAsync(url, DISCORD_REDIRECT_URI);
 
       if (result.type === 'success' && result.url) {
         await handleDiscordCallback(result.url);
