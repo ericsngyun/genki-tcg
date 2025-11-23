@@ -46,3 +46,4 @@ apps/backend/prisma/migrations/dev.db*
 
 # Sentry
 .sentryclirc
+*.tsbuildinfo
