@@ -28,9 +28,6 @@ const DISCORD_REDIRECT_URI = makeRedirectUri({
   path: 'discord/callback',
 });
 
-// Debug: log the redirect URI
-console.log('Discord redirect URI:', DISCORD_REDIRECT_URI);
-
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -96,19 +93,14 @@ export default function LoginScreen() {
       setDiscordLoading(true);
       setError('');
 
-      console.log('Starting Discord login with redirect URI:', DISCORD_REDIRECT_URI);
-
       // Get the Discord auth URL from backend
       const response = await api.getDiscordAuthUrl(DISCORD_REDIRECT_URI);
-      console.log('Backend response:', response);
 
       // Backend returns { url, state }
       const { url } = response;
       if (!url) {
-        throw new Error('No url returned from backend');
+        throw new Error('Discord OAuth not configured on server');
       }
-
-      console.log('Opening Discord auth URL:', url);
 
       // Open Discord login in browser
       const result = await WebBrowser.openAuthSessionAsync(url, DISCORD_REDIRECT_URI);

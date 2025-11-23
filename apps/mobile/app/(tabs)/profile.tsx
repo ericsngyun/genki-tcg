@@ -1,10 +1,45 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../lib/api';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  discordUsername?: string;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await api.getMe();
+      setUser(response.user || response);
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -20,13 +55,26 @@ export default function ProfileScreen() {
       {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={48} color={theme.colors.text.secondary} />
-          </View>
+          {user?.avatarUrl ? (
+            <Image
+              source={{ uri: user.avatarUrl }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person" size={48} color={theme.colors.text.secondary} />
+            </View>
+          )}
         </View>
 
-        <Text style={styles.playerName}>Player Name</Text>
-        <Text style={styles.playerEmail}>player@example.com</Text>
+        <Text style={styles.playerName}>{user?.name || 'Unknown Player'}</Text>
+        <Text style={styles.playerEmail}>{user?.email || 'No email'}</Text>
+        {user?.discordUsername && (
+          <View style={styles.discordBadge}>
+            <Ionicons name="logo-discord" size={16} color="#5865F2" />
+            <Text style={styles.discordUsername}>{user.discordUsername}</Text>
+          </View>
+        )}
 
         <TouchableOpacity style={styles.editProfileButton}>
           <Text style={styles.editProfileText}>Edit Profile</Text>
@@ -66,6 +114,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background.primary,
   },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     backgroundColor: theme.colors.background.card,
     paddingTop: 50,
@@ -91,6 +143,13 @@ const styles = StyleSheet.create({
   avatarContainer: {
     marginBottom: 16,
   },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: theme.colors.border.main,
+  },
   avatarPlaceholder: {
     width: 100,
     height: 100,
@@ -110,7 +169,22 @@ const styles = StyleSheet.create({
   playerEmail: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  discordBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(88, 101, 242, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.full,
+    marginBottom: 16,
+  },
+  discordUsername: {
+    fontSize: theme.typography.fontSize.sm,
+    color: '#5865F2',
+    marginLeft: 6,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   editProfileButton: {
     backgroundColor: theme.colors.primary.main,
