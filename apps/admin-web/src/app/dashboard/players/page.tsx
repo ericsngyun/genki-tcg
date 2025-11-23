@@ -24,8 +24,8 @@ export default function PlayersPage() {
 
   const loadUsers = async () => {
     try {
-      const response = await api.get('/admin/users');
-      setUsers(response.data.users);
+      const response = await api.getOrgUsers();
+      setUsers(response.users || []);
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {

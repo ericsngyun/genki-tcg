@@ -23,6 +23,7 @@ interface EventSocketCallbacks {
     title: string;
     message: string;
   }) => void;
+  onError?: (error: { message: string }) => void;
 }
 
 export function useEventSocket(
@@ -34,9 +35,20 @@ export function useEventSocket(
   useEffect(() => {
     if (!eventId) return;
 
-    // Create socket connection
+    // SECURITY: Get access token for WebSocket authentication
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      console.warn('No access token found, WebSocket connection will be rejected');
+      callbacks.onError?.({ message: 'Authentication required for real-time updates' });
+      return;
+    }
+
+    // Create socket connection with JWT authentication
     const socket = io(API_URL, {
       transports: ['websocket', 'polling'],
+      auth: {
+        token,
+      },
     });
 
     socketRef.current = socket;
@@ -49,6 +61,17 @@ export function useEventSocket(
 
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
+    });
+
+    // Handle authentication errors from backend
+    socket.on('error', (error: { message: string }) => {
+      console.error('Socket error:', error.message);
+      callbacks.onError?.(error);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message);
+      callbacks.onError?.({ message: error.message });
     });
 
     // Register event listeners
