@@ -26,7 +26,7 @@ export class SeedService {
     console.log('✅ Created organization:', genkiOrg.name);
 
     // Create owner user
-    const ownerPassword = await bcrypt.hash('password123', 10);
+    const ownerPassword = await bcrypt.hash('password123', 12);
     const owner = await this.prisma.user.upsert({
       where: { email: 'owner@genki-tcg.com' },
       update: {},
@@ -55,7 +55,7 @@ export class SeedService {
     console.log('✅ Created owner:', owner.email);
 
     // Create staff user
-    const staffPassword = await bcrypt.hash('password123', 10);
+    const staffPassword = await bcrypt.hash('password123', 12);
     const staff = await this.prisma.user.upsert({
       where: { email: 'staff@genki-tcg.com' },
       update: {},
@@ -86,7 +86,7 @@ export class SeedService {
     // Create 10 test players
     const players = [];
     for (let i = 1; i <= 10; i++) {
-      const playerPassword = await bcrypt.hash('password123', 10);
+      const playerPassword = await bcrypt.hash('password123', 12);
       const player = await this.prisma.user.upsert({
         where: { email: `player${i}@test.com` },
         update: {},
