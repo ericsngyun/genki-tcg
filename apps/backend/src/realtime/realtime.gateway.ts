@@ -6,16 +6,30 @@ import {
   OnGatewayDisconnect,
   MessageBody,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 interface JoinEventPayload {
   eventId: string;
 }
 
+interface AuthenticatedSocket extends Socket {
+  data: {
+    user?: {
+      sub: string;
+      email: string;
+      orgId: string;
+      role: string;
+    };
+  };
+}
+
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:8081'],
+    origin: (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:8081').split(','),
     credentials: true,
   },
 })
@@ -25,33 +39,78 @@ export class RealtimeGateway
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  constructor(
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  async handleConnection(client: AuthenticatedSocket) {
+    try {
+      // SECURITY: Require JWT authentication for WebSocket connections
+      const token = client.handshake.auth?.token ||
+                    client.handshake.headers?.authorization?.replace('Bearer ', '');
+
+      if (!token) {
+        console.log(`Client ${client.id} rejected: No token provided`);
+        client.emit('error', { message: 'Authentication required' });
+        client.disconnect();
+        return;
+      }
+
+      // Verify JWT token
+      const secret = this.configService.get('JWT_SECRET');
+      const payload = await this.jwtService.verifyAsync(token, { secret });
+
+      // Store user info on socket for later use
+      client.data.user = payload;
+
+      console.log(`Client ${client.id} connected (user: ${payload.sub})`);
+    } catch (error) {
+      console.log(`Client ${client.id} rejected: Invalid token`);
+      client.emit('error', { message: 'Invalid or expired token' });
+      client.disconnect();
+    }
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+  handleDisconnect(client: AuthenticatedSocket) {
+    const userId = client.data?.user?.sub || 'unknown';
+    console.log(`Client ${client.id} disconnected (user: ${userId})`);
   }
 
   @SubscribeMessage('join-event')
   handleJoinEvent(
     @MessageBody() payload: JoinEventPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: AuthenticatedSocket
   ) {
+    // SECURITY: Verify user is authenticated
+    if (!client.data?.user) {
+      throw new WsException('Authentication required');
+    }
+
     const { eventId } = payload;
+    const userId = client.data.user.sub;
+
+    // Join the event room
     client.join(`event:${eventId}`);
-    console.log(`Client ${client.id} joined event: ${eventId}`);
+    console.log(`User ${userId} joined event: ${eventId}`);
     return { status: 'joined', eventId };
   }
 
   @SubscribeMessage('leave-event')
   handleLeaveEvent(
     @MessageBody() payload: JoinEventPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: AuthenticatedSocket
   ) {
+    // SECURITY: Verify user is authenticated
+    if (!client.data?.user) {
+      throw new WsException('Authentication required');
+    }
+
     const { eventId } = payload;
+    const userId = client.data.user.sub;
+
     client.leave(`event:${eventId}`);
-    console.log(`Client ${client.id} left event: ${eventId}`);
+    console.log(`User ${userId} left event: ${eventId}`);
     return { status: 'left', eventId };
   }
 
