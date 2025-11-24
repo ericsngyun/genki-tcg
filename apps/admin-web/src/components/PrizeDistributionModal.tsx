@@ -129,19 +129,19 @@ export function PrizeDistributionModal({
           <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-4 mb-4">
             <div className="flex justify-between items-center">
               <div>
-                <div className="text-sm text-gray-600">Total Prize Pool</div>
+                <div className="text-sm text-muted-foreground">Total Prize Pool</div>
                 <div className="text-2xl font-bold text-primary">{totalPrizeCredits} credits</div>
               </div>
               <div className="text-right">
-                <div className="text-sm text-gray-600">Remaining</div>
-                <div className={`text-2xl font-bold ${getRemaining() < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <div className="text-sm text-muted-foreground">Remaining</div>
+                <div className={`text-2xl font-bold ${getRemaining() < 0 ? 'text-destructive' : 'text-green-500'}`}>
                   {getRemaining()} credits
                 </div>
               </div>
             </div>
             {getTotalAllocated() > 0 && (
               <div className="mt-2 pt-2 border-t border-primary/20">
-                <div className="text-sm text-gray-600">Allocated: {getTotalAllocated()} credits</div>
+                <div className="text-sm text-muted-foreground">Allocated: {getTotalAllocated()} credits</div>
               </div>
             )}
           </div>
@@ -154,7 +154,7 @@ export function PrizeDistributionModal({
                 className={`border-2 rounded-lg p-4 transition-all ${
                   distributions[standing.userId] > 0
                     ? 'border-primary bg-primary/5'
-                    : 'border-gray-200 hover:border-gray-300'
+                    : 'border-border hover:border-muted-foreground/50'
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -167,8 +167,8 @@ export function PrizeDistributionModal({
 
                   {/* Player Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">{standing.userName}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="font-semibold text-foreground truncate">{standing.userName}</div>
+                    <div className="text-sm text-muted-foreground">
                       {standing.points} pts • {standing.matchWins}-{standing.matchLosses}-{standing.matchDraws} • OMW {(standing.omwPercent * 100).toFixed(1)}%
                     </div>
                   </div>
@@ -183,9 +183,9 @@ export function PrizeDistributionModal({
                         value={distributions[standing.userId] || ''}
                         onChange={(e) => handleAmountChange(standing.userId, e.target.value)}
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-center font-semibold"
+                        className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-center font-semibold"
                       />
-                      <span className="text-sm text-gray-600">cr</span>
+                      <span className="text-sm text-muted-foreground">cr</span>
                     </div>
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export function PrizeDistributionModal({
           </div>
 
           {standings.length > 8 && (
-            <div className="mt-4 text-center text-sm text-gray-500">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               Showing top 8 finishers
             </div>
           )}

@@ -72,6 +72,14 @@ export class RoundsService {
 
     // Create round and matches in transaction
     const result = await this.prisma.$transaction(async (tx) => {
+      // Update event status to IN_PROGRESS when first round is created
+      if (nextRoundNumber === 1) {
+        await tx.event.update({
+          where: { id: eventId },
+          data: { status: 'IN_PROGRESS' },
+        });
+      }
+
       const round = await tx.round.create({
         data: {
           eventId,
