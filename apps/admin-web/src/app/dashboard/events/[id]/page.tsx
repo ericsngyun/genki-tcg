@@ -93,6 +93,7 @@ export default function EventDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [roundActionLoading, setRoundActionLoading] = useState(false);
 
   // Socket.IO for real-time updates
   useEventSocket(eventId, {
@@ -321,6 +322,44 @@ export default function EventDetailPage() {
       alert(error.response?.data?.message || 'Failed to mark as paid');
     } finally {
       setMarkingPaid(null);
+    }
+  };
+
+  const handleStartRound = async (roundId: string) => {
+    if (!confirm('Start this round? Players will be notified.')) {
+      return;
+    }
+
+    setRoundActionLoading(true);
+    try {
+      await api.startRound(roundId);
+      await loadEvent();
+      if (selectedRound) {
+        await loadPairings(selectedRound);
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to start round');
+    } finally {
+      setRoundActionLoading(false);
+    }
+  };
+
+  const handleCompleteRound = async (roundId: string) => {
+    if (!confirm('Complete this round and lock in results?')) {
+      return;
+    }
+
+    setRoundActionLoading(true);
+    try {
+      const result = await api.completeRound(roundId);
+      await loadEvent();
+      if (result.tournamentComplete) {
+        alert(`Tournament Complete! ${result.reason || ''}`);
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to complete round');
+    } finally {
+      setRoundActionLoading(false);
     }
   };
 
@@ -580,22 +619,61 @@ export default function EventDetailPage() {
                 </div>
               ) : (
                 <div>
-                  {/* Round Selector */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">
-                      Select Round
-                    </label>
-                    <select
-                      value={selectedRound || ''}
-                      onChange={(e) => setSelectedRound(e.target.value)}
-                      className="px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                    >
-                      {event.rounds.map((round) => (
-                        <option key={round.id} value={round.id}>
-                          Round {round.roundNumber} - {round.status}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Round Selector and Controls */}
+                  <div className="mb-6 flex flex-wrap items-end gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">
+                        Select Round
+                      </label>
+                      <select
+                        value={selectedRound || ''}
+                        onChange={(e) => setSelectedRound(e.target.value)}
+                        className="px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                      >
+                        {event.rounds.map((round) => (
+                          <option key={round.id} value={round.id}>
+                            Round {round.roundNumber} - {round.status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Round Action Buttons */}
+                    {selectedRound && (() => {
+                      const currentRoundData = event.rounds.find(r => r.id === selectedRound);
+                      const allMatchesReported = pairings.length > 0 && pairings.every(p => p.result || !p.playerB);
+
+                      return (
+                        <div className="flex gap-2">
+                          {currentRoundData?.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleStartRound(selectedRound)}
+                              disabled={roundActionLoading}
+                              className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <span>▶</span>
+                              {roundActionLoading ? 'Starting...' : 'Start Round'}
+                            </button>
+                          )}
+                          {(currentRoundData?.status === 'ACTIVE' || currentRoundData?.status === 'PENDING') && (
+                            <button
+                              onClick={() => handleCompleteRound(selectedRound)}
+                              disabled={roundActionLoading || !allMatchesReported}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                              title={!allMatchesReported ? 'All matches must be reported first' : ''}
+                            >
+                              <span>✓</span>
+                              {roundActionLoading ? 'Completing...' : 'Complete Round'}
+                            </button>
+                          )}
+                          {currentRoundData?.status === 'COMPLETED' && (
+                            <span className="px-4 py-2 bg-green-500/10 text-green-400 rounded-lg font-medium">
+                              ✓ Round Completed
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Pairings */}

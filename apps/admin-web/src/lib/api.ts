@@ -249,6 +249,21 @@ class ApiClient {
     return data;
   }
 
+  async startRound(roundId: string) {
+    const { data } = await this.client.post(`/rounds/${roundId}/start`);
+    return data;
+  }
+
+  async completeRound(roundId: string) {
+    const { data } = await this.client.post(`/rounds/${roundId}/complete`);
+    return data;
+  }
+
+  async getTournamentStatus(eventId: string) {
+    const { data } = await this.client.get(`/rounds/events/${eventId}/status`);
+    return data;
+  }
+
   // Matches
   async reportMatchResult(matchId: string, result: string, gamesWonA: number, gamesWonB: number) {
     const { data } = await this.client.post('/matches/report', {
