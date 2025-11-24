@@ -28,4 +28,35 @@ export class RoundsController {
   async getMatches(@CurrentUser() user: any, @Param('roundId') roundId: string) {
     return this.roundsService.getMatches(roundId, user.orgId);
   }
+
+  /**
+   * Start a round (PENDING -> ACTIVE)
+   */
+  @Post(':roundId/start')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async startRound(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+    return this.roundsService.startRound(roundId, user.orgId);
+  }
+
+  /**
+   * Complete a round (ACTIVE -> COMPLETED)
+   * Also checks if tournament should be marked complete
+   */
+  @Post(':roundId/complete')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async completeRound(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+    return this.roundsService.completeRound(roundId, user.orgId);
+  }
+
+  /**
+   * Get tournament status including round info and completion detection
+   */
+  @Get('events/:eventId/status')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async getTournamentStatus(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+    return this.roundsService.getTournamentStatus(eventId, user.orgId);
+  }
 }
