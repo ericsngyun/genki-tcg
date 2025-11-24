@@ -23,11 +23,9 @@ import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
 
-// Create redirect URI that works on all platforms (native and web)
-const DISCORD_REDIRECT_URI = makeRedirectUri({
-  scheme: 'genki-tcg',
-  path: 'discord/callback',
-});
+// Use custom scheme for Discord OAuth (works in dev and prod)
+// Discord doesn't support exp:// URLs, so we always use genki-tcg://
+const DISCORD_REDIRECT_URI = 'genki-tcg://discord/callback';
 
 // Debug: Log the redirect URI so we know what to register in Discord portal
 console.log('Discord Redirect URI:', DISCORD_REDIRECT_URI);
