@@ -624,6 +624,13 @@ export class AuthService {
 
   private validateRedirectUri(redirectUri: string): boolean {
     const allowed = this.getAllowedRedirectUris();
+
+    // Special handling for Expo dev URLs with dynamic IPs
+    // Pattern: exp://IP:PORT/--/discord/callback
+    if (redirectUri.startsWith('exp://') && redirectUri.includes('/--/discord/callback')) {
+      return true;
+    }
+
     return allowed.some(uri => {
       // Exact match or starts with (for scheme handlers)
       if (uri === redirectUri) return true;
@@ -642,6 +649,10 @@ export class AuthService {
 
     // SECURITY: Validate redirect URI against whitelist
     if (!this.validateRedirectUri(redirectUri)) {
+      console.error('Redirect URI validation failed:', {
+        redirectUri,
+        allowedUris: this.getAllowedRedirectUris(),
+      });
       throw new BadRequestException('Invalid redirect URI');
     }
 
@@ -707,6 +718,10 @@ export class AuthService {
 
     // SECURITY: Validate redirect URI again
     if (!this.validateRedirectUri(redirectUri)) {
+      console.error('Redirect URI validation failed in callback:', {
+        redirectUri,
+        allowedUris: this.getAllowedRedirectUris(),
+      });
       throw new BadRequestException('Invalid redirect URI');
     }
 
