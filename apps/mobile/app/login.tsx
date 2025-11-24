@@ -29,6 +29,9 @@ const DISCORD_REDIRECT_URI = makeRedirectUri({
   path: 'discord/callback',
 });
 
+// Debug: Log the redirect URI so we know what to register in Discord portal
+console.log('Discord Redirect URI:', DISCORD_REDIRECT_URI);
+
 export default function LoginScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
