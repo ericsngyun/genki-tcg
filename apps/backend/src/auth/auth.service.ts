@@ -726,7 +726,17 @@ export class AuthService {
     });
 
     if (!tokenResponse.ok) {
-      throw new BadRequestException('Failed to exchange Discord authorization code');
+      const errorData = await tokenResponse.json().catch(() => null);
+      console.error('Discord token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorData,
+        redirectUri,
+        clientId,
+      });
+      throw new BadRequestException(
+        `Failed to exchange Discord authorization code: ${errorData?.error || tokenResponse.statusText}`
+      );
     }
 
     const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string };
@@ -891,7 +901,17 @@ export class AuthService {
     });
 
     if (!tokenResponse.ok) {
-      throw new BadRequestException('Failed to exchange Discord authorization code');
+      const errorData = await tokenResponse.json().catch(() => null);
+      console.error('Discord token exchange failed (linkAccount):', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorData,
+        redirectUri,
+        clientId,
+      });
+      throw new BadRequestException(
+        `Failed to exchange Discord authorization code: ${errorData?.error || tokenResponse.statusText}`
+      );
     }
 
     const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string };
@@ -904,6 +924,12 @@ export class AuthService {
     });
 
     if (!userResponse.ok) {
+      const errorData = await userResponse.json().catch(() => null);
+      console.error('Discord user info fetch failed:', {
+        status: userResponse.status,
+        statusText: userResponse.statusText,
+        error: errorData,
+      });
       throw new BadRequestException('Failed to fetch Discord user info');
     }
 
