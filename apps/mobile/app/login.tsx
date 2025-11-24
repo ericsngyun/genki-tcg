@@ -23,12 +23,17 @@ import { FadeInView, SlideUpView, ScaleInView } from '../lib/animations';
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
 
-// Use custom scheme for Discord OAuth (works in dev and prod)
-// Discord doesn't support exp:// URLs, so we always use genki-tcg://
-const DISCORD_REDIRECT_URI = 'genki-tcg://discord/callback';
+// Discord OAuth redirect URI
+// Discord only supports http://localhost (dev) or https:// (prod), NOT custom schemes
+// For Expo web/dev: use localhost
+// For production native: will need an HTTPS redirect that forwards to genki-tcg://
+const DISCORD_REDIRECT_URI = __DEV__
+  ? 'http://localhost:8081/discord/callback'
+  : 'https://genki-tcg-production.up.railway.app/auth/discord/mobile-callback';
 
 // Debug: Log the redirect URI so we know what to register in Discord portal
 console.log('Discord Redirect URI:', DISCORD_REDIRECT_URI);
+console.log('Development mode:', __DEV__);
 
 export default function LoginScreen() {
   const router = useRouter();
