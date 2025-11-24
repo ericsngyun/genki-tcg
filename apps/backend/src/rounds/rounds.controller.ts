@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Param, UseGuards } from '@nestjs/common';
+import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { RoundsService } from './rounds.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -13,19 +14,19 @@ export class RoundsController {
   @Post('events/:eventId/next')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async createNextRound(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+  async createNextRound(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
     return this.roundsService.createNextRound(eventId, user.orgId);
   }
 
   @Get(':roundId/pairings')
-  async getPairings(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+  async getPairings(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
     return this.roundsService.getPairings(roundId, user.orgId);
   }
 
   @Get(':roundId/matches')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async getMatches(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+  async getMatches(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
     return this.roundsService.getMatches(roundId, user.orgId);
   }
 
@@ -35,7 +36,7 @@ export class RoundsController {
   @Post(':roundId/start')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async startRound(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+  async startRound(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
     return this.roundsService.startRound(roundId, user.orgId);
   }
 
@@ -46,7 +47,7 @@ export class RoundsController {
   @Post(':roundId/complete')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async completeRound(@CurrentUser() user: any, @Param('roundId') roundId: string) {
+  async completeRound(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
     return this.roundsService.completeRound(roundId, user.orgId);
   }
 
@@ -56,7 +57,7 @@ export class RoundsController {
   @Get('events/:eventId/status')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async getTournamentStatus(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+  async getTournamentStatus(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
     return this.roundsService.getTournamentStatus(eventId, user.orgId);
   }
 }

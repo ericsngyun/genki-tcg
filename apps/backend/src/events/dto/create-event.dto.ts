@@ -25,9 +25,9 @@ export class CreateEventDto {
   game: GameType;
 
   @IsEnum(
-    ['CONSTRUCTED', 'DRAFT', 'SEALED', 'BOOSTER_DRAFT', 'TWO_HEADED_GIANT', 'COMMANDER', 'OTHER'],
+    ['STANDARD', 'DRAFT', 'SEALED', 'CONSTRUCTED', 'SUPER_PRE_RELEASE', 'PRE_RELEASE'],
     {
-      message: 'Format must be a valid event format',
+      message: 'Format must be one of: STANDARD, DRAFT, SEALED, CONSTRUCTED, SUPER_PRE_RELEASE, PRE_RELEASE',
     },
   )
   format: EventFormat;

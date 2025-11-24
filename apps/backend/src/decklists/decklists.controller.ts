@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { DecklistsService, SubmitDecklistDto } from './decklists.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,7 +20,7 @@ export class DecklistsController {
 
   @Post()
   async submitDecklist(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SubmitDecklistDto,
   ) {
     return this.decklistsService.submitDecklist(user.id, user.orgId, dto);
@@ -27,7 +28,7 @@ export class DecklistsController {
 
   @Get('entry/:entryId')
   async getMyDecklist(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('entryId') entryId: string,
   ) {
     return this.decklistsService.getMyDecklist(user.id, user.orgId, entryId);
@@ -36,21 +37,21 @@ export class DecklistsController {
   @Get('event/:eventId')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async getDecklistsForEvent(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+  async getDecklistsForEvent(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
     return this.decklistsService.getDecklistsForEvent(eventId, user.orgId);
   }
 
   @Post('entry/:entryId/lock')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async lockDecklist(@CurrentUser() user: any, @Param('entryId') entryId: string) {
+  async lockDecklist(@CurrentUser() user: AuthenticatedUser, @Param('entryId') entryId: string) {
     return this.decklistsService.lockDecklist(entryId, user.orgId);
   }
 
   @Post('event/:eventId/lock-all')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async lockAllDecklists(@CurrentUser() user: any, @Param('eventId') eventId: string) {
+  async lockAllDecklists(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
     return this.decklistsService.lockAllDecklists(eventId, user.orgId);
   }
 }

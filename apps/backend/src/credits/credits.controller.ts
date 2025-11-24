@@ -12,6 +12,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { Response } from 'express';
+import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import { CreditsService } from './credits.service';
 import { AdjustCreditsDto, RedeemCreditsDto, GetHistoryDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,7 +29,7 @@ export class CreditsController {
    * Get current user's balance and recent transactions
    */
   @Get('me')
-  async getMyBalance(@CurrentUser() user: any) {
+  async getMyBalance(@CurrentUser() user: AuthenticatedUser) {
     return this.creditsService.getBalanceWithHistory(user.orgId, user.id);
   }
 
@@ -39,7 +40,7 @@ export class CreditsController {
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
   async getBalance(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string
   ) {
     return this.creditsService.getBalanceWithHistory(user.orgId, userId);
@@ -53,7 +54,7 @@ export class CreditsController {
   @Roles('OWNER', 'STAFF')
   @UsePipes(new ValidationPipe({ transform: true }))
   async getHistory(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string,
     @Query() filters: GetHistoryDto
   ) {
@@ -68,7 +69,7 @@ export class CreditsController {
   @Roles('OWNER', 'STAFF')
   @UsePipes(new ValidationPipe({ transform: true }))
   async exportHistory(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string,
     @Query() filters: GetHistoryDto,
     @Res() res: Response
@@ -94,7 +95,7 @@ export class CreditsController {
   @Get('all-balances')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async getAllBalances(@CurrentUser() user: any) {
+  async getAllBalances(@CurrentUser() user: AuthenticatedUser) {
     return this.creditsService.getAllBalances(user.orgId);
   }
 
@@ -105,7 +106,7 @@ export class CreditsController {
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async adjustCredits(@CurrentUser() user: any, @Body() dto: AdjustCreditsDto) {
+  async adjustCredits(@CurrentUser() user: AuthenticatedUser, @Body() dto: AdjustCreditsDto) {
     return this.creditsService.adjustCredits(user.orgId, dto, user.id);
   }
 
@@ -117,7 +118,7 @@ export class CreditsController {
   @Roles('OWNER', 'STAFF')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async redeemCredits(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RedeemCreditsDto
   ) {
     return this.creditsService.redeemCredits(
@@ -136,7 +137,7 @@ export class CreditsController {
   @UseGuards(RolesGuard)
   @Roles('OWNER')
   async reconcileBalance(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string
   ) {
     return this.creditsService.reconcileBalance(user.orgId, userId);

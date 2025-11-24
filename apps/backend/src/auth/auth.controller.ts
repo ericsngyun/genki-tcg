@@ -11,6 +11,7 @@ import {
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from '@prisma/client';
+import type { AuthenticatedUser } from './types/jwt-payload.type';
 
 @Controller('auth')
 export class AuthController {
@@ -30,7 +31,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@CurrentUser() user: any) {
+  async getMe(@CurrentUser() user: AuthenticatedUser) {
     // Fetch organization details
     const org = await this.authService.getOrganization(user.orgId);
 
@@ -103,6 +104,7 @@ export class AuthController {
   // ============================================================================
 
   @Post('discord/url')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute
   async getDiscordAuthUrl(
     @Body() body: { redirectUri: string }
   ) {
@@ -121,8 +123,9 @@ export class AuthController {
 
   @Post('discord/link')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   async linkDiscord(
-    @CurrentUser() user: User,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() body: { code: string; redirectUri: string }
   ) {
     return this.authService.linkDiscordAccount(
@@ -134,7 +137,8 @@ export class AuthController {
 
   @Post('discord/unlink')
   @UseGuards(JwtAuthGuard)
-  async unlinkDiscord(@CurrentUser() user: User) {
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 attempts per minute
+  async unlinkDiscord(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.unlinkDiscordAccount(user.id);
   }
 }

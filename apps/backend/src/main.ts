@@ -59,13 +59,35 @@ async function bootstrap() {
       const isAllowed = allowedOrigins.some(allowed => {
         // Exact match
         if (origin === allowed) return true;
+
         // Custom scheme handler (mobile apps)
         if (allowed.endsWith('://') && origin.startsWith(allowed)) return true;
+
         // Subdomain wildcard (e.g., "https://*.vercel.app")
+        // SECURITY: Properly validate wildcard to prevent bypass attacks
         if (allowed.includes('*')) {
-          const escapedPattern = allowed.replace(/\./g, '\\.').replace('*', '[^.]+');
-          return new RegExp(`^${escapedPattern}$`).test(origin);
+          // Split into protocol and domain parts
+          const protocolMatch = allowed.match(/^(https?:\/\/)/);
+          if (!protocolMatch) return false;
+
+          const protocol = protocolMatch[1];
+          const domainPattern = allowed.slice(protocol.length);
+
+          // Ensure origin uses same protocol
+          if (!origin.startsWith(protocol)) return false;
+
+          const originDomain = origin.slice(protocol.length);
+
+          // Replace * with regex that matches subdomains (alphanumeric and hyphens only)
+          // [a-zA-Z0-9-]+ ensures only valid subdomain characters
+          const escapedPattern = domainPattern
+            .replace(/\./g, '\\.')
+            .replace('*', '[a-zA-Z0-9-]+');
+
+          const regex = new RegExp(`^${escapedPattern}$`);
+          return regex.test(originDomain);
         }
+
         return false;
       });
 

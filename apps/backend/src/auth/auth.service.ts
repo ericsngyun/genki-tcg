@@ -94,6 +94,9 @@ export class AuthService {
 
     const membership = user.memberships[0];
 
+    // Grant welcome bonus to new user
+    await this.grantWelcomeBonus(user.id, org.id);
+
     // Generate access token and refresh token
     const accessToken = this.generateToken(user, membership, org.id);
     const refreshToken = await this.generateRefreshToken(user.id);
@@ -196,6 +199,47 @@ export class AuthService {
   private sanitizeUser(user: User) {
     const { passwordHash, ...sanitized } = user;
     return sanitized;
+  }
+
+  /**
+   * Grant welcome bonus to new users
+   */
+  private async grantWelcomeBonus(userId: string, orgId: string) {
+    const WELCOME_BONUS_AMOUNT = 10;
+
+    // Create credit ledger entry for welcome bonus
+    await this.prisma.creditLedgerEntry.create({
+      data: {
+        orgId,
+        userId,
+        amount: WELCOME_BONUS_AMOUNT,
+        reasonCode: 'PROMO',
+        memo: 'Welcome bonus - thank you for joining!',
+        createdBy: userId, // Self-created
+      },
+    });
+
+    // Update or create credit balance
+    await this.prisma.creditBalance.upsert({
+      where: {
+        orgId_userId: {
+          orgId,
+          userId,
+        },
+      },
+      update: {
+        balance: {
+          increment: WELCOME_BONUS_AMOUNT,
+        },
+        lastTransactionAt: new Date(),
+      },
+      create: {
+        orgId,
+        userId,
+        balance: WELCOME_BONUS_AMOUNT,
+        lastTransactionAt: new Date(),
+      },
+    });
   }
 
   // ============================================================================
@@ -401,12 +445,11 @@ export class AuthService {
     // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
     // await this.emailService.sendPasswordResetEmail(user.email, resetLink);
 
-    console.log(`Password reset token for ${email}: ${token}`);
+    // SECURITY: Never log tokens or return them in API responses
+    // In development, implement email service or use a tool like MailHog/Mailpit for testing
 
     return {
       message: 'If an account with that email exists, a password reset link has been sent.',
-      // REMOVE THIS IN PRODUCTION - only for development
-      resetToken: process.env.NODE_ENV === 'development' ? token : undefined,
     };
   }
 
@@ -478,25 +521,85 @@ export class AuthService {
       throw new BadRequestException('Email already verified');
     }
 
-    // Generate verification token (reuse password reset token structure)
+    // Generate verification token
     const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // Token valid for 24 hours
+
+    // Store token in database
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt,
+      },
+    });
 
     // TODO: Send verification email
-    // For now, we'll just log the token
-    console.log(`Email verification token for ${user.email}: ${token}`);
+    // SECURITY: Never log tokens or return them in API responses
+    // In development, implement email service or use a tool like MailHog/Mailpit for testing
+    // const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+    // await this.emailService.sendVerificationEmail(user.email, verificationLink);
 
     return {
-      message: 'Verification email sent',
-      // REMOVE THIS IN PRODUCTION
-      verificationToken: process.env.NODE_ENV === 'development' ? token : undefined,
+      message: 'Verification email sent. Please check your inbox.',
     };
   }
 
   async verifyEmail(token: string) {
-    // TODO: Implement email verification token lookup
-    // For now, this is a placeholder
+    // Find and validate verification token
+    const verificationToken = await this.prisma.emailVerificationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
 
-    throw new BadRequestException('Email verification not fully implemented');
+    if (!verificationToken) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    // Check if token is expired
+    if (verificationToken.expiresAt < new Date()) {
+      await this.prisma.emailVerificationToken.delete({
+        where: { id: verificationToken.id },
+      });
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    // Check if token was already used
+    if (verificationToken.usedAt) {
+      throw new BadRequestException('Verification token has already been used');
+    }
+
+    // Check if email is already verified
+    if (verificationToken.user.emailVerified) {
+      // Mark token as used and return success
+      await this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: new Date() },
+      });
+      return {
+        message: 'Email is already verified',
+      };
+    }
+
+    // Mark email as verified and token as used
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: verificationToken.userId },
+        data: {
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+      }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message: 'Email verified successfully',
+    };
   }
 
   // ============================================================================
@@ -739,6 +842,9 @@ export class AuthService {
           },
         },
       });
+
+      // Grant welcome bonus to new user
+      await this.grantWelcomeBonus(user.id, defaultOrg.id);
     }
 
     const membership = user.memberships[0];

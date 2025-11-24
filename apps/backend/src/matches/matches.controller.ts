@@ -1,4 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
+import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
+import type { MatchResult } from '@prisma/client';
 import {
   MatchesService,
   ReportMatchResultDto,
@@ -18,12 +20,12 @@ export class MatchesController {
   @Post('report')
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
-  async reportResult(@CurrentUser() user: any, @Body() dto: ReportMatchResultDto) {
+  async reportResult(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReportMatchResultDto) {
     return this.matchesService.reportMatchResult(dto, user.id, user.orgId);
   }
 
   @Get(':id')
-  async getMatch(@CurrentUser() user: any, @Param('id') id: string) {
+  async getMatch(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.matchesService.getMatch(id, user.orgId);
   }
 
@@ -32,8 +34,8 @@ export class MatchesController {
   @Roles('OWNER', 'STAFF')
   async overrideResult(
     @Param('id') matchId: string,
-    @CurrentUser() user: any,
-    @Body() dto: { result: any; gamesWonA: number; gamesWonB: number },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: { result: MatchResult; gamesWonA: number; gamesWonB: number },
   ) {
     return this.matchesService.overrideMatchResult(
       matchId,
@@ -51,7 +53,7 @@ export class MatchesController {
   @Post(':id/report-result')
   async playerReportResult(
     @Param('id') matchId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: PlayerReportResultDto,
   ) {
     return this.matchesService.playerReportResult(matchId, dto, user.id, user.orgId);
@@ -63,7 +65,7 @@ export class MatchesController {
   @Post(':id/confirm-result')
   async confirmResult(
     @Param('id') matchId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ConfirmMatchResultDto,
   ) {
     return this.matchesService.confirmMatchResult(matchId, dto, user.id, user.orgId);

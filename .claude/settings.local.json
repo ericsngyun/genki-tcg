@@ -9,7 +9,14 @@
       "Bash(del nul:*)",
       "Bash(npx expo-doctor)",
       "WebFetch(domain:docs.expo.dev)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(railway up:*)",
+      "Bash(curl:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Align GameType enum values in create-event DTO with Prisma schema\n\nUpdates validation to use ONE_PIECE_TCG, AZUKI_TCG, RIFTBOUND instead of\nlegacy OPTCG, AZUKI, OTHER values that were causing event creation to fail.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git checkout:*)",
+      "Bash(npx expo start:*)"
     ],
     "deny": [],
     "ask": []

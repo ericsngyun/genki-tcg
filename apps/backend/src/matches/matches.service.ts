@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { RatingsService } from '../ratings/ratings.service';
 import type { MatchResult } from '@prisma/client';
 
 export interface ReportMatchResultDto {
@@ -27,7 +28,8 @@ export interface ConfirmMatchResultDto {
 export class MatchesService {
   constructor(
     private prisma: PrismaService,
-    private realtimeGateway: RealtimeGateway
+    private realtimeGateway: RealtimeGateway,
+    private ratingsService: RatingsService
   ) {}
 
   async reportMatchResult(dto: ReportMatchResultDto, reportedBy: string, userOrgId: string) {
@@ -76,7 +78,93 @@ export class MatchesService {
     // Also emit standings updated (since results affect standings)
     this.realtimeGateway.emitStandingsUpdated(match.round.eventId);
 
+    // Update player ratings
+    await this.updatePlayerRatings(match, updatedMatch, userOrgId);
+
     return updatedMatch;
+  }
+
+  /**
+   * Update player ratings based on match result
+   */
+  private async updatePlayerRatings(
+    match: any,
+    updatedMatch: any,
+    orgId: string
+  ) {
+    try {
+      // Only update ratings if both players exist (not a bye)
+      if (!match.playerBId) {
+        return;
+      }
+
+      const gameType = match.round.event.game;
+
+      // Get current ratings for both players
+      const [playerARating, playerBRating] = await Promise.all([
+        this.prisma.playerRating.findUnique({
+          where: {
+            userId_orgId_gameType: {
+              userId: match.playerAId,
+              orgId,
+              gameType,
+            },
+          },
+        }),
+        this.prisma.playerRating.findUnique({
+          where: {
+            userId_orgId_gameType: {
+              userId: match.playerBId,
+              orgId,
+              gameType,
+            },
+          },
+        }),
+      ]);
+
+      // Use default rating if player doesn't have a rating yet
+      const playerARatingValue = playerARating?.rating || 1500;
+      const playerARD = playerARating?.ratingDeviation || 350;
+      const playerBRatingValue = playerBRating?.rating || 1500;
+      const playerBRD = playerBRating?.ratingDeviation || 350;
+
+      // Update both players' ratings
+      await Promise.all([
+        this.ratingsService.updateRating(
+          match.playerAId,
+          orgId,
+          gameType,
+          [
+            {
+              opponentId: match.playerBId,
+              opponentRating: playerBRatingValue,
+              opponentRD: playerBRD,
+              result: updatedMatch.result,
+              eventId: match.round.eventId,
+              matchId: match.id,
+            },
+          ]
+        ),
+        this.ratingsService.updateRating(
+          match.playerBId,
+          orgId,
+          gameType,
+          [
+            {
+              opponentId: match.playerAId,
+              opponentRating: playerARatingValue,
+              opponentRD: playerARD,
+              result: updatedMatch.result,
+              eventId: match.round.eventId,
+              matchId: match.id,
+            },
+          ]
+        ),
+      ]);
+    } catch (error) {
+      // Log error but don't fail the match result
+      console.error('Failed to update player ratings:', error);
+    }
   }
 
   async getMatch(matchId: string, userOrgId: string) {
@@ -165,6 +253,9 @@ export class MatchesService {
 
     // Also emit standings updated
     this.realtimeGateway.emitStandingsUpdated(match.round.eventId);
+
+    // Update player ratings
+    await this.updatePlayerRatings(match, updatedMatch, userOrgId);
 
     return updatedMatch;
   }
@@ -339,6 +430,9 @@ export class MatchesService {
 
       // Emit standings updated since confirmed result affects standings
       this.realtimeGateway.emitStandingsUpdated(match.round.eventId);
+
+      // Update player ratings
+      await this.updatePlayerRatings(match, updatedMatch, userOrgId);
 
       return {
         match: updatedMatch,

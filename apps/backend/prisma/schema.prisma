@@ -32,6 +32,7 @@ model Organization {
   events        Event[]
   creditEntries CreditLedgerEntry[]
   auditLogs     AuditLog[]
+  playerRatings PlayerRating[]
 
   @@index([slug])
   @@index([inviteCode])
@@ -57,18 +58,21 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships          OrgMembership[]
-  creditEntries        CreditLedgerEntry[]  @relation("CreditLedgerUser")
-  creditEntriesCreated CreditLedgerEntry[]  @relation("CreditLedgerCreator")
-  creditBalances       CreditBalance[]
-  entries              Entry[]
-  decklists            Decklist[]
-  matchesAsPlayerA     Match[]              @relation("MatchPlayerA")
-  matchesAsPlayerB     Match[]              @relation("MatchPlayerB")
-  notificationTokens   NotificationToken[]
-  auditLogs            AuditLog[]           @relation("AuditPerformer")
-  refreshTokens        RefreshToken[]
-  passwordResetTokens  PasswordResetToken[]
+  memberships              OrgMembership[]
+  creditEntries            CreditLedgerEntry[]       @relation("CreditLedgerUser")
+  creditEntriesCreated     CreditLedgerEntry[]       @relation("CreditLedgerCreator")
+  creditBalances           CreditBalance[]
+  entries                  Entry[]
+  decklists                Decklist[]
+  matchesAsPlayerA         Match[]                   @relation("MatchPlayerA")
+  matchesAsPlayerB         Match[]                   @relation("MatchPlayerB")
+  notificationTokens       NotificationToken[]
+  auditLogs                AuditLog[]                @relation("AuditPerformer")
+  refreshTokens            RefreshToken[]
+  passwordResetTokens      PasswordResetToken[]
+  emailVerificationTokens  EmailVerificationToken[]
+  playerRatings            PlayerRating[]
+  ratingHistoryAsOpponent  PlayerRatingHistory[]     @relation("RatingHistoryOpponent")
 
   @@index([email])
 }
@@ -142,6 +146,23 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
 // ============================================================================
 // Credits System
 // ============================================================================
@@ -154,6 +175,7 @@ enum CreditReasonCode {
   MANUAL_DEDUCT
   EVENT_ENTRY
   EVENT_REFUND
+  PROMO          // Promotional credits (welcome bonus, campaigns, etc.)
 }
 
 model CreditLedgerEntry {
@@ -262,6 +284,7 @@ model Event {
   rounds            Round[]
   standingSnapshots StandingSnapshot[]
   creditEntries     CreditLedgerEntry[]
+  ratingHistory     PlayerRatingHistory[]
 
   @@index([orgId, status])
   @@index([orgId, startAt])
@@ -385,9 +408,10 @@ model Match {
   updatedAt DateTime @updatedAt
 
   // Relations
-  round   Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  playerA User  @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
-  playerB User? @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  round         Round                 @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerA       User                  @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB       User?                 @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  ratingHistory PlayerRatingHistory[]
 
   @@unique([roundId, tableNumber])
   @@index([roundId])
@@ -495,4 +519,79 @@ model AuditLog {
   @@index([orgId, createdAt(sort: Desc)])
   @@index([performedBy])
   @@index([targetEventId])
+}
+
+// ============================================================================
+// Player Rating & Leaderboard System (Glicko-2)
+// ============================================================================
+
+model PlayerRating {
+  id       String   @id @default(cuid())
+  userId   String
+  orgId    String
+  gameType GameType // Track rating per game system
+
+  // Glicko-2 components
+  rating          Float @default(1500) // Player's rating (higher = better)
+  ratingDeviation Float @default(350) // Uncertainty/confidence (lower = more certain)
+  volatility      Float @default(0.06) // Expected fluctuation (sigma)
+
+  // Statistics
+  matchesPlayed Int @default(0)
+  matchWins     Int @default(0)
+  matchLosses   Int @default(0)
+  matchDraws    Int @default(0)
+
+  // Metadata
+  lastUpdatedAt DateTime  @default(now())
+  lastMatchAt   DateTime?
+  isProvisional Boolean   @default(true) // < 30 matches
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org     Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  history PlayerRatingHistory[]
+
+  @@unique([userId, orgId, gameType])
+  @@index([userId])
+  @@index([orgId, gameType, rating(sort: Desc)]) // Leaderboard queries
+  @@index([orgId, gameType, isProvisional]) // Filter provisional players
+}
+
+model PlayerRatingHistory {
+  id             String @id @default(cuid())
+  playerRatingId String
+  eventId        String?
+  matchId        String?
+
+  // Rating changes
+  ratingBefore Float
+  ratingAfter  Float
+  ratingChange Float
+
+  rdBefore Float // Rating deviation before
+  rdAfter  Float // Rating deviation after
+
+  volatilityBefore Float
+  volatilityAfter  Float
+
+  // Match context
+  opponentId           String
+  opponentRatingBefore Float
+  matchResult          MatchResult
+
+  calculatedAt DateTime @default(now())
+
+  // Relations
+  playerRating PlayerRating @relation(fields: [playerRatingId], references: [id], onDelete: Cascade)
+  event        Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  match        Match?       @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  opponent     User         @relation("RatingHistoryOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+
+  @@index([playerRatingId, calculatedAt(sort: Desc)]) // Player history timeline
+  @@index([eventId]) // Event-specific queries
+  @@index([matchId]) // Match-specific queries
 }

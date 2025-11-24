@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { SeedModule } from './seed/seed.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { SeedModule } from './seed/seed.module';
     AuditModule,
     RealtimeModule,
     SeedModule,
+    RatingsModule,
   ],
   providers: [
     // SECURITY: Enable global rate limiting
