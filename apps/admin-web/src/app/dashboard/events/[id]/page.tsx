@@ -383,13 +383,24 @@ export default function EventDetailPage() {
         </div>
 
         <div className="mt-6 flex space-x-3">
-          <button
-            onClick={handleCreateRound}
-            disabled={checkedInCount < 2}
-            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Create Round {(event.rounds.length || 0) + 1}
-          </button>
+          {event.rounds.length === 0 ? (
+            <button
+              onClick={handleCreateRound}
+              disabled={checkedInCount < 2}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <span className="text-lg">▶</span>
+              Start Tournament
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateRound}
+              disabled={checkedInCount < 2}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Create Round {event.rounds.length + 1}
+            </button>
+          )}
         </div>
       </div>
 
@@ -557,9 +568,16 @@ export default function EventDetailPage() {
           {activeTab === 'rounds' && (
             <div>
               {event.rounds.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No rounds created yet. Click "Create Round 1" to start the tournament.
-                </p>
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">🏁</div>
+                  <p className="text-lg font-medium text-foreground mb-2">Tournament Not Started</p>
+                  <p className="text-muted-foreground mb-6">
+                    Check in players first, then click "Start Tournament" to create Round 1 and generate pairings.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Currently {checkedInCount} player(s) checked in. Need at least 2 to start.
+                  </p>
+                </div>
               ) : (
                 <div>
                   {/* Round Selector */}

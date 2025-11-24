@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,22 +7,39 @@ import { api } from '../../lib/api';
 export default function MoreScreen() {
   const router = useRouter();
 
+  const performLogout = () => {
+    api.logout()
+      .then(() => {
+        router.replace('/login');
+      })
+      .catch((error) => {
+        console.error('Logout error:', error);
+        // Still navigate to login even on error
+        router.replace('/login');
+      });
+  };
+
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await api.logout();
-            router.replace('/login');
+    if (Platform.OS === 'web') {
+      // Use browser confirm on web since Alert.alert doesn't work
+      if (window.confirm('Are you sure you want to logout?')) {
+        performLogout();
+      }
+    } else {
+      // Use native Alert on iOS/Android
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: performLogout,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const menuItems = [

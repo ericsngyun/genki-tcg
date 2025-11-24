@@ -57,6 +57,7 @@ export default function EventsScreen() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPastEvents, setShowPastEvents] = useState(false);
@@ -86,6 +87,10 @@ export default function EventsScreen() {
     try {
       const userData = await api.getMe();
       setMyUserId(userData.user.id);
+      // Set organization name from response (if available)
+      if (userData.organization?.name) {
+        setOrgName(userData.organization.name);
+      }
 
       // Load all event statuses
       const [scheduledEvents, inProgressEvents, completedEvents] = await Promise.all([
@@ -409,7 +414,9 @@ export default function EventsScreen() {
             resizeMode="contain"
           />
           <Text style={styles.title}>Events</Text>
-          <Text style={styles.subtitle}>Find tournaments and track your matches</Text>
+          <Text style={styles.subtitle}>
+            {orgName ? `${orgName} tournaments` : 'Find tournaments and track your matches'}
+          </Text>
         </View>
 
         {/* My Active Match - Most Prominent */}
@@ -468,6 +475,7 @@ export default function EventsScreen() {
                   isCheckedIn={isCheckedIn(event)}
                   isDropped={isDropped(event)}
                   onPress={() => handleEventPress(event)}
+                  showMyStatus
                 />
               ))}
             </View>
@@ -491,6 +499,7 @@ export default function EventsScreen() {
                   isCheckedIn={isCheckedIn(event)}
                   isDropped={isDropped(event)}
                   onPress={() => handleEventPress(event)}
+                  showMyStatus
                 />
               ))}
             </View>
@@ -544,6 +553,7 @@ export default function EventsScreen() {
                     isDropped={isDropped(event)}
                     onPress={() => handleEventPress(event)}
                     muted
+                    showMyStatus
                   />
                 ))}
                 {pastEvents.length > 10 && (

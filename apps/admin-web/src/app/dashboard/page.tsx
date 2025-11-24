@@ -49,11 +49,22 @@ export default function DashboardPage() {
   };
 
   // Smart event categorization based on status and time
-  const { activeEvents, upcomingEvents, pastEvents, filteredEvents, totalPlayers } = useMemo(() => {
+  const { activeEvents, readyToStartEvents, upcomingEvents, pastEvents, filteredEvents, totalPlayers } = useMemo(() => {
     const now = new Date();
 
     // Active tournaments - IN_PROGRESS status
     const active = allEvents.filter(e => e.status === 'IN_PROGRESS');
+
+    // Ready to start - SCHEDULED events where start time has passed (within 24 hours)
+    // These need admin action to start them
+    const readyToStart = allEvents
+      .filter(e => {
+        if (e.status !== 'SCHEDULED') return false;
+        const startTime = new Date(e.startAt);
+        const hoursPastStart = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+        return hoursPastStart > 0 && hoursPastStart <= 24;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
     // Upcoming events - SCHEDULED and start time is in the future
     const upcoming = allEvents
@@ -64,7 +75,7 @@ export default function DashboardPage() {
       })
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
-    // Past events - COMPLETED, CANCELLED, or start time passed without starting
+    // Past events - COMPLETED, CANCELLED, or start time passed without starting (24+ hours)
     const past = allEvents
       .filter(e => {
         if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return true;
@@ -78,28 +89,28 @@ export default function DashboardPage() {
       })
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
-    // Calculate total unique players across active and upcoming events (approximation using entries count)
-    const total = [...active, ...upcoming].reduce((acc, event) => acc + event._count.entries, 0);
+    // Calculate total unique players across active, ready to start, and upcoming events
+    const total = [...active, ...readyToStart, ...upcoming].reduce((acc, event) => acc + event._count.entries, 0);
 
     // Apply filter for the main list view
-    // When "All Events" is selected (no filter), show active + upcoming, NOT past events
-    // Past events are shown in the collapsible Past Events section
     let filtered: Event[];
     if (filter === 'IN_PROGRESS') {
       filtered = active;
     } else if (filter === 'SCHEDULED') {
-      filtered = upcoming;
+      // Include both upcoming AND ready to start
+      filtered = [...readyToStart, ...upcoming];
     } else if (filter === 'COMPLETED') {
       filtered = past;
     } else {
-      // "All Events" = active + upcoming (excludes past from main list)
-      filtered = [...active, ...upcoming].sort((a, b) =>
+      // "All Events" = active + ready to start + upcoming (excludes past from main list)
+      filtered = [...active, ...readyToStart, ...upcoming].sort((a, b) =>
         new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
       );
     }
 
     return {
       activeEvents: active,
+      readyToStartEvents: readyToStart,
       upcomingEvents: upcoming,
       pastEvents: past,
       filteredEvents: filtered,
@@ -227,15 +238,16 @@ export default function DashboardPage() {
 
       {/* Hero Stats Row */}
       {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className={`grid grid-cols-1 gap-6 mb-10 ${readyToStartEvents.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
           {/* Active Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-green-500/5 p-6 backdrop-blur-sm shadow-xl shadow-green-500/5 transition-all hover:shadow-green-500/10 hover:border-green-500/30 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
+          <div className="relative overflow-hidden rounded-2xl border border-green-500/30 bg-green-500/5 p-6 backdrop-blur-md shadow-xl shadow-green-500/10 transition-all hover:shadow-green-500/20 hover:border-green-500/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-400 uppercase tracking-wider">Active Now</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{activeEvents.length}</h3>
               </div>
-              <div className="rounded-full bg-green-500/20 p-3 text-green-400 animate-pulse">
+              <div className="rounded-full bg-green-500/20 p-3 text-green-400 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -243,14 +255,33 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Ready to Start Stats - Only show if there are events */}
+          {readyToStartEvents.length > 0 && (
+            <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6 backdrop-blur-md shadow-xl shadow-orange-500/10 transition-all hover:shadow-orange-500/20 hover:border-orange-500/50 hover:-translate-y-1 group">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-400 uppercase tracking-wider">Ready to Start</p>
+                  <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{readyToStartEvents.length}</h3>
+                </div>
+                <div className="rounded-full bg-orange-500/20 p-3 text-orange-400 animate-pulse shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Upcoming Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-6 backdrop-blur-sm shadow-xl shadow-blue-500/5 transition-all hover:shadow-blue-500/10 hover:border-blue-500/30 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
+          <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-blue-500/5 p-6 backdrop-blur-md shadow-xl shadow-blue-500/10 transition-all hover:shadow-blue-500/20 hover:border-blue-500/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-400 uppercase tracking-wider">Upcoming</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{upcomingEvents.length}</h3>
               </div>
-              <div className="rounded-full bg-blue-500/20 p-3 text-blue-400">
+              <div className="rounded-full bg-blue-500/20 p-3 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -259,13 +290,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Player Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-6 backdrop-blur-sm shadow-xl shadow-purple-500/5 transition-all hover:shadow-purple-500/10 hover:border-purple-500/30 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6 backdrop-blur-md shadow-xl shadow-purple-500/10 transition-all hover:shadow-purple-500/20 hover:border-purple-500/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-400 uppercase tracking-wider">Total Players</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{totalPlayers}</h3>
               </div>
-              <div className="rounded-full bg-purple-500/20 p-3 text-purple-400">
+              <div className="rounded-full bg-purple-500/20 p-3 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -298,7 +330,7 @@ export default function DashboardPage() {
               <Link
                 key={event.id}
                 href={`/dashboard/events/${event.id}`}
-                className="group relative overflow-hidden rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-green-500/5 p-6 backdrop-blur-sm transition-all hover:border-green-500/40 hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl border border-green-500/30 bg-green-500/5 p-6 backdrop-blur-md transition-all hover:border-green-500/50 hover:shadow-2xl hover:shadow-green-500/20 hover:-translate-y-1"
               >
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-green-500/10 blur-2xl transition-all group-hover:bg-green-500/20"></div>
 
@@ -335,6 +367,61 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Ready to Start Section - Events past their start time that need to be started */}
+      {!filter && !loading && readyToStartEvents.length > 0 && (
+        <div className="mb-10 animate-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-both">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+              </div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">Ready to Start</h2>
+              <span className="text-sm text-orange-400 font-medium">(past scheduled time)</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {readyToStartEvents.map((event) => (
+              <Link
+                key={event.id}
+                href={`/dashboard/events/${event.id}`}
+                className="group relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6 backdrop-blur-md transition-all hover:border-orange-500/50 hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1"
+              >
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-orange-500/10 blur-2xl transition-all group-hover:bg-orange-500/20"></div>
+
+                <div className="flex items-start justify-between mb-4 relative">
+                  <div className="px-3 py-1 rounded-full text-xs font-bold border bg-orange-500/20 text-orange-400 border-orange-500/30 animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.2)]">
+                    READY TO START
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-orange-400 tracking-tight">
+                      {event._count.entries}
+                      {event.maxPlayers && <span className="text-lg text-orange-500/50">/{event.maxPlayers}</span>}
+                    </div>
+                    <div className="text-xs font-medium text-orange-500/70 uppercase tracking-wider">players</div>
+                  </div>
+                </div>
+
+                <h3 className="text-xl font-bold text-foreground mb-3 line-clamp-2 group-hover:text-orange-400 transition-colors relative">
+                  {event.name}
+                </h3>
+
+                <div className="space-y-2 text-sm text-muted-foreground relative">
+                  <div className="flex items-center bg-background/30 rounded-lg p-2 backdrop-blur-sm">
+                    <span className="mr-3 text-lg">🎮</span>
+                    <span className="font-medium">{formatGameName(event.game)}</span>
+                  </div>
+                  <div className="flex items-center bg-orange-500/10 rounded-lg p-2 backdrop-blur-sm border border-orange-500/20">
+                    <span className="mr-3 text-lg">⚠️</span>
+                    <span className="font-medium text-orange-400">Click to start tournament</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Upcoming Events Section */}
       {!filter && !loading && upcomingEvents.length > 0 && (
         <div className="mb-10 animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
@@ -352,7 +439,7 @@ export default function DashboardPage() {
               <Link
                 key={event.id}
                 href={`/dashboard/events/${event.id}`}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1"
               >
                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
@@ -401,8 +488,8 @@ export default function DashboardPage() {
         <button
           onClick={() => setFilter(undefined)}
           className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === undefined
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            ? 'bg-primary text-primary-foreground shadow-md'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
         >
           All Events
@@ -410,8 +497,8 @@ export default function DashboardPage() {
         <button
           onClick={() => setFilter('SCHEDULED')}
           className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'SCHEDULED'
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            ? 'bg-primary text-primary-foreground shadow-md'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
         >
           Upcoming
@@ -419,8 +506,8 @@ export default function DashboardPage() {
         <button
           onClick={() => setFilter('IN_PROGRESS')}
           className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'IN_PROGRESS'
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            ? 'bg-primary text-primary-foreground shadow-md'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
         >
           Active
@@ -428,8 +515,8 @@ export default function DashboardPage() {
         <button
           onClick={() => setFilter('COMPLETED')}
           className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${filter === 'COMPLETED'
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            ? 'bg-primary text-primary-foreground shadow-md'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
         >
           Completed
@@ -475,9 +562,9 @@ export default function DashboardPage() {
             <Link
               key={event.id}
               href={`/dashboard/events/${event.id}`}
-              className={`group bg-card/50 backdrop-blur-sm rounded-xl border p-6 hover:shadow-lg transition-all hover:-translate-y-0.5 ${event.status === 'IN_PROGRESS'
-                  ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10'
-                  : 'border-border hover:border-primary/30 hover:shadow-primary/5'
+              className={`group bg-white/5 backdrop-blur-md rounded-xl border p-6 hover:shadow-lg transition-all hover:-translate-y-0.5 ${event.status === 'IN_PROGRESS'
+                ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10'
+                : 'border-white/10 hover:border-primary/30 hover:shadow-primary/5'
                 }`}
             >
               <div className="flex justify-between items-center">

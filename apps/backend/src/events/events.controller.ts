@@ -13,7 +13,7 @@ export class EventsController {
 
   @Get()
   async getEvents(@CurrentUser() user: any, @Query('status') status?: any) {
-    return this.eventsService.getEvents(user.orgId, status);
+    return this.eventsService.getEvents(user.orgId, status, user.id);
   }
 
   @Get(':id')

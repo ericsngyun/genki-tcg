@@ -6,8 +6,10 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
 
@@ -35,6 +37,7 @@ interface Event {
 
 export default function StandingsScreen() {
   const params = useLocalSearchParams();
+  const router = useRouter();
   const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -110,8 +113,13 @@ export default function StandingsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.title}>{event.name}</Text>
-          <Text style={styles.subtitle}>Standings</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.title}>{event.name}</Text>
+            <Text style={styles.subtitle}>Standings</Text>
+          </View>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No standings yet</Text>
@@ -133,8 +141,13 @@ export default function StandingsScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.title}>{event.name}</Text>
-        <Text style={styles.subtitle}>Standings</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>{event.name}</Text>
+          <Text style={styles.subtitle}>Standings</Text>
+        </View>
       </View>
 
       {/* My Standing Highlight */}
@@ -146,7 +159,7 @@ export default function StandingsScreen() {
               <Text style={styles.rankLabel}>RANK</Text>
               <Text style={styles.rankNumber}>
                 {typeof getRankDisplay(myStanding.rank) === 'string' &&
-                String(getRankDisplay(myStanding.rank)).includes('🥇') ? (
+                  String(getRankDisplay(myStanding.rank)).includes('🥇') ? (
                   <Text style={{ fontSize: 48 }}>
                     {getRankDisplay(myStanding.rank)}
                   </Text>
@@ -260,90 +273,122 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.primary,
   },
   header: {
-    padding: 20,
-    backgroundColor: theme.colors.background.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
   },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.background.elevated,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   title: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
-    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
+    marginTop: 2,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   emptyContainer: {
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 300,
   },
   emptyText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: theme.typography.fontSize.lg,
+    color: theme.colors.text.primary,
+    fontWeight: theme.typography.fontWeight.bold,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 24,
   },
   errorText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.error.main,
     textAlign: 'center',
+    marginTop: 20,
   },
   myStandingCard: {
     backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.xl,
     margin: 16,
-    padding: 20,
-    borderWidth: 3,
-    borderColor: theme.colors.primary.main,
-    ...theme.shadows.lg,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.main + '40',
+    ...theme.shadows.xl,
+    position: 'relative',
+    overflow: 'hidden',
   },
   myStandingLabel: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary.main,
-    letterSpacing: 1,
-    marginBottom: 12,
+    letterSpacing: 1.5,
+    marginBottom: 20,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
   myStandingContent: {
     alignItems: 'center',
   },
   rankBadge: {
-    backgroundColor: theme.colors.primary.main,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.primary.lightest,
+    borderRadius: theme.borderRadius.lg,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    paddingHorizontal: 32,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.light,
+    minWidth: 120,
+    alignItems: 'center',
   },
   rankLabel: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.lightest,
+    color: theme.colors.primary.dark,
     textAlign: 'center',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
   rankNumber: {
-    fontSize: 32,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.foreground,
+    fontSize: 40,
+    fontWeight: theme.typography.fontWeight.black,
+    color: theme.colors.primary.main,
     textAlign: 'center',
+    lineHeight: 48,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    gap: 12,
   },
   statItem: {
     alignItems: 'center',
-    minWidth: '45%',
-    marginBottom: 12,
+    width: '48%', // 2 columns
+    backgroundColor: theme.colors.background.elevated,
+    padding: 12,
+    borderRadius: theme.borderRadius.md,
   },
   statValue: {
     fontSize: 20,
@@ -354,21 +399,24 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   standingsContainer: {
     backgroundColor: theme.colors.background.card,
     margin: 16,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...theme.shadows.sm,
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: theme.colors.background.elevated,
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 2,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.main,
   },
   headerCell: {
@@ -380,57 +428,65 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
   },
   tableRowHighlight: {
-    backgroundColor: theme.colors.primary.lightest,
+    backgroundColor: theme.colors.primary.lightest + '10',
   },
   tableRowDropped: {
     opacity: 0.5,
+    backgroundColor: theme.colors.background.primary,
   },
   cell: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.primary,
   },
   rankCell: {
-    width: 50,
+    width: 40,
+    textAlign: 'center',
   },
   rankText: {
     fontWeight: theme.typography.fontWeight.bold,
-    textAlign: 'center',
   },
   playerCell: {
     flex: 1,
+    paddingHorizontal: 8,
   },
   playerText: {
     fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: theme.typography.fontSize.base,
   },
   playerTextMe: {
     color: theme.colors.primary.main,
+    fontWeight: theme.typography.fontWeight.bold,
   },
   pointsCell: {
     width: 40,
+    textAlign: 'center',
   },
   pointsText: {
     fontWeight: theme.typography.fontWeight.bold,
-    textAlign: 'center',
   },
   recordCell: {
     width: 60,
+    textAlign: 'center',
   },
   recordText: {
-    textAlign: 'center',
     fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
   },
   tieCell: {
-    width: 55,
+    width: 50,
+    textAlign: 'right',
   },
   tieText: {
-    textAlign: 'right',
     fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.tertiary,
+    fontVariant: ['tabular-nums'],
   },
   youBadge: {
     fontSize: theme.typography.fontSize.xs,
@@ -438,23 +494,27 @@ const styles = StyleSheet.create({
     color: theme.colors.primary.main,
   },
   droppedBadge: {
-    fontSize: theme.typography.fontSize.xs,
+    fontSize: 10,
     color: theme.colors.error.main,
     marginTop: 2,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   footer: {
-    padding: 16,
+    padding: 20,
     marginBottom: 32,
+    alignItems: 'center',
   },
   footerText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginBottom: 4,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   footerSubtext: {
-    fontSize: theme.typography.fontSize.xs,
+    fontSize: 10,
     color: theme.colors.text.tertiary,
     textAlign: 'center',
+    maxWidth: '80%',
   },
 });

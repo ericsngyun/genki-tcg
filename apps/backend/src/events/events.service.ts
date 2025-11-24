@@ -18,7 +18,7 @@ export class EventsService {
     });
   }
 
-  async getEvents(orgId: string, status?: EventStatus) {
+  async getEvents(orgId: string, status?: EventStatus, userId?: string) {
     return this.prisma.event.findMany({
       where: {
         orgId,
@@ -33,6 +33,18 @@ export class EventsService {
             entries: true,
           },
         },
+        // Include the current user's entry to check registration status
+        entries: userId ? {
+          where: {
+            userId,
+          },
+          select: {
+            userId: true,
+            checkedInAt: true,
+            paidAt: true,
+            droppedAt: true,
+          },
+        } : false,
       },
     });
   }

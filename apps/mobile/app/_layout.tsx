@@ -31,13 +31,19 @@ export default function RootLayout() {
   return (
     <PaperProvider theme={paperTheme}>
       <StatusBar style="light" />
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="signup" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="pairings" options={{ title: 'Pairings' }} />
-        <Stack.Screen name="standings" options={{ title: 'Standings' }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: customTheme.colors.background.primary },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="pairings" />
+        <Stack.Screen name="standings" />
+        <Stack.Screen name="match-details" />
       </Stack>
     </PaperProvider>
   );

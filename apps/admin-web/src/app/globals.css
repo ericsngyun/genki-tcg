@@ -67,5 +67,30 @@
   }
   body {
     @apply bg-background text-foreground;
+    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
+    min-height: 100vh;
+  }
+
+  /* Animated background blob */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(76, 29, 149, 0.15), transparent 60%);
+    animation: rotate 20s linear infinite;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  @keyframes rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 }

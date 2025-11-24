@@ -33,6 +33,20 @@ export class AuthService {
     private jwtService: JwtService
   ) {}
 
+  /**
+   * Get organization by ID (for /auth/me endpoint)
+   */
+  async getOrganization(orgId: string) {
+    return this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+  }
+
   async signup(dto: SignupDto) {
     const { email, password, name, inviteCode } = dto;
 

@@ -30,14 +30,26 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@CurrentUser() user: User) {
+  async getMe(@CurrentUser() user: any) {
+    // Fetch organization details
+    const org = await this.authService.getOrganization(user.orgId);
+
+    // user object includes orgId and role from JWT strategy
     return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        discordUsername: user.discordUsername,
         createdAt: user.createdAt,
+      },
+      // Include organization context for debugging and multi-org support
+      organization: {
+        id: user.orgId,
+        name: org?.name || 'Unknown',
+        slug: org?.slug,
+        role: user.role,
       },
     };
   }

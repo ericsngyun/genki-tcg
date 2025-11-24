@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
 
@@ -37,6 +39,7 @@ interface Round {
 interface Event {
   id: string;
   name: string;
+  game: string;
   rounds: Round[];
 }
 
@@ -150,7 +153,13 @@ export default function PairingsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.title}>{event.name}</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.title}>{event.name}</Text>
+            <Text style={styles.subtitle}>Pairings</Text>
+          </View>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No rounds posted yet</Text>
@@ -165,260 +174,335 @@ export default function PairingsScreen() {
   const myPairing = getMyPairing();
   const selectedRound = event.rounds.find((r) => r.id === selectedRoundId);
 
-  return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>{event.name}</Text>
-        <Text style={styles.subtitle}>Round {selectedRound?.roundNumber}</Text>
-      </View>
+  const handleReportResult = () => {
+    router.push({
+      pathname: '/match-details',
+      params: {
+        eventId,
+        eventName: event.name,
+        gameType: event.game,
+      },
+    });
+  };
 
-      {/* My Pairing Highlight */}
-      {myPairing && (
-        <View style={styles.myPairingCard}>
-          <Text style={styles.myPairingLabel}>Your Match</Text>
-          <View style={styles.myPairingContent}>
-            <View style={styles.tableNumberBadge}>
-              <Text style={styles.tableNumberLabel}>TABLE</Text>
-              <Text style={styles.tableNumber}>{myPairing.tableNumber}</Text>
-            </View>
-            <View style={styles.matchupContainer}>
-              <Text style={styles.playerName}>
-                {myPairing.playerA.id === myUserId ? (
-                  <Text style={styles.youLabel}>YOU</Text>
-                ) : (
-                  myPairing.playerA.name
-                )}
-              </Text>
-              <Text style={styles.vsText}>vs</Text>
-              <Text style={styles.playerName}>
-                {!myPairing.playerB ? (
-                  <Text style={styles.byeLabel}>— BYE —</Text>
-                ) : myPairing.playerB.id === myUserId ? (
-                  <Text style={styles.youLabel}>YOU</Text>
-                ) : (
-                  myPairing.playerB.name
-                )}
-              </Text>
-            </View>
-            <View style={styles.resultContainer}>
-              <Text
-                style={[
-                  styles.resultText,
-                  myPairing.result ? styles.resultCompleted : styles.resultPending,
-                ]}
-              >
-                {formatResult(myPairing)}
-              </Text>
-            </View>
+  return (
+    <View style={styles.mainContainer}>
+      <LinearGradient
+        colors={[theme.colors.background.primary, '#1a1a2e']}
+        style={StyleSheet.absoluteFill}
+      />
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary.main} />
+        }
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.title}>{event.name}</Text>
+            <Text style={styles.subtitle}>Round {selectedRound?.roundNumber}</Text>
           </View>
         </View>
-      )}
 
-      {/* Round Selector */}
-      {event.rounds.length > 1 && (
-        <View style={styles.roundSelectorContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {event.rounds.map((round) => (
-              <TouchableOpacity
-                key={round.id}
-                onPress={() => setSelectedRoundId(round.id)}
-                style={[
-                  styles.roundButton,
-                  selectedRoundId === round.id && styles.roundButtonActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.roundButtonText,
-                    selectedRoundId === round.id && styles.roundButtonTextActive,
-                  ]}
-                >
-                  Round {round.roundNumber}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* All Pairings */}
-      <View style={styles.allPairingsContainer}>
-        <Text style={styles.sectionTitle}>All Pairings</Text>
-        {pairings.length === 0 ? (
-          <Text style={styles.emptyText}>No pairings yet</Text>
-        ) : (
-          pairings.map((pairing) => (
-            <View
-              key={pairing.id}
-              style={[
-                styles.pairingCard,
-                (pairing.playerA.id === myUserId ||
-                  pairing.playerB?.id === myUserId) &&
-                  styles.pairingCardHighlight,
-              ]}
-            >
-              <View style={styles.pairingHeader}>
-                <Text style={styles.pairingTable}>Table {pairing.tableNumber}</Text>
-                <Text
-                  style={[
-                    styles.pairingStatus,
-                    pairing.result
-                      ? styles.pairingStatusCompleted
-                      : styles.pairingStatusPending,
-                  ]}
-                >
-                  {pairing.result ? '✓ Complete' : '⏱ In Progress'}
-                </Text>
+        {/* My Pairing Highlight */}
+        {myPairing && (
+          <View style={styles.myPairingCard}>
+            <Text style={styles.myPairingLabel}>Your Match</Text>
+            <View style={styles.myPairingContent}>
+              <View style={styles.tableNumberBadge}>
+                <Text style={styles.tableNumberLabel}>TABLE</Text>
+                <Text style={styles.tableNumber}>{myPairing.tableNumber}</Text>
               </View>
-              <View style={styles.pairingMatchup}>
-                <Text style={styles.pairingPlayer}>
-                  {pairing.playerA.name}
-                  {pairing.playerA.id === myUserId && (
-                    <Text style={styles.youBadge}> (You)</Text>
-                  )}
-                </Text>
-                <Text style={styles.pairingVs}>vs</Text>
-                <Text style={styles.pairingPlayer}>
-                  {pairing.playerB ? (
-                    <>
-                      {pairing.playerB.name}
-                      {pairing.playerB.id === myUserId && (
-                        <Text style={styles.youBadge}> (You)</Text>
-                      )}
-                    </>
+              <View style={styles.matchupContainer}>
+                <Text style={styles.playerName}>
+                  {myPairing.playerA.id === myUserId ? (
+                    <Text style={styles.youLabel}>YOU</Text>
                   ) : (
+                    myPairing.playerA.name
+                  )}
+                </Text>
+                <Text style={styles.vsText}>vs</Text>
+                <Text style={styles.playerName}>
+                  {!myPairing.playerB ? (
                     <Text style={styles.byeLabel}>— BYE —</Text>
+                  ) : myPairing.playerB.id === myUserId ? (
+                    <Text style={styles.youLabel}>YOU</Text>
+                  ) : (
+                    myPairing.playerB.name
                   )}
                 </Text>
               </View>
-              {pairing.result && (
-                <Text style={styles.pairingResult}>{formatResult(pairing)}</Text>
+              <View style={styles.resultContainer}>
+                <Text
+                  style={[
+                    styles.resultText,
+                    myPairing.result ? styles.resultCompleted : styles.resultPending,
+                  ]}
+                >
+                  {formatResult(myPairing)}
+                </Text>
+              </View>
+
+              {/* Report Result Button */}
+              {!myPairing.result && myPairing.playerB && (
+                <TouchableOpacity
+                  style={styles.reportResultButton}
+                  onPress={handleReportResult}
+                >
+                  <Ionicons name="create" size={20} color={theme.colors.primary.foreground} />
+                  <Text style={styles.reportResultButtonText}>Report Result</Text>
+                </TouchableOpacity>
               )}
             </View>
-          ))
+          </View>
         )}
-      </View>
-    </ScrollView>
+
+        {/* Round Selector */}
+        {event.rounds.length > 1 && (
+          <View style={styles.roundSelectorContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {event.rounds.map((round) => (
+                <TouchableOpacity
+                  key={round.id}
+                  onPress={() => setSelectedRoundId(round.id)}
+                  style={[
+                    styles.roundButton,
+                    selectedRoundId === round.id && styles.roundButtonActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.roundButtonText,
+                      selectedRoundId === round.id && styles.roundButtonTextActive,
+                    ]}
+                  >
+                    Round {round.roundNumber}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* All Pairings */}
+        <View style={styles.allPairingsContainer}>
+          <Text style={styles.sectionTitle}>All Pairings</Text>
+          {pairings.length === 0 ? (
+            <Text style={styles.emptyText}>No pairings yet</Text>
+          ) : (
+            pairings.map((pairing) => (
+              <View
+                key={pairing.id}
+                style={[
+                  styles.pairingCard,
+                  (pairing.playerA.id === myUserId ||
+                    pairing.playerB?.id === myUserId) &&
+                  styles.pairingCardHighlight,
+                ]}
+              >
+                <View style={styles.pairingHeader}>
+                  <Text style={styles.pairingTable}>Table {pairing.tableNumber}</Text>
+                  <Text
+                    style={[
+                      styles.pairingStatus,
+                      pairing.result
+                        ? styles.pairingStatusCompleted
+                        : styles.pairingStatusPending,
+                    ]}
+                  >
+                    {pairing.result ? '✓ Complete' : '⏱ In Progress'}
+                  </Text>
+                </View>
+                <View style={styles.pairingMatchup}>
+                  <Text style={styles.pairingPlayer}>
+                    {pairing.playerA.name}
+                    {pairing.playerA.id === myUserId && (
+                      <Text style={styles.youBadge}> (You)</Text>
+                    )}
+                  </Text>
+                  <Text style={styles.pairingVs}>vs</Text>
+                  <Text style={styles.pairingPlayer}>
+                    {pairing.playerB ? (
+                      <>
+                        {pairing.playerB.name}
+                        {pairing.playerB.id === myUserId && (
+                          <Text style={styles.youBadge}> (You)</Text>
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.byeLabel}>— BYE —</Text>
+                    )}
+                  </Text>
+                </View>
+                {pairing.result && (
+                  <Text style={styles.pairingResult}>{formatResult(pairing)}</Text>
+                )}
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: 'transparent',
   },
   header: {
-    padding: 20,
-    backgroundColor: theme.colors.background.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent', // Make transparent for gradient
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
+    borderBottomColor: 'rgba(255,255,255,0.1)', // Subtle border
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.background.elevated,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
-    fontSize: theme.typography.fontSize['2xl'],
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
-    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
+    marginTop: 2,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   emptyContainer: {
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 300,
   },
   emptyText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: theme.typography.fontSize.lg,
+    color: theme.colors.text.primary,
+    fontWeight: theme.typography.fontWeight.bold,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 24,
   },
   errorText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.error.main,
     textAlign: 'center',
+    marginTop: 20,
   },
   myPairingCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: 'rgba(24, 24, 27, 0.7)', // Glassmorphism
+    borderRadius: theme.borderRadius.xl,
     margin: 16,
-    padding: 20,
-    borderWidth: 3,
-    borderColor: theme.colors.primary.main,
-    ...theme.shadows.lg,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.3)', // Subtle primary border
+    ...theme.shadows.xl,
+    position: 'relative',
+    overflow: 'hidden',
   },
   myPairingLabel: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary.main,
-    letterSpacing: 1,
-    marginBottom: 12,
+    letterSpacing: 1.5,
+    marginBottom: 20,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
   myPairingContent: {
     alignItems: 'center',
   },
   tableNumberBadge: {
-    backgroundColor: theme.colors.primary.main,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.primary.lightest,
+    borderRadius: theme.borderRadius.lg,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    paddingHorizontal: 32,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.light,
   },
   tableNumberLabel: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.lightest,
+    color: theme.colors.primary.dark,
     textAlign: 'center',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
   tableNumber: {
-    fontSize: 32,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.foreground,
+    fontSize: 40,
+    fontWeight: theme.typography.fontWeight.black,
+    color: theme.colors.primary.main,
     textAlign: 'center',
+    lineHeight: 48,
   },
   matchupContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    width: '100%',
   },
   playerName: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
     marginVertical: 4,
+    textAlign: 'center',
   },
   vsText: {
     fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.tertiary,
-    marginVertical: 8,
+    marginVertical: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   youLabel: {
-    fontSize: theme.typography.fontSize.lg,
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary.main,
   },
   byeLabel: {
-    fontSize: theme.typography.fontSize.md,
+    fontSize: theme.typography.fontSize.lg,
     fontStyle: 'italic',
     color: theme.colors.text.tertiary,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   resultContainer: {
-    marginTop: 8,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.background.elevated,
   },
   resultText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: theme.typography.fontWeight.bold,
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   resultCompleted: {
     color: theme.colors.success.main,
@@ -428,20 +512,24 @@ const styles = StyleSheet.create({
   },
   roundSelectorContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   roundButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.base,
-    marginRight: 8,
-    borderWidth: 2,
-    borderColor: theme.colors.border.light,
+    backgroundColor: theme.colors.background.elevated,
+    borderRadius: theme.borderRadius.full,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border.main,
   },
   roundButtonActive: {
     backgroundColor: theme.colors.primary.main,
     borderColor: theme.colors.primary.main,
+    ...theme.shadows.md,
   },
   roundButtonText: {
     fontSize: theme.typography.fontSize.sm,
@@ -450,42 +538,54 @@ const styles = StyleSheet.create({
   },
   roundButtonTextActive: {
     color: theme.colors.primary.foreground,
+    fontWeight: theme.typography.fontWeight.bold,
   },
   allPairingsContainer: {
     padding: 16,
+    paddingBottom: 40,
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
-    marginBottom: 12,
+    marginBottom: 16,
+    marginLeft: 4,
   },
   pairingCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(24, 24, 27, 0.6)', // Glassmorphism
+    borderRadius: theme.borderRadius.lg,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
+    borderColor: 'rgba(255,255,255,0.05)',
+    ...theme.shadows.sm,
   },
   pairingCardHighlight: {
     borderWidth: 2,
     borderColor: theme.colors.primary.main,
+    backgroundColor: theme.colors.primary.lightest + '20', // Very transparent primary bg
   },
   pairingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
   },
   pairingTable: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
+    color: theme.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   pairingStatus: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontWeight: theme.typography.fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   pairingStatusCompleted: {
     color: theme.colors.success.main,
@@ -497,27 +597,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   pairingPlayer: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.text.primary,
     flex: 1,
   },
   pairingVs: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.text.tertiary,
-    marginHorizontal: 8,
+    marginHorizontal: 12,
+    fontWeight: theme.typography.fontWeight.bold,
   },
   pairingResult: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.text.secondary,
     fontStyle: 'italic',
+    marginTop: 8,
+    textAlign: 'center',
   },
   youBadge: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.primary.main,
+  },
+  reportResultButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primary.main,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: theme.borderRadius.full,
+    marginTop: 24,
+    width: '100%',
+    ...theme.shadows.md,
+  },
+  reportResultButtonText: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.foreground,
   },
 });
