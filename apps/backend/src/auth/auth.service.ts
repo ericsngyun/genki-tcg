@@ -726,7 +726,7 @@ export class AuthService {
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json().catch(() => null);
+      const errorData = await tokenResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
       console.error('Discord token exchange failed:', {
         status: tokenResponse.status,
         statusText: tokenResponse.statusText,
@@ -901,7 +901,7 @@ export class AuthService {
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json().catch(() => null);
+      const errorData = await tokenResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
       console.error('Discord token exchange failed (linkAccount):', {
         status: tokenResponse.status,
         statusText: tokenResponse.statusText,
@@ -924,7 +924,7 @@ export class AuthService {
     });
 
     if (!userResponse.ok) {
-      const errorData = await userResponse.json().catch(() => null);
+      const errorData = await userResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
       console.error('Discord user info fetch failed:', {
         status: userResponse.status,
         statusText: userResponse.statusText,
