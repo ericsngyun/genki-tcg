@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
-import { Logo } from '../../components';
+import { AppHeader } from '../../components';
 
 export default function MoreScreen() {
   const router = useRouter();
@@ -91,9 +91,7 @@ export default function MoreScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Logo size="medium" />
-      </View>
+      <AppHeader title="More" subtitle="Settings and options" />
 
       {/* Menu Items */}
       <View style={styles.menuContainer}>
@@ -139,15 +137,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
-  },
-  header: {
-    backgroundColor: theme.colors.background.card,
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-    alignItems: 'center',
   },
   menuContainer: {
     padding: 16,

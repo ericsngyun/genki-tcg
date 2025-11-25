@@ -22,7 +22,7 @@ import { theme } from '../../lib/theme';
 import { usePressAnimation } from '../../lib/animations';
 import { EventActionSheet } from '../../components/EventActionSheet';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
-import { Logo } from '../../components';
+import { AppHeader } from '../../components';
 
 interface Event {
   id: string;
@@ -408,13 +408,10 @@ export default function EventsScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Logo size="small" />
-          <Text style={styles.title}>Events</Text>
-          <Text style={styles.subtitle}>
-            {orgName ? `${orgName} tournaments` : 'Find tournaments and track your matches'}
-          </Text>
-        </View>
+        <AppHeader
+          title="Events"
+          subtitle={orgName ? `${orgName} tournaments` : 'Find tournaments and track your matches'}
+        />
 
         {/* My Active Match - Most Prominent */}
         {myActiveMatch && (
@@ -939,25 +936,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: theme.colors.background.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
   },
   section: {
     marginTop: 24,

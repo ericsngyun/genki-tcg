@@ -8,3 +8,6 @@ export { Badge } from './Badge';
 export { Input } from './Input';
 export { ActiveMatchCard } from './ActiveMatchCard';
 export { Logo } from './Logo';
+export { AppHeader } from './AppHeader';
+export { EventActionSheet } from './EventActionSheet';
+export { ConfirmationModal } from './ConfirmationModal';

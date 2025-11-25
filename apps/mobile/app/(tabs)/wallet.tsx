@@ -10,7 +10,7 @@ import {
 import { api } from '../../lib/api';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Logo } from '../../components';
+import { AppHeader } from '../../components';
 
 interface Transaction {
   id: string;
@@ -67,11 +67,10 @@ export default function WalletScreen() {
         />
       }
     >
-      <View style={styles.header}>
-        <Logo size="small" />
-        <Text style={styles.title}>Credits Wallet</Text>
-        <Text style={styles.subtitle}>Track your tournament credits</Text>
-      </View>
+      <AppHeader
+        title="Credits Wallet"
+        subtitle="Track your tournament credits"
+      />
 
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Current Balance</Text>
@@ -120,27 +119,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.background.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
   },
   balanceCard: {
     backgroundColor: theme.colors.background.card,

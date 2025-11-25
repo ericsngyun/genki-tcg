@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
-import { Logo } from '../../components';
+import { AppHeader } from '../../components';
 
 interface User {
   id: string;
@@ -45,9 +45,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Logo size="medium" />
-      </View>
+      <AppHeader title="Profile" subtitle="Your player profile" />
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
@@ -113,15 +111,6 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    backgroundColor: theme.colors.background.card,
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
   },
   profileCard: {

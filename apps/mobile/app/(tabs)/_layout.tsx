@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../lib/theme';
 
@@ -12,13 +13,19 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background.card,
           borderTopColor: theme.colors.border.light,
           borderTopWidth: 1,
-          paddingBottom: 8,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 12,
           paddingTop: 8,
-          height: 65,
+          height: Platform.OS === 'ios' ? 85 : 70,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginBottom: -4,
         },
         headerStyle: {
           backgroundColor: theme.colors.background.card,
@@ -37,8 +44,12 @@ export default function TabLayout() {
         options={{
           title: 'Events',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "calendar" : "calendar-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -47,8 +58,12 @@ export default function TabLayout() {
         options={{
           title: 'Wallet',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="wallet" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "wallet" : "wallet-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -57,8 +72,12 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -67,8 +86,12 @@ export default function TabLayout() {
         options={{
           title: 'More',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="menu" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "menu" : "menu-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

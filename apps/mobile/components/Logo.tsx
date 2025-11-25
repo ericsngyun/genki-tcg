@@ -1,30 +1,32 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, Image, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '../lib/theme';
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large';
   style?: ViewStyle;
+  showText?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ 
-  size = 'medium', 
-  style 
+export const Logo = memo<LogoProps>(({
+  size = 'medium',
+  style,
+  showText = true
 }) => {
   const sizeConfig = {
     small: {
-      mainFontSize: theme.typography.fontSize['3xl'],
-      imageSize: 56,
+      mainFontSize: theme.typography.fontSize['2xl'],
+      imageSize: 48,
       gap: theme.spacing.sm,
     },
     medium: {
-      mainFontSize: theme.typography.fontSize['4xl'],
-      imageSize: 72,
+      mainFontSize: theme.typography.fontSize['3xl'],
+      imageSize: 64,
       gap: theme.spacing.md,
     },
     large: {
-      mainFontSize: theme.typography.fontSize['5xl'],
-      imageSize: 88,
+      mainFontSize: theme.typography.fontSize['4xl'],
+      imageSize: 80,
       gap: theme.spacing.md,
     },
   };
@@ -33,17 +35,22 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={[styles.titleMain, { fontSize: config.mainFontSize }]}>
-        GENKI
-      </Text>
+      {showText && (
+        <Text style={[styles.titleMain, { fontSize: config.mainFontSize }]}>
+          GENKI
+        </Text>
+      )}
       <Image
-        source={require('../assets/images/genki-head.png')}
+        source={require('../assets/images/genki.webp')}
         style={[styles.logoImage, { width: config.imageSize, height: config.imageSize }]}
         resizeMode="contain"
+        fadeDuration={0}
       />
     </View>
   );
-};
+});
+
+Logo.displayName = 'Logo';
 
 const styles = StyleSheet.create({
   container: {
