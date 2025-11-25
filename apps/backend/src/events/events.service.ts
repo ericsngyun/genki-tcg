@@ -502,6 +502,7 @@ export class EventsService {
 
   /**
    * Get player's active match for the current/latest round
+   * Shows PENDING or ACTIVE rounds (not COMPLETED)
    */
   async getMyActiveMatch(eventId: string, userId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
@@ -509,7 +510,9 @@ export class EventsService {
       include: {
         rounds: {
           where: {
-            status: 'ACTIVE',
+            status: {
+              in: ['PENDING', 'ACTIVE'],
+            },
           },
           include: {
             matches: {
@@ -560,13 +563,60 @@ export class EventsService {
     // Determine if user is playerA or playerB
     const iAmPlayerA = match.playerAId === userId;
 
+    // Determine opponent - handle both cases properly
+    // If playerBId is null or undefined, it's a BYE (opponent is null)
+    // Otherwise, show the other player
+    let opponent = null;
+    
+    // Check if this is a BYE match (playerBId is null/undefined)
+    // Also check if playerBId exists but is empty string (defensive check)
+    if (!match.playerBId || match.playerBId === null || match.playerBId === undefined) {
+      // This is a BYE match - no opponent
+      opponent = null;
+    } else {
+      // Normal match - opponent is the other player
+      if (iAmPlayerA) {
+        // We're playerA, opponent is playerB
+        opponent = match.playerB;
+        // If relation didn't load but playerBId exists, fetch it
+        if (!opponent && match.playerBId) {
+          try {
+            opponent = await this.prisma.user.findUnique({
+              where: { id: match.playerBId },
+              select: { id: true, name: true },
+            });
+          } catch (error) {
+            // If user doesn't exist, treat as BYE
+            console.error(`Failed to fetch playerB with id ${match.playerBId}:`, error);
+            opponent = null;
+          }
+        }
+      } else {
+        // We're playerB, opponent is playerA
+        opponent = match.playerA;
+        // PlayerA should always exist, but handle gracefully if not
+        if (!opponent && match.playerAId) {
+          try {
+            opponent = await this.prisma.user.findUnique({
+              where: { id: match.playerAId },
+              select: { id: true, name: true },
+            });
+          } catch (error) {
+            console.error(`Failed to fetch playerA with id ${match.playerAId}:`, error);
+            // PlayerA should always exist, but if not, we can't proceed
+            throw new Error('Match data is invalid: playerA not found');
+          }
+        }
+      }
+    }
+
     return {
       match: {
         id: match.id,
         roundId: round.id,
         roundNumber: round.roundNumber,
         tableNumber: match.tableNumber,
-        opponent: iAmPlayerA ? match.playerB : match.playerA,
+        opponent,
         result: match.result,
         gamesWonA: match.gamesWonA,
         gamesWonB: match.gamesWonB,
