@@ -86,6 +86,14 @@ export const colors = {
     main: '#3F3F46',         // Zinc-700
     dark: '#52525B',         // Zinc-600
   },
+
+  // Glassmorphism Tokens
+  glass: {
+    overlay: 'rgba(255, 255, 255, 0.03)',
+    border: 'rgba(255, 255, 255, 0.08)',
+    highlight: 'rgba(255, 255, 255, 0.15)',
+    shadow: 'rgba(0, 0, 0, 0.5)',
+  },
 };
 
 // Typography Scale

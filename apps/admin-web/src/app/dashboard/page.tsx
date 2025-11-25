@@ -240,14 +240,14 @@ export default function DashboardPage() {
       {!loading && (
         <div className={`grid grid-cols-1 gap-6 mb-10 ${readyToStartEvents.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
           {/* Active Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-green-500/30 bg-green-500/5 p-6 backdrop-blur-md shadow-xl shadow-green-500/10 transition-all hover:shadow-green-500/20 hover:border-green-500/50 hover:-translate-y-1 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md shadow-xl shadow-primary/10 transition-all hover:shadow-primary/20 hover:border-primary/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-400 uppercase tracking-wider">Active Now</p>
+                <p className="text-sm font-medium text-primary uppercase tracking-wider">Active Now</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{activeEvents.length}</h3>
               </div>
-              <div className="rounded-full bg-green-500/20 p-3 text-green-400 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+              <div className="rounded-full bg-primary/20 p-3 text-primary animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -257,14 +257,14 @@ export default function DashboardPage() {
 
           {/* Ready to Start Stats - Only show if there are events */}
           {readyToStartEvents.length > 0 && (
-            <div className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6 backdrop-blur-md shadow-xl shadow-orange-500/10 transition-all hover:shadow-orange-500/20 hover:border-orange-500/50 hover:-translate-y-1 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md shadow-xl shadow-primary/10 transition-all hover:shadow-primary/20 hover:border-primary/50 hover:-translate-y-1 group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-400 uppercase tracking-wider">Ready to Start</p>
+                  <p className="text-sm font-medium text-primary uppercase tracking-wider">Ready to Start</p>
                   <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{readyToStartEvents.length}</h3>
                 </div>
-                <div className="rounded-full bg-orange-500/20 p-3 text-orange-400 animate-pulse shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                <div className="rounded-full bg-primary/20 p-3 text-primary animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -274,14 +274,14 @@ export default function DashboardPage() {
           )}
 
           {/* Upcoming Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-blue-500/5 p-6 backdrop-blur-md shadow-xl shadow-blue-500/10 transition-all hover:shadow-blue-500/20 hover:border-blue-500/50 hover:-translate-y-1 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md shadow-xl shadow-primary/10 transition-all hover:shadow-primary/20 hover:border-primary/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-400 uppercase tracking-wider">Upcoming</p>
+                <p className="text-sm font-medium text-primary uppercase tracking-wider">Upcoming</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{upcomingEvents.length}</h3>
               </div>
-              <div className="rounded-full bg-blue-500/20 p-3 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+              <div className="rounded-full bg-primary/20 p-3 text-primary shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -290,14 +290,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Player Stats */}
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6 backdrop-blur-md shadow-xl shadow-purple-500/10 transition-all hover:shadow-purple-500/20 hover:border-purple-500/50 hover:-translate-y-1 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md shadow-xl shadow-primary/10 transition-all hover:shadow-primary/20 hover:border-primary/50 hover:-translate-y-1 group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-400 uppercase tracking-wider">Total Players</p>
+                <p className="text-sm font-medium text-primary uppercase tracking-wider">Total Players</p>
                 <h3 className="mt-2 text-4xl font-bold text-foreground tracking-tight">{totalPlayers}</h3>
               </div>
-              <div className="rounded-full bg-purple-500/20 p-3 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+              <div className="rounded-full bg-primary/20 p-3 text-primary shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>

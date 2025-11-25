@@ -22,6 +22,7 @@ import { theme } from '../../lib/theme';
 import { usePressAnimation } from '../../lib/animations';
 import { EventActionSheet } from '../../components/EventActionSheet';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { Logo } from '../../components';
 
 interface Event {
   id: string;
@@ -408,11 +409,7 @@ export default function EventsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/images/genki-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Logo size="small" />
           <Text style={styles.title}>Events</Text>
           <Text style={styles.subtitle}>
             {orgName ? `${orgName} tournaments` : 'Find tournaments and track your matches'}
@@ -950,11 +947,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.card,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
-  },
-  logo: {
-    width: 120,
-    height: 36,
-    marginBottom: 8,
   },
   title: {
     fontSize: 24,

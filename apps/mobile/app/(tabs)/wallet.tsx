@@ -10,7 +10,7 @@ import {
 import { api } from '../../lib/api';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'react-native';
+import { Logo } from '../../components';
 
 interface Transaction {
   id: string;
@@ -68,11 +68,7 @@ export default function WalletScreen() {
       }
     >
       <View style={styles.header}>
-        <Image
-          source={require('../../assets/images/genki-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <Logo size="small" />
         <Text style={styles.title}>Credits Wallet</Text>
         <Text style={styles.subtitle}>Track your tournament credits</Text>
       </View>
@@ -133,11 +129,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
-  },
-  logo: {
-    width: 120,
-    height: 36,
-    marginBottom: 16,
   },
   title: {
     fontSize: theme.typography.fontSize['2xl'],

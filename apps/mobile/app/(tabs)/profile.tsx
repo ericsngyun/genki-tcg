@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
+import { Logo } from '../../components';
 
 interface User {
   id: string;
@@ -45,11 +46,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Image
-          source={require('../../assets/images/genki-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <Logo size="medium" />
       </View>
 
       {/* Profile Card */}
@@ -126,10 +123,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
-  },
-  logo: {
-    width: 120,
-    height: 36,
   },
   profileCard: {
     backgroundColor: theme.colors.background.card,

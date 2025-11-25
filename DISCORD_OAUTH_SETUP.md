@@ -30,15 +30,14 @@ Go to: https://discord.com/developers/applications/1441953820820373639/oauth2
 Click "Add Redirect" and add ALL of these:
 
 #### Development:
-- `http://localhost:3001/auth/discord/callback` (backend dev)
-- `http://localhost:3000/auth/discord/callback` (admin web dev)
-- `http://localhost:8081` (Expo web)
-- `exp://localhost:8081/--/discord/callback` (Expo dev)
+- `http://localhost:3001/auth/discord/callback` (admin web dev)
+- `http://localhost:3001/auth/discord/mobile-callback` (mobile dev - backend endpoint)
+- `http://localhost:3000/auth/discord/callback` (admin web alternative)
 
 #### Production:
-- `genki-tcg://discord/callback` (mobile app deep link)
 - `https://genki-tcg-production.up.railway.app/auth/discord/callback` (backend prod)
-- `https://your-admin-domain.com/auth/discord/callback` (admin web prod)
+- `https://genki-tcg-production.up.railway.app/auth/discord/mobile-callback` (mobile prod)
+- `https://your-admin-domain.com/auth/discord/callback` (admin web prod if different)
 
 **IMPORTANT**: URIs must match EXACTLY (case-sensitive, no trailing slash on callback URLs)
 

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -40,14 +40,7 @@ export default function LoginPage() {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
-              <Image
-                src="/genki-logo.png"
-                alt="Genki TCG Logo"
-                width={180}
-                height={54}
-                priority
-                className="h-14 w-auto"
-              />
+              <Logo size="medium" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Admin Portal</h1>
             <div className="mt-2 h-0.5 w-16 bg-primary mx-auto rounded-full" />

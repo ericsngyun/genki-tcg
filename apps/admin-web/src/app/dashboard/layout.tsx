@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Logo } from '@/components/Logo';
 
 export default function DashboardLayout({
   children,
@@ -44,14 +44,7 @@ export default function DashboardLayout({
                 className="flex items-center"
                 aria-label="Genki TCG Home"
               >
-                <Image
-                  src="/genki-logo.png"
-                  alt="Genki TCG"
-                  width={140}
-                  height={42}
-                  priority
-                  className="h-8 w-auto"
-                />
+                <Logo size="small" />
               </Link>
               <nav className="hidden md:flex space-x-1" aria-label="Main navigation">
                 <Link
@@ -60,6 +53,13 @@ export default function DashboardLayout({
                   aria-label="Events management"
                 >
                   Events
+                </Link>
+                <Link
+                  href="/dashboard/players"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
+                  aria-label="Players management"
+                >
+                  Players
                 </Link>
                 <Link
                   href="/dashboard/credits"

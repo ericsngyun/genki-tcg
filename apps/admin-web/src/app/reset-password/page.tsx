@@ -3,9 +3,9 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/spinner';
+import { Logo } from '@/components/Logo';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -73,14 +73,7 @@ function ResetPasswordForm() {
             {/* Logo and Header */}
             <div className="text-center mb-8">
               <div className="flex justify-center mb-6">
-                <Image
-                  src="/genki-logo.png"
-                  alt="Genki TCG Logo"
-                  width={180}
-                  height={54}
-                  priority
-                  className="h-14 w-auto"
-                />
+                <Logo size="medium" />
               </div>
               <h1 className="text-2xl font-bold text-foreground">Password Reset Successful!</h1>
               <div className="mt-2 h-0.5 w-16 bg-primary mx-auto rounded-full" />

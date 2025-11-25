@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -140,5 +140,155 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 attempts per minute
   async unlinkDiscord(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.unlinkDiscordAccount(user.id);
+  }
+
+  // Mobile-specific OAuth callback endpoint
+  // Discord redirects here -> we exchange code -> we redirect to deep link
+  @Get('discord/mobile-callback')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async discordMobileCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error?: string,
+  ) {
+    // Handle OAuth errors (user cancelled, etc.)
+    if (error) {
+      return this.generateDeepLinkRedirect({
+        error: error === 'access_denied' ? 'Discord login cancelled' : error,
+      });
+    }
+
+    if (!code || !state) {
+      return this.generateDeepLinkRedirect({
+        error: 'Invalid callback - missing code or state',
+      });
+    }
+
+    try {
+      // Use the backend callback URL as redirect URI since that's what Discord called
+      const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/auth/discord/mobile-callback`;
+      const result = await this.authService.handleDiscordCallback(code, state, redirectUri);
+
+      // Return HTML that opens deep link with tokens
+      return this.generateDeepLinkRedirect({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+    } catch (err: any) {
+      console.error('Mobile Discord callback error:', err);
+      return this.generateDeepLinkRedirect({
+        error: err.message || 'Discord login failed',
+      });
+    }
+  }
+
+  // Helper to generate HTML that opens deep link or posts message to opener (for web)
+  private generateDeepLinkRedirect(params: {
+    accessToken?: string;
+    refreshToken?: string;
+    error?: string;
+  }) {
+    const deepLinkParams = new URLSearchParams();
+    if (params.accessToken) deepLinkParams.set('accessToken', params.accessToken);
+    if (params.refreshToken) deepLinkParams.set('refreshToken', params.refreshToken);
+    if (params.error) deepLinkParams.set('error', params.error);
+
+    const deepLink = `genki-tcg://auth/callback?${deepLinkParams.toString()}`;
+
+    // For web compatibility, we'll post a message to the opener window
+    const authData = JSON.stringify({
+      accessToken: params.accessToken,
+      refreshToken: params.refreshToken,
+      error: params.error,
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Genki TCG - Redirecting...</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 2rem;
+            }
+            .spinner {
+              border: 4px solid rgba(255, 255, 255, 0.3);
+              border-top: 4px solid white;
+              border-radius: 50%;
+              width: 40px;
+              height: 40px;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 1rem;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            .message {
+              font-size: 18px;
+              margin-bottom: 1rem;
+            }
+            .note {
+              font-size: 14px;
+              opacity: 0.8;
+            }
+            a {
+              color: white;
+              text-decoration: underline;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="spinner"></div>
+            <div class="message">
+              ${params.error ? 'Login failed' : 'Login successful!'}
+            </div>
+            <div class="note">
+              ${params.error
+                ? `Error: ${params.error}`
+                : 'Redirecting to Genki TCG...'
+              }
+            </div>
+            <div class="note" style="margin-top: 1rem;">
+              If you're not redirected automatically,
+              <a href="${deepLink}">click here</a>.
+            </div>
+          </div>
+          <script>
+            const authData = ${authData};
+
+            // For web: try to post message to opener window
+            if (window.opener) {
+              console.log('Posting auth data to opener window');
+              window.opener.postMessage(
+                { type: 'DISCORD_AUTH_CALLBACK', ...authData },
+                '*'
+              );
+              setTimeout(() => window.close(), 500);
+            }
+            // For mobile: try to open deep link
+            else {
+              console.log('Opening deep link:', '${deepLink}');
+              window.location.href = '${deepLink}';
+              setTimeout(() => window.close(), 1000);
+            }
+          </script>
+        </body>
+      </html>
+    `;
   }
 }

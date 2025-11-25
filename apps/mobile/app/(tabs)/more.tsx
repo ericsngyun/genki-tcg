@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
+import { Logo } from '../../components';
 
 export default function MoreScreen() {
   const router = useRouter();
@@ -91,11 +92,7 @@ export default function MoreScreen() {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Image
-          source={require('../../assets/images/genki-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <Logo size="medium" />
       </View>
 
       {/* Menu Items */}
@@ -151,10 +148,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
-  },
-  logo: {
-    width: 120,
-    height: 36,
   },
   menuContainer: {
     padding: 16,
