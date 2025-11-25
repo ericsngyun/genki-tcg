@@ -13,21 +13,19 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background.card,
           borderTopColor: theme.colors.border.light,
           borderTopWidth: 1,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 16,
-          paddingTop: 12,
-          height: Platform.OS === 'ios' ? 90 : 75,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 88 : 68,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
-          marginTop: 2,
-          marginBottom: 0,
+          paddingBottom: Platform.OS === 'ios' ? 0 : 4,
         },
         tabBarIconStyle: {
-          marginTop: 0,
-          marginBottom: 0,
+          marginTop: Platform.OS === 'ios' ? 4 : 2,
         },
         headerStyle: {
           backgroundColor: theme.colors.background.card,
@@ -49,7 +47,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "calendar" : "calendar-outline"}
-              size={24}
+              size={22}
               color={color}
             />
           ),
@@ -63,7 +61,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "wallet" : "wallet-outline"}
-              size={24}
+              size={22}
               color={color}
             />
           ),
@@ -77,7 +75,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person" : "person-outline"}
-              size={24}
+              size={22}
               color={color}
             />
           ),
@@ -91,7 +89,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "menu" : "menu-outline"}
-              size={24}
+              size={22}
               color={color}
             />
           ),
