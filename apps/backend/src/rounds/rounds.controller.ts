@@ -60,4 +60,15 @@ export class RoundsController {
   async getTournamentStatus(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
     return this.roundsService.getTournamentStatus(eventId, user.orgId);
   }
+
+  /**
+   * Regenerate a PENDING round with updated pairings
+   * Useful when players drop before round starts
+   */
+  @Post(':roundId/regenerate')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async regeneratePendingRound(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
+    return this.roundsService.regeneratePendingRound(roundId, user.orgId);
+  }
 }

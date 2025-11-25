@@ -235,11 +235,14 @@ export class RoundsService {
       throw new BadRequestException('Round is already completed');
     }
 
-    // Check if all matches have results
+    // Check if all matches have results (including confirmation for player-reported)
     const allReported = areAllMatchesReported(
       round.matches.map((m) => ({
         result: m.result,
         playerBId: m.playerBId,
+        reportedBy: m.reportedBy,
+        confirmedBy: m.confirmedBy,
+        overriddenBy: m.overriddenBy,
       }))
     );
 
@@ -324,9 +327,11 @@ export class RoundsService {
 
     // Emit real-time events
     this.realtimeGateway.emitStandingsUpdated(round.eventId);
+    this.realtimeGateway.emitRoundEnded(round.eventId, round.roundNumber);
 
     if (result.tournamentComplete) {
-      // Could add a specific event for tournament completion
+      // Emit tournament completion event
+      this.realtimeGateway.emitTournamentCompleted(round.eventId);
       this.realtimeGateway.emitStandingsUpdated(round.eventId);
     }
 
@@ -397,6 +402,9 @@ export class RoundsService {
           latestRound.matches.map((m) => ({
             result: m.result,
             playerBId: m.playerBId,
+            reportedBy: m.reportedBy,
+            confirmedBy: m.confirmedBy,
+            overriddenBy: m.overriddenBy,
           }))
         )
       : true;
@@ -528,5 +536,147 @@ export class RoundsService {
       },
       matches: matchesWithStatus,
     };
+  }
+
+  /**
+   * Regenerate a PENDING round with updated pairings
+   * This allows admins to drop no-show players and re-pair
+   * Only works for PENDING rounds (before round has started)
+   */
+  async regeneratePendingRound(roundId: string, userOrgId: string) {
+    // Get round with event and all data
+    const round = await this.prisma.round.findUnique({
+      where: { id: roundId },
+      include: {
+        event: {
+          include: {
+            entries: {
+              where: {
+                checkedInAt: { not: null },
+                droppedAt: null, // Only active players
+              },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            rounds: {
+              include: {
+                matches: true,
+              },
+              orderBy: {
+                roundNumber: 'asc',
+              },
+            },
+          },
+        },
+        matches: true,
+      },
+    });
+
+    if (!round) {
+      throw new NotFoundException('Round not found');
+    }
+
+    // Validate organization
+    if (round.event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this round');
+    }
+
+    // Validate round is PENDING
+    if (round.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Can only regenerate PENDING rounds. Round has already started or completed.'
+      );
+    }
+
+    const roundNumber = round.roundNumber;
+    const eventId = round.event.id;
+
+    // Get player records from previous rounds (not including current pending round)
+    const playerIds = round.event.entries.map((e) => e.userId);
+    const playerNames = new Map(
+      round.event.entries.map((e) => [e.userId, e.user.name])
+    );
+
+    // Get matches from all PREVIOUS rounds (exclude current pending round)
+    const previousMatches = round.event.rounds
+      .filter((r) => r.roundNumber < roundNumber)
+      .flatMap((r) =>
+        r.matches.map((m) => ({
+          playerAId: m.playerAId,
+          playerBId: m.playerBId,
+          result: m.result,
+          gamesWonA: m.gamesWonA ?? 0,
+          gamesWonB: m.gamesWonB ?? 0,
+        }))
+      );
+
+    // Get player records with calculated standings for proper Swiss pairing
+    const players = getPlayerRecordsForPairing({
+      playerIds,
+      playerNames,
+      matches: previousMatches,
+    });
+
+    const pairingResult = generateSwissPairings({
+      players,
+      avoidRematches: true,
+    });
+
+    // Delete old round and create new one in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Delete old matches first (due to foreign key constraint)
+      await tx.match.deleteMany({
+        where: { roundId },
+      });
+
+      // Delete old round
+      await tx.round.delete({
+        where: { id: roundId },
+      });
+
+      // Create new round with updated pairings
+      const newRound = await tx.round.create({
+        data: {
+          eventId,
+          roundNumber,
+          status: 'PENDING',
+          timerSeconds: 3000, // 50 minutes
+        },
+      });
+
+      // Create new matches
+      const matches = await Promise.all(
+        pairingResult.pairings.map((pairing) =>
+          tx.match.create({
+            data: {
+              roundId: newRound.id,
+              tableNumber: pairing.tableNumber,
+              playerAId: pairing.playerAId,
+              playerBId: pairing.playerBId,
+              // Auto-report bye matches
+              ...(pairing.playerBId === null && {
+                result: 'PLAYER_A_WIN',
+                gamesWonA: 2,
+                gamesWonB: 0,
+                reportedAt: new Date(),
+              }),
+            },
+          })
+        )
+      );
+
+      return { round: newRound, matches, byePlayerId: pairingResult.byePlayerId };
+    });
+
+    // Emit real-time event for updated pairings
+    this.realtimeGateway.emitPairingsPosted(eventId, roundNumber);
+
+    return result;
   }
 }
