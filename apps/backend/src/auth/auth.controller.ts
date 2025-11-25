@@ -151,14 +151,21 @@ export class AuthController {
     @Query('state') state: string,
     @Query('error') error?: string,
   ) {
+    console.log('=== Discord Mobile Callback Received ===');
+    console.log('Has code:', !!code);
+    console.log('Has state:', !!state);
+    console.log('Error:', error);
+
     // Handle OAuth errors (user cancelled, etc.)
     if (error) {
+      console.log('OAuth error, redirecting with error:', error);
       return this.generateDeepLinkRedirect({
         error: error === 'access_denied' ? 'Discord login cancelled' : error,
       });
     }
 
     if (!code || !state) {
+      console.error('Missing code or state in callback');
       return this.generateDeepLinkRedirect({
         error: 'Invalid callback - missing code or state',
       });
@@ -167,7 +174,12 @@ export class AuthController {
     try {
       // Use the backend callback URL as redirect URI since that's what Discord called
       const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/auth/discord/mobile-callback`;
+      console.log('Exchanging code with redirect URI:', redirectUri);
+
       const result = await this.authService.handleDiscordCallback(code, state, redirectUri);
+
+      console.log('Token exchange successful, generating deep link redirect');
+      console.log('User:', result.user.email);
 
       // Return HTML that opens deep link with tokens
       return this.generateDeepLinkRedirect({
@@ -271,20 +283,58 @@ export class AuthController {
           <script>
             const authData = ${authData};
 
+            console.log('=== Auth Callback HTML Loaded ===');
+            console.log('Has window.opener:', !!window.opener);
+            console.log('Auth data:', authData);
+            console.log('Current URL:', window.location.href);
+
             // For web: try to post message to opener window
-            if (window.opener) {
+            if (window.opener && !window.opener.closed) {
               console.log('Posting auth data to opener window');
-              window.opener.postMessage(
-                { type: 'DISCORD_AUTH_CALLBACK', ...authData },
-                '*'
-              );
-              setTimeout(() => window.close(), 500);
+
+              // Post message to parent window
+              const message = { type: 'DISCORD_AUTH_CALLBACK', ...authData };
+              console.log('Message to send:', message);
+
+              window.opener.postMessage(message, '*');
+              console.log('Message posted successfully');
+
+              // Try posting again after a short delay to ensure it's received
+              setTimeout(() => {
+                console.log('Posting message again (retry)');
+                window.opener.postMessage(message, '*');
+              }, 100);
+
+              setTimeout(() => {
+                console.log('Closing popup window');
+                window.close();
+              }, 1000);
+            } else if (!window.opener) {
+              console.error('No window.opener available - popup may have been blocked or opened incorrectly');
+              document.querySelector('.note').innerHTML = 'Please close this window and try again. Make sure popups are not blocked.';
+            } else if (window.opener.closed) {
+              console.error('window.opener is closed');
             }
             // For mobile: try to open deep link
             else {
-              console.log('Opening deep link:', '${deepLink}');
-              window.location.href = '${deepLink}';
-              setTimeout(() => window.close(), 1000);
+              console.log('Opening deep link:', ${JSON.stringify(deepLink)});
+              window.location.href = ${JSON.stringify(deepLink)};
+
+              // Try multiple methods to ensure deep link opens
+              // Method 1: window.location
+              setTimeout(() => {
+                window.location.href = ${JSON.stringify(deepLink)};
+              }, 100);
+
+              // Method 2: Create and click a link
+              setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = ${JSON.stringify(deepLink)};
+                link.click();
+              }, 200);
+
+              // Close the window after giving it time to open the deep link
+              setTimeout(() => window.close(), 1500);
             }
           </script>
         </body>

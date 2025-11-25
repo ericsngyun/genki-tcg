@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from './secure-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -23,7 +23,7 @@ class ApiClient {
 
     // Add access token to requests
     this.client.interceptors.request.use(async (config) => {
-      const accessToken = await AsyncStorage.getItem('access_token');
+      const accessToken = await secureStorage.getItem('access_token');
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
@@ -55,7 +55,7 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const refreshToken = await AsyncStorage.getItem('refresh_token');
+            const refreshToken = await secureStorage.getItem('refresh_token');
             if (!refreshToken) {
               throw new Error('No refresh token available');
             }
@@ -65,7 +65,7 @@ class ApiClient {
             });
 
             const { accessToken } = data;
-            await AsyncStorage.setItem('access_token', accessToken);
+            await secureStorage.setItem('access_token', accessToken);
 
             // Retry all queued requests with new token
             this.failedQueue.forEach((prom) => prom.resolve(accessToken));
@@ -78,7 +78,7 @@ class ApiClient {
             this.failedQueue.forEach((prom) => prom.reject(refreshError));
             this.failedQueue = [];
 
-            await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
+            await secureStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
             // TODO: Navigate to login screen
             return Promise.reject(refreshError);
           } finally {
@@ -100,17 +100,15 @@ class ApiClient {
 
     // Store both tokens from new format
     if (data.accessToken && data.refreshToken) {
-      await AsyncStorage.multiSet([
-        ['access_token', data.accessToken],
-        ['refresh_token', data.refreshToken],
-      ]);
+      await secureStorage.setItem('access_token', data.accessToken);
+      await secureStorage.setItem('refresh_token', data.refreshToken);
       // Remove old token format if it exists
-      await AsyncStorage.removeItem('auth_token');
+      await secureStorage.removeItem('auth_token');
     }
     // Backward compatibility: if old format is still returned
     else if (data.token) {
-      await AsyncStorage.setItem('access_token', data.token);
-      await AsyncStorage.removeItem('auth_token');
+      await secureStorage.setItem('access_token', data.token);
+      await secureStorage.removeItem('auth_token');
     }
 
     return data;
@@ -126,17 +124,15 @@ class ApiClient {
 
     // Store both tokens from new format
     if (data.accessToken && data.refreshToken) {
-      await AsyncStorage.multiSet([
-        ['access_token', data.accessToken],
-        ['refresh_token', data.refreshToken],
-      ]);
+      await secureStorage.setItem('access_token', data.accessToken);
+      await secureStorage.setItem('refresh_token', data.refreshToken);
       // Remove old token format if it exists
-      await AsyncStorage.removeItem('auth_token');
+      await secureStorage.removeItem('auth_token');
     }
     // Backward compatibility: if old format is still returned
     else if (data.token) {
-      await AsyncStorage.setItem('access_token', data.token);
-      await AsyncStorage.removeItem('auth_token');
+      await secureStorage.setItem('access_token', data.token);
+      await secureStorage.removeItem('auth_token');
     }
 
     return data;
@@ -156,7 +152,7 @@ class ApiClient {
       console.error('Logout error:', error);
     } finally {
       // Clear all tokens from local storage
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
+      await secureStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
     }
   }
 
@@ -251,11 +247,9 @@ class ApiClient {
 
     // Store both tokens from response
     if (data.accessToken && data.refreshToken) {
-      await AsyncStorage.multiSet([
-        ['access_token', data.accessToken],
-        ['refresh_token', data.refreshToken],
-      ]);
-      await AsyncStorage.removeItem('auth_token');
+      await secureStorage.setItem('access_token', data.accessToken);
+      await secureStorage.setItem('refresh_token', data.refreshToken);
+      await secureStorage.removeItem('auth_token');
     }
 
     return data;

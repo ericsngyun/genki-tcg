@@ -19,12 +19,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
+import { secureStorage } from '../lib/secure-storage';
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-const DISCORD_REDIRECT_URI = `${API_URL}/auth/discord/mobile-callback`;
+
+// Get the appropriate redirect URI based on platform
+const getRedirectUri = () => {
+  if (Platform.OS === 'web') {
+    // Web: Discord redirects directly back to our web app
+    return `${window.location.origin}/discord/callback`;
+  } else {
+    // Native: Discord redirects to backend, which opens deep link
+    return `${API_URL}/auth/discord/mobile-callback`;
+  }
+};
+
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
@@ -74,30 +86,48 @@ export default function LoginScreen() {
   useEffect(() => {
     const handleDeepLink = async (event: { url: string }) => {
       const { url } = event;
+      console.log('Deep link event received:', url);
       if (url.includes('auth/callback')) {
         await handleAuthCallback(url);
       }
     };
 
+    console.log('Setting up deep link listener...');
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
+    // Check if app was opened with a deep link
     Linking.getInitialURL().then((url) => {
+      console.log('Initial URL:', url);
       if (url && url.includes('auth/callback')) {
         handleAuthCallback(url);
       }
     });
 
-    return () => subscription.remove();
+    return () => {
+      console.log('Removing deep link listener');
+      subscription.remove();
+    };
   }, []);
 
   // Handle postMessage for Discord callback (web)
   useEffect(() => {
     if (Platform.OS === 'web') {
+      console.log('Setting up postMessage listener for web...');
+
       const handleMessage = async (event: MessageEvent) => {
+        console.log('=== postMessage Received ===');
+        console.log('Origin:', event.origin);
+        console.log('Data:', event.data);
+        console.log('Data type:', event.data?.type);
+
         if (event.data.type === 'DISCORD_AUTH_CALLBACK') {
-          console.log('Received auth callback from popup:', event.data);
+          console.log('Discord auth callback received!');
+          console.log('Has accessToken:', !!event.data.accessToken);
+          console.log('Has refreshToken:', !!event.data.refreshToken);
+          console.log('Error:', event.data.error);
 
           if (event.data.error) {
+            console.error('OAuth error:', event.data.error);
             setError(event.data.error);
             setLoading(false);
             return;
@@ -105,57 +135,84 @@ export default function LoginScreen() {
 
           if (event.data.accessToken && event.data.refreshToken) {
             try {
-              // Store tokens
-              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-              await AsyncStorage.multiSet([
-                ['access_token', event.data.accessToken],
-                ['refresh_token', event.data.refreshToken],
-              ]);
+              console.log('Storing tokens securely...');
+              // Store tokens securely
+              await secureStorage.setItem('access_token', event.data.accessToken);
+              await secureStorage.setItem('refresh_token', event.data.refreshToken);
+              console.log('Tokens stored successfully');
 
               // Navigate to events screen
+              console.log('Navigating to events screen...');
               router.replace('/(tabs)/events');
             } catch (err: any) {
               console.error('Error storing tokens:', err);
               setError('Failed to store authentication tokens');
               setLoading(false);
             }
+          } else {
+            console.error('Missing tokens in callback');
+            setError('Authentication failed - missing tokens');
+            setLoading(false);
           }
+        } else {
+          console.log('Message type not DISCORD_AUTH_CALLBACK, ignoring');
         }
       };
 
+      console.log('Adding message event listener...');
       window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
+      console.log('Message listener added successfully');
+
+      return () => {
+        console.log('Removing message event listener');
+        window.removeEventListener('message', handleMessage);
+      };
     }
   }, []);
 
   const handleAuthCallback = async (url: string) => {
     try {
+      console.log('=== Deep Link Callback Received ===');
+      console.log('URL:', url);
+
       setLoading(true);
       setError('');
 
       // Parse the deep link URL
       // Format: genki-tcg://auth/callback?accessToken=...&refreshToken=...&error=...
       const parsed = Linking.parse(url);
+      console.log('Parsed URL:', {
+        scheme: parsed.scheme,
+        hostname: parsed.hostname,
+        path: parsed.path,
+        queryParams: parsed.queryParams,
+      });
+
       const accessToken = parsed.queryParams?.accessToken as string;
       const refreshToken = parsed.queryParams?.refreshToken as string;
       const errorParam = parsed.queryParams?.error as string;
 
       if (errorParam) {
+        console.error('OAuth error in callback:', errorParam);
         throw new Error(errorParam);
       }
 
       if (!accessToken || !refreshToken) {
+        console.error('Missing tokens in callback:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+        });
         throw new Error('Invalid callback - missing tokens');
       }
 
-      // Store tokens
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.multiSet([
-        ['access_token', accessToken],
-        ['refresh_token', refreshToken],
-      ]);
+      console.log('Tokens received, storing securely...');
+      // Store tokens securely
+      await secureStorage.setItem('access_token', accessToken);
+      await secureStorage.setItem('refresh_token', refreshToken);
+      console.log('Tokens stored successfully');
 
       // Navigate to events screen
+      console.log('Navigating to events screen...');
       router.replace('/(tabs)/events');
     } catch (err: any) {
       console.error('Auth callback error:', err);
@@ -170,40 +227,50 @@ export default function LoginScreen() {
       setLoading(true);
       setError('');
 
-      // Log configuration for debugging
-      console.log('Discord OAuth Config:', {
-        apiUrl: API_URL,
-        redirectUri: DISCORD_REDIRECT_URI,
-      });
+      const redirectUri = getRedirectUri();
+
+      console.log('=== Starting Discord OAuth ===');
+      console.log('Platform:', Platform.OS);
+      console.log('Redirect URI:', redirectUri);
 
       // Get the Discord auth URL from backend
-      const response = await api.getDiscordAuthUrl(DISCORD_REDIRECT_URI);
-
-      // Backend returns { url, state }
+      const response = await api.getDiscordAuthUrl(redirectUri);
       const { url } = response;
+
       if (!url) {
         throw new Error('Discord OAuth not configured on server');
       }
 
-      // Open Discord login in browser
-      // The backend will handle the callback and redirect to genki-tcg://auth/callback
-      // which will be caught by the deep link listener above
-      const result = await WebBrowser.openAuthSessionAsync(url, DISCORD_REDIRECT_URI);
+      console.log('Discord OAuth URL:', url);
 
-      // The deep link handler will process the callback automatically
-      // Just handle explicit cancellation here
-      if (result.type === 'cancel') {
-        setError('Discord login cancelled');
-        setLoading(false);
+      if (Platform.OS === 'web') {
+        // WEB: Simple redirect to Discord, which redirects back to /auth/discord/callback
+        console.log('Redirecting to Discord (web)...');
+        window.location.href = url;
+        // Loading state will persist until callback route loads
+      } else {
+        // NATIVE: Backend-mediated flow with deep links
+        console.log('Opening Discord OAuth (native)...');
+        const result = await WebBrowser.openAuthSessionAsync(url, 'genki-tcg://auth/callback');
+
+        console.log('WebBrowser result:', result);
+
+        if (result.type === 'cancel') {
+          setError('Discord login cancelled');
+          setLoading(false);
+        } else if (result.type === 'dismiss') {
+          // Browser closed - wait for deep link handler
+          console.log('Waiting for deep link...');
+          setTimeout(() => {
+            // If still loading after 2 seconds, something went wrong
+            setLoading(false);
+            setError('Authentication window closed. Please try again.');
+          }, 2000);
+        }
+        // On success, the deep link handler will take over
       }
-      // Note: We don't setLoading(false) on success because the deep link handler will do it
     } catch (err: any) {
       console.error('Discord login error:', err);
-      console.error('Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        redirectUri: DISCORD_REDIRECT_URI,
-      });
       setError(err.response?.data?.message || err.message || 'Discord login failed');
       setLoading(false);
     }

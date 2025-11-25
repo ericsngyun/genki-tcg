@@ -1,12 +1,19 @@
 # Discord OAuth Setup Guide
 
-## Problem
-Getting 400 errors when trying to login with Discord from mobile app.
+## Overview
+This guide helps you set up Discord OAuth for both development and production environments. The Genki TCG platform uses a **backend-mediated OAuth flow** that works seamlessly across mobile, web, and native platforms.
+
+## Common Issues
+- 400 errors when trying to login with Discord
+- "Discord OAuth not configured" error
+- "Invalid redirect URI" error
+- Deep links not working on mobile
 
 ## Root Causes
-1. **Redirect URI not registered** - Discord requires exact URI matches
-2. **Production env vars not set** - Railway might not have Discord credentials
-3. **CORS/Allowed redirects not configured** - Backend rejecting the redirect URI
+1. **Missing environment variables** - Backend .env file missing Discord credentials
+2. **Redirect URI not registered** - Discord portal doesn't have the callback URL
+3. **State token expired** - OAuth flow took longer than 5 minutes
+4. **Incorrect redirect URI validation** - URI not in DISCORD_ALLOWED_REDIRECTS
 
 ## Solution Steps
 
@@ -41,39 +48,69 @@ Click "Add Redirect" and add ALL of these:
 
 **IMPORTANT**: URIs must match EXACTLY (case-sensitive, no trailing slash on callback URLs)
 
-### 3. Configure Production Backend Environment Variables
+### 3. Configure Backend Environment Variables
 
-In Railway dashboard (https://railway.app), add these environment variables:
+**For Development (`apps/backend/.env`):**
 
 ```bash
-DISCORD_CLIENT_ID=1441953820820373639
-DISCORD_CLIENT_SECRET=lOhOX_bGSNGlzJxbLgFi3tBz2aqj-24D
+# Application
+API_URL="http://localhost:3001"
 
-# Comma-separated list of allowed redirect URIs
-DISCORD_ALLOWED_REDIRECTS="http://localhost:3000,http://localhost:3001,http://localhost:8081,exp://localhost:8081/--/discord/callback,genki-tcg://discord/callback,https://genki-tcg-production.up.railway.app/auth/discord/callback"
+# Discord OAuth
+DISCORD_CLIENT_ID="1441953820820373639"
+DISCORD_CLIENT_SECRET="<get-from-discord-portal>"
+
+# Comma-separated list of allowed redirect URIs for security
+DISCORD_ALLOWED_REDIRECTS="http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost:3001/auth/discord/callback,http://localhost:3001/auth/discord/mobile-callback,exp://localhost:8081/--/discord/callback,genki-tcg://discord/callback,genki-tcg://auth/callback"
 ```
+
+**For Production (Railway dashboard):**
+
+```bash
+# Application
+API_URL="https://genki-tcg-production.up.railway.app"
+
+# Discord OAuth
+DISCORD_CLIENT_ID="1441953820820373639"
+DISCORD_CLIENT_SECRET="<production-secret>"
+
+# Production redirect URIs
+DISCORD_ALLOWED_REDIRECTS="https://genki-tcg-production.up.railway.app/auth/discord/callback,https://genki-tcg-production.up.railway.app/auth/discord/mobile-callback,genki-tcg://discord/callback,genki-tcg://auth/callback"
+```
+
+**Important:** Restart the backend server after changing environment variables!
 
 ### 4. Verify Backend Configuration
 
-SSH into Railway or check logs:
+Test the backend Discord OAuth setup:
 
+**Development:**
 ```bash
-# The backend should log when it starts
-# Check if Discord credentials are loaded
-
-# Test the auth URL endpoint
-curl "https://genki-tcg-production.up.railway.app/auth/discord/auth-url" \
+curl "http://localhost:3001/auth/discord/url" \
+  -X POST \
   -H "Content-Type: application/json" \
-  -d '{"redirectUri":"genki-tcg://discord/callback"}'
+  -d '{"redirectUri":"http://localhost:3001/auth/discord/mobile-callback"}'
 ```
 
-Should return:
+**Production:**
+```bash
+curl "https://genki-tcg-production.up.railway.app/auth/discord/url" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"redirectUri":"https://genki-tcg-production.up.railway.app/auth/discord/mobile-callback"}'
+```
+
+Expected response:
 ```json
 {
-  "url": "https://discord.com/api/oauth2/authorize?...",
-  "state": "random-hex-string"
+  "url": "https://discord.com/api/oauth2/authorize?client_id=1441953820820373639&redirect_uri=...",
+  "state": "64-character-hex-string"
 }
 ```
+
+If you get an error:
+- **"Discord OAuth not configured"** → Environment variables missing or invalid
+- **"Invalid redirect URI"** → URI not in DISCORD_ALLOWED_REDIRECTS
 
 ### 5. Check Backend Error Logs
 
