@@ -201,7 +201,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
     setReporting(true);
     try {
       await api.reportMatchResult(match.id, result, gamesWonA, gamesWonB);
-      Alert.alert('Success', 'Match result reported. Waiting for opponent confirmation.');
+      Alert.alert('Success', 'Match result submitted! Your opponent can dispute if they disagree.');
       onMatchUpdate();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to report result');
@@ -311,36 +311,31 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
         </View>
       ) : waitingForConfirmation ? (
         opponentReported ? (
-          // Opponent reported, I need to confirm
+          // Opponent reported, result shown - can dispute if wrong
           <View style={styles.confirmationContainer}>
             <View style={styles.pendingBadge}>
-              <Ionicons name="time" size={20} color={theme.colors.warning.main} />
-              <Text style={styles.pendingText}>Opponent Reported Result</Text>
+              <Ionicons name="information-circle" size={20} color={theme.colors.primary.main} />
+              <Text style={styles.pendingText}>Result Submitted by Opponent</Text>
             </View>
             <Text style={styles.reportedResult}>{getResultDisplay()}</Text>
 
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-                disabled={confirming}
+                onPress={() => {
+                  Alert.alert('Result Accepted', 'The match result has been recorded.');
+                  onMatchUpdate();
+                }}
               >
-                {confirming ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark" size={20} color="#fff" />
-                    <Text style={styles.buttonText}>Confirm</Text>
-                  </>
-                )}
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.buttonText}>Accept</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.button, styles.disputeButton]}
                 onPress={handleDispute}
-                disabled={confirming}
               >
-                <Ionicons name="close" size={20} color={theme.colors.error.main} />
+                <Ionicons name="flag" size={20} color={theme.colors.error.main} />
                 <Text style={[styles.buttonText, { color: theme.colors.error.main }]}>
                   Dispute
                 </Text>
@@ -348,10 +343,10 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
             </View>
           </View>
         ) : (
-          // I reported, waiting for opponent
+          // Result submitted, refreshing data
           <View style={styles.waitingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary.main} />
-            <Text style={styles.waitingText}>Waiting for opponent confirmation...</Text>
+            <Text style={styles.waitingText}>Submitting result...</Text>
             <Text style={styles.reportedResult}>{getResultDisplay()}</Text>
           </View>
         )
