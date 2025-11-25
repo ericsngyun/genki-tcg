@@ -70,6 +70,7 @@ export default function WalletScreen() {
       <AppHeader
         title="Credits Wallet"
         subtitle="Track your tournament credits"
+        showLogo={false}
       />
 
       <View style={styles.balanceCard}>

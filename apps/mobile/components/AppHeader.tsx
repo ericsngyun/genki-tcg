@@ -49,7 +49,12 @@ export const AppHeader = memo<AppHeaderProps>(({
     : {};
 
   return (
-    <Animated.View style={[styles.header, animatedStyle, style]}>
+    <Animated.View style={[
+      styles.header,
+      !showLogo && styles.headerCompact,
+      animatedStyle,
+      style
+    ]}>
       {showLogo && (
         <View style={styles.logoContainer}>
           <Logo size={logoSize} />
@@ -76,6 +81,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
+  },
+  headerCompact: {
+    paddingTop: 50,
+    paddingBottom: 12,
   },
   logoContainer: {
     marginBottom: 12,

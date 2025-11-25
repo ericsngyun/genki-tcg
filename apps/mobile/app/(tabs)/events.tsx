@@ -411,6 +411,7 @@ export default function EventsScreen() {
         <AppHeader
           title="Events"
           subtitle={orgName ? `${orgName} tournaments` : 'Find tournaments and track your matches'}
+          showLogo={false}
         />
 
         {/* My Active Match - Most Prominent */}
