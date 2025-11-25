@@ -501,8 +501,9 @@ export class EventsService {
   }
 
   /**
-   * Get player's active match for the current/latest round
-   * Shows PENDING or ACTIVE rounds (not COMPLETED)
+   * Get player's active match for the current round
+   * Only shows ACTIVE rounds (admin has started the round)
+   * Players must view pairings for PENDING rounds
    */
   async getMyActiveMatch(eventId: string, userId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
@@ -510,9 +511,7 @@ export class EventsService {
       include: {
         rounds: {
           where: {
-            status: {
-              in: ['PENDING', 'ACTIVE'],
-            },
+            status: 'ACTIVE',
           },
           include: {
             matches: {
