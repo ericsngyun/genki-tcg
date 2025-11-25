@@ -2,6 +2,7 @@ import React, { memo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ViewStyle, Animated } from 'react-native';
 import { Logo } from './Logo';
 import { theme } from '../lib/theme';
+import { shadows } from '../lib/shadows';
 
 interface AppHeaderProps {
   title?: string;
@@ -81,6 +82,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.light,
     alignItems: 'center',
+    ...shadows.sm,
   },
   headerCompact: {
     paddingTop: 50,
@@ -102,5 +104,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: 4,
+    opacity: 0.8,
   },
 });

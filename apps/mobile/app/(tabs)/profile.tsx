@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
+import { shadows } from '../../lib/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
 import { AppHeader } from '../../components';
@@ -45,7 +46,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <AppHeader title="Profile" subtitle="Your player profile" />
+      <AppHeader title="Profile" subtitle="Your player profile" showLogo={false} />
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
@@ -121,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...shadows.md,
   },
   avatarContainer: {
     marginBottom: 16,
@@ -129,8 +131,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 2,
-    borderColor: theme.colors.border.main,
+    borderWidth: 3,
+    borderColor: theme.colors.primary.main,
+    ...shadows.base,
   },
   avatarPlaceholder: {
     width: 100,
@@ -139,8 +142,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: theme.colors.border.main,
+    ...shadows.sm,
   },
   playerName: {
     fontSize: theme.typography.fontSize['2xl'],
@@ -171,8 +175,9 @@ const styles = StyleSheet.create({
   editProfileButton: {
     backgroundColor: theme.colors.primary.main,
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: theme.borderRadius.base,
+    paddingVertical: 12,
+    borderRadius: theme.borderRadius.full,
+    ...shadows.primary,
   },
   editProfileText: {
     color: theme.colors.primary.foreground,
@@ -193,6 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...shadows.base,
   },
   statValue: {
     fontSize: theme.typography.fontSize['2xl'],
@@ -213,6 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...shadows.sm,
   },
   comingSoonTitle: {
     fontSize: theme.typography.fontSize.lg,

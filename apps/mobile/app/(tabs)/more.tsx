@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
+import { shadows } from '../../lib/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
 import { AppHeader } from '../../components';
@@ -150,6 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...shadows.sm,
   },
   menuIconContainer: {
     width: 40,
@@ -182,6 +184,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderColor: theme.colors.error.main + '30',
+    ...shadows.error,
   },
   footer: {
     padding: 32,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { api } from '../../lib/api';
 import { theme } from '../../lib/theme';
+import { shadows } from '../../lib/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components';
 
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
-    ...theme.shadows.base,
+    ...shadows.lg,
   },
   balanceLabel: {
     fontSize: theme.typography.fontSize.base,
@@ -165,6 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    ...shadows.base,
   },
   transactionLeft: {
     flex: 1,

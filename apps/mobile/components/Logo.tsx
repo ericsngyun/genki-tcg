@@ -41,7 +41,7 @@ export const Logo = memo<LogoProps>(({
         </Text>
       )}
       <Image
-        source={require('../assets/images/genki.webp')}
+        source={require('../assets/images/genki.avif')}
         style={[styles.logoImage, { width: config.imageSize, height: config.imageSize }]}
         resizeMode="contain"
         fadeDuration={0}
