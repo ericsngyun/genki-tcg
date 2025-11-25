@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { theme } from '../lib/theme';
 import { api } from '../lib/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 
 interface ActiveMatch {
   id: string;
@@ -40,9 +41,21 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   const [reporting, setReporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
+  // Real-time updates: Refresh match when opponent reports result
+  // This allows the opponent to see the report and confirm it
+  useRealtimeUpdates({
+    eventId,
+    onMatchResultReported: useCallback((matchId: string) => {
+      // Only refresh if this is our match
+      if (matchId === match.id) {
+        onMatchUpdate(); // Refresh to show opponent's reported result
+      }
+    }, [match.id, onMatchUpdate]),
+  });
+
   const isBo3 = gameType === 'RIFTBOUND';
   const iReported = match.reportedBy !== null;
-  // FIX: Check if opponent reported (not me) - was incorrectly always true when iReported was true
+  // Check if opponent reported (not me)
   const iAmTheReporter = match.reportedBy === myUserId;
   const opponentReported = iReported && !iAmTheReporter;
   const waitingForConfirmation = iReported && !match.confirmedBy;
@@ -248,6 +261,9 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
     return resultMap[match.result] + score;
   };
 
+  // Check if this is a bye (no opponent)
+  const isBye = !match.opponent;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -275,7 +291,19 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
       </View>
 
       {/* Match Status & Actions */}
-      {matchConfirmed ? (
+      {isBye ? (
+        // Bye Round - Show info message
+        <View style={styles.byeContainer}>
+          <Ionicons name="information-circle" size={48} color={theme.colors.primary.main} />
+          <Text style={styles.byeTitle}>Bye Round</Text>
+          <Text style={styles.byeText}>
+            You received a bye this round. This counts as an automatic win with 2 match points.
+          </Text>
+          <Text style={styles.byeSubtext}>
+            You can take a break or watch other matches. The next round will start when all matches are complete.
+          </Text>
+        </View>
+      ) : matchConfirmed ? (
         <View style={styles.confirmedContainer}>
           <Ionicons name="checkmark-circle" size={48} color={theme.colors.success.main} />
           <Text style={styles.confirmedText}>Match Confirmed</Text>
@@ -613,5 +641,36 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.lg,
     color: theme.colors.text.primary,
     fontWeight: theme.typography.fontWeight.medium,
+  },
+  byeContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary.lightest + '20',
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.main + '30',
+  },
+  byeTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary.main,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  byeText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 12,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  byeSubtext: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
 });
