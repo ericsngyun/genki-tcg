@@ -28,11 +28,13 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships   OrgMembership[]
-  events        Event[]
-  creditEntries CreditLedgerEntry[]
-  auditLogs     AuditLog[]
-  playerRatings PlayerRating[]
+  memberships     OrgMembership[]
+  events          Event[]
+  creditEntries   CreditLedgerEntry[]
+  auditLogs       AuditLog[]
+  seasons         Season[]
+  lifetimeRatings PlayerCategoryLifetimeRating[]
+  seasonalRatings PlayerCategorySeasonRating[]
 
   @@index([slug])
   @@index([inviteCode])
@@ -58,23 +60,25 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  memberships              OrgMembership[]
-  creditEntries            CreditLedgerEntry[]       @relation("CreditLedgerUser")
-  creditEntriesCreated     CreditLedgerEntry[]       @relation("CreditLedgerCreator")
-  creditBalances           CreditBalance[]
-  entries                  Entry[]
-  decklists                Decklist[]
-  matchesAsPlayerA         Match[]                   @relation("MatchPlayerA")
-  matchesAsPlayerB         Match[]                   @relation("MatchPlayerB")
-  notificationTokens       NotificationToken[]
-  notifications            Notification[]
-  notificationPreferences  UserNotificationPreference[]
-  auditLogs                AuditLog[]                @relation("AuditPerformer")
-  refreshTokens            RefreshToken[]
-  passwordResetTokens      PasswordResetToken[]
-  emailVerificationTokens  EmailVerificationToken[]
-  playerRatings            PlayerRating[]
-  ratingHistoryAsOpponent  PlayerRatingHistory[]     @relation("RatingHistoryOpponent")
+  memberships                     OrgMembership[]
+  creditEntries                   CreditLedgerEntry[]            @relation("CreditLedgerUser")
+  creditEntriesCreated            CreditLedgerEntry[]            @relation("CreditLedgerCreator")
+  creditBalances                  CreditBalance[]
+  entries                         Entry[]
+  decklists                       Decklist[]
+  matchesAsPlayerA                Match[]                        @relation("MatchPlayerA")
+  matchesAsPlayerB                Match[]                        @relation("MatchPlayerB")
+  notificationTokens              NotificationToken[]
+  notifications                   Notification[]
+  notificationPreferences         UserNotificationPreference[]
+  auditLogs                       AuditLog[]                     @relation("AuditPerformer")
+  refreshTokens                   RefreshToken[]
+  passwordResetTokens             PasswordResetToken[]
+  emailVerificationTokens         EmailVerificationToken[]
+  lifetimeRatings                 PlayerCategoryLifetimeRating[]
+  seasonalRatings                 PlayerCategorySeasonRating[]
+  lifetimeRatingHistory           LifetimeRatingHistory[]
+  lifetimeRatingHistoryAsOpponent LifetimeRatingHistory[]        @relation("LifetimeRatingHistoryOpponent")
 
   @@index([email])
 }
@@ -177,7 +181,7 @@ enum CreditReasonCode {
   MANUAL_DEDUCT
   EVENT_ENTRY
   EVENT_REFUND
-  PROMO          // Promotional credits (welcome bonus, campaigns, etc.)
+  PROMO // Promotional credits (welcome bonus, campaigns, etc.)
 }
 
 model CreditLedgerEntry {
@@ -276,21 +280,33 @@ model Event {
   prizesDistributedAt DateTime?
   prizesDistributedBy String?
 
+  // Rating processing
+  ratingsProcessed   Boolean   @default(false)
+  ratingsProcessedAt DateTime?
+  ratingsProcessedBy String?
+
+  // Season link (auto-assigned based on startAt date)
+  seasonId String?
+
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  org               Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  entries           Entry[]
-  rounds            Round[]
-  standingSnapshots StandingSnapshot[]
-  creditEntries     CreditLedgerEntry[]
-  ratingHistory     PlayerRatingHistory[]
+  org                     Organization             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  season                  Season?                  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  entries                 Entry[]
+  rounds                  Round[]
+  standingSnapshots       StandingSnapshot[]
+  creditEntries           CreditLedgerEntry[]
+  lifetimeRatingHistory   LifetimeRatingHistory[]
+  tournamentRatingUpdates TournamentRatingUpdate[]
 
   @@index([orgId, status])
   @@index([orgId, startAt])
   @@index([status])
+  @@index([seasonId])
+  @@index([orgId, seasonId, status])
 }
 
 // ============================================================================
@@ -410,10 +426,10 @@ model Match {
   updatedAt DateTime @updatedAt
 
   // Relations
-  round         Round                 @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  playerA       User                  @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
-  playerB       User?                 @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
-  ratingHistory PlayerRatingHistory[]
+  round                 Round                   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerA               User                    @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB               User?                   @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  lifetimeRatingHistory LifetimeRatingHistory[]
 
   @@unique([roundId, tableNumber])
   @@index([roundId])
@@ -501,7 +517,7 @@ model NotificationToken {
 }
 
 model Notification {
-  id     String               @id @default(cuid())
+  id     String @id @default(cuid())
   userId String
   orgId  String
 
@@ -537,7 +553,7 @@ model Notification {
 }
 
 model UserNotificationPreference {
-  id     String           @id @default(cuid())
+  id     String @id @default(cuid())
   userId String
   orgId  String
 
@@ -613,50 +629,123 @@ model AuditLog {
 }
 
 // ============================================================================
-// Player Rating & Leaderboard System (Glicko-2)
+// Seasons (Quarterly periods for rating resets and prizes)
 // ============================================================================
 
-model PlayerRating {
-  id       String   @id @default(cuid())
-  userId   String
-  orgId    String
-  gameType GameType // Track rating per game system
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
 
-  // Glicko-2 components
-  rating          Float @default(1500) // Player's rating (higher = better)
-  ratingDeviation Float @default(350) // Uncertainty/confidence (lower = more certain)
-  volatility      Float @default(0.06) // Expected fluctuation (sigma)
-
-  // Statistics
-  matchesPlayed Int @default(0)
-  matchWins     Int @default(0)
-  matchLosses   Int @default(0)
-  matchDraws    Int @default(0)
-
-  // Metadata
-  lastUpdatedAt DateTime  @default(now())
-  lastMatchAt   DateTime?
-  isProvisional Boolean   @default(true) // < 30 matches
+model Season {
+  id        String       @id @default(cuid())
+  orgId     String
+  name      String // e.g., "2025 Q1", "2025 Q2"
+  startDate DateTime
+  endDate   DateTime
+  status    SeasonStatus @default(UPCOMING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  org     Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  history PlayerRatingHistory[]
+  org                     Organization                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  events                  Event[]
+  seasonalRatings         PlayerCategorySeasonRating[]
+  tournamentRatingUpdates TournamentRatingUpdate[]
 
-  @@unique([userId, orgId, gameType])
-  @@index([userId])
-  @@index([orgId, gameType, rating(sort: Desc)]) // Leaderboard queries
-  @@index([orgId, gameType, isProvisional]) // Filter provisional players
+  @@index([orgId, status])
+  @@index([orgId, startDate])
+  @@index([orgId, status, startDate])
 }
 
-model PlayerRatingHistory {
-  id             String @id @default(cuid())
-  playerRatingId String
-  eventId        String?
-  matchId        String?
+// ============================================================================
+// Player Rating & Leaderboard System (Glicko-2)
+// Lifetime ratings: Never reset, used for baseline stability
+// Seasonal ratings: Reset each season, used for tiers and prizes
+// ============================================================================
+
+// Lifetime rating per category (never resets, baseline for new seasons)
+model PlayerCategoryLifetimeRating {
+  id       String   @id @default(cuid())
+  userId   String
+  orgId    String
+  category GameType // ONE_PIECE_TCG, AZUKI_TCG, RIFTBOUND
+
+  // Glicko-2 components (lifetime, never reset)
+  rating          Float @default(1500)
+  ratingDeviation Float @default(350)
+  volatility      Float @default(0.06)
+
+  // Lifetime statistics
+  totalRatedMatches Int @default(0)
+  matchWins         Int @default(0)
+  matchLosses       Int @default(0)
+  matchDraws        Int @default(0)
+
+  // Metadata
+  lastUpdatedAt DateTime  @default(now())
+  lastMatchAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org     Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  history LifetimeRatingHistory[]
+
+  @@unique([userId, orgId, category])
+  @@index([userId])
+  @@index([orgId, category, rating(sort: Desc)]) // Lifetime leaderboard
+  @@map("player_category_lifetime_rating")
+}
+
+// Seasonal rating per category (resets each season, determines tiers)
+model PlayerCategorySeasonRating {
+  id       String   @id @default(cuid())
+  userId   String
+  orgId    String
+  seasonId String
+  category GameType // ONE_PIECE_TCG, AZUKI_TCG, RIFTBOUND
+
+  // Glicko-2 components (reset each season from lifetime rating)
+  rating          Float @default(1500)
+  ratingDeviation Float @default(350)
+  volatility      Float @default(0.06)
+
+  // Season statistics (this season only)
+  totalRatedMatches Int @default(0)
+  matchWins         Int @default(0)
+  matchLosses       Int @default(0)
+  matchDraws        Int @default(0)
+
+  // Metadata
+  lastUpdatedAt DateTime  @default(now())
+  lastMatchAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  season Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId, seasonId, category])
+  @@index([userId])
+  @@index([seasonId, category, rating(sort: Desc)]) // Seasonal leaderboard
+  @@index([orgId, seasonId, category])
+  @@map("player_category_season_rating")
+}
+
+// Lifetime rating history (match-by-match changes to lifetime rating)
+model LifetimeRatingHistory {
+  id               String  @id @default(cuid())
+  lifetimeRatingId String // PlayerCategoryLifetimeRating ID
+  eventId          String?
+  matchId          String?
 
   // Rating changes
   ratingBefore Float
@@ -677,12 +766,53 @@ model PlayerRatingHistory {
   calculatedAt DateTime @default(now())
 
   // Relations
-  playerRating PlayerRating @relation(fields: [playerRatingId], references: [id], onDelete: Cascade)
-  event        Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  match        Match?       @relation(fields: [matchId], references: [id], onDelete: SetNull)
-  opponent     User         @relation("RatingHistoryOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  lifetimeRating PlayerCategoryLifetimeRating @relation(fields: [lifetimeRatingId], references: [id], onDelete: Cascade)
+  event          Event?                       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  match          Match?                       @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  opponent       User                         @relation("LifetimeRatingHistoryOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  User           User?                        @relation(fields: [userId], references: [id])
+  userId         String?
 
-  @@index([playerRatingId, calculatedAt(sort: Desc)]) // Player history timeline
+  @@index([lifetimeRatingId, calculatedAt(sort: Desc)]) // Player history timeline
   @@index([eventId]) // Event-specific queries
   @@index([matchId]) // Match-specific queries
+  @@map("lifetime_rating_history")
+}
+
+// Tournament rating update audit log (per player, per tournament)
+model TournamentRatingUpdate {
+  id           String   @id @default(cuid())
+  tournamentId String // Event ID
+  seasonId     String
+  userId       String
+  category     GameType
+
+  // Lifetime rating changes  
+  lifetimeRatingBefore Float
+  lifetimeRatingAfter  Float
+  lifetimeRatingDelta  Float
+
+  // Seasonal rating changes
+  seasonalRatingBefore Float
+  seasonalRatingAfter  Float
+  seasonalRatingDelta  Float
+
+  // Tier changes (based on seasonal rating)
+  tierBefore String // e.g., "GOLD"
+  tierAfter  String // e.g., "PLATINUM"  
+  tierChange String // "UP" | "DOWN" | "SAME"
+
+  // Match count for this tournament
+  matchesInTournament Int
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  tournament Event  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  season     Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([userId, seasonId, category])
+  @@index([seasonId, category])
+  @@map("tournament_rating_update")
 }
