@@ -27,6 +27,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadEvents();
+    
+    // Cleanup: Remove any stuck dialog overlays
+    const cleanup = () => {
+      const overlays = document.querySelectorAll('[data-radix-dialog-overlay], [data-state="open"]');
+      overlays.forEach((overlay) => {
+        const htmlOverlay = overlay as HTMLElement;
+        if (htmlOverlay.style.position === 'fixed' && htmlOverlay.style.zIndex) {
+          const zIndex = parseInt(htmlOverlay.style.zIndex);
+          if (zIndex >= 50) {
+            htmlOverlay.remove();
+          }
+        }
+      });
+    };
+    
+    // Run cleanup after a short delay
+    setTimeout(cleanup, 100);
   }, []);
 
   const loadEvents = async () => {
@@ -562,50 +579,53 @@ export default function DashboardPage() {
             <Link
               key={event.id}
               href={`/dashboard/events/${event.id}`}
-              className={`group bg-white/5 backdrop-blur-md rounded-xl border p-6 hover:shadow-lg transition-all hover:-translate-y-0.5 ${event.status === 'IN_PROGRESS'
+              className={`group relative bg-white/5 backdrop-blur-md rounded-xl border overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5 ${event.status === 'IN_PROGRESS'
                 ? 'border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10'
                 : 'border-white/10 hover:border-primary/30 hover:shadow-primary/5'
                 }`}
             >
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                      {event.name}
-                    </h3>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(
-                        event
-                      )}`}
-                    >
-                      {getStatusText(event)}
-                    </span>
+              {/* Content */}
+              <div className="relative z-10 p-6">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1 pr-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                        {event.name}
+                      </h3>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(
+                          event
+                        )}`}
+                      >
+                        {getStatusText(event)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-base">🎮</span> {formatGameName(event.game)}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-base">📋</span> {formatEventFormat(event.format)}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-base">📅</span>{' '}
+                        {new Date(event.startAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-base">🎮</span> {formatGameName(event.game)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-base">📋</span> {formatEventFormat(event.format)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-base">📅</span>{' '}
-                      {new Date(event.startAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                  <div className="text-right pl-4 border-l border-border/50 ml-4">
+                    <div className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
+                      {event._count.entries}
+                      {event.maxPlayers && <span className="text-sm text-muted-foreground font-normal">/{event.maxPlayers}</span>}
+                    </div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Players</div>
                   </div>
-                </div>
-                <div className="text-right pl-4 border-l border-border/50 ml-4">
-                  <div className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
-                    {event._count.entries}
-                    {event.maxPlayers && <span className="text-sm text-muted-foreground font-normal">/{event.maxPlayers}</span>}
-                  </div>
-                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Players</div>
                 </div>
               </div>
             </Link>
