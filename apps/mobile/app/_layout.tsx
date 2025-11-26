@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { theme as customTheme } from '../lib/theme';
+import { SocketProvider } from '../contexts/SocketContext';
 
 // Integrate custom theme with React Native Paper's Material Design 3 Dark Theme
 const paperTheme = {
@@ -29,22 +30,24 @@ const paperTheme = {
 
 export default function RootLayout() {
   return (
-    <PaperProvider theme={paperTheme}>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: customTheme.colors.background.primary },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="signup" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="pairings" />
-        <Stack.Screen name="standings" />
-        <Stack.Screen name="match-details" />
-      </Stack>
-    </PaperProvider>
+    <SocketProvider>
+      <PaperProvider theme={paperTheme}>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: customTheme.colors.background.primary },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="signup" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="pairings" />
+          <Stack.Screen name="standings" />
+          <Stack.Screen name="match-details" />
+        </Stack>
+      </PaperProvider>
+    </SocketProvider>
   );
 }
