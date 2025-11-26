@@ -10,7 +10,7 @@ export class EventsService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   async createEvent(orgId: string, createdBy: string, dto: CreateEventDto) {
     const event = await this.prisma.event.create({
@@ -25,7 +25,7 @@ export class EventsService {
     // Notify all org members about new event (non-blocking)
     this.notificationsService.notifyAdmins(orgId, {
       type: NotificationType.EVENT_PUBLISHED,
-      priority: NotificationPriority.NORMAL,
+      priority: NotificationPriority.HIGH,
       title: 'New Event Published',
       body: `${event.name} is now open for registration`,
       eventId: event.id,
@@ -127,12 +127,30 @@ export class EventsService {
       throw new BadRequestException('Already registered for this event');
     }
 
-    return this.prisma.entry.create({
+    const entry = await this.prisma.entry.create({
       data: {
         eventId,
         userId,
       },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
+
+    // Notify admins about new player registration (non-blocking)
+    this.notificationsService.notifyAdmins(userOrgId, {
+      type: NotificationType.PLAYER_REGISTERED,
+      priority: NotificationPriority.NORMAL,
+      title: 'New Player Registered',
+      body: `${entry.user.name} registered for ${event.name}`,
+      eventId: event.id,
+    }).catch(err => console.error('Failed to send player registered notification:', err));
+
+    return entry;
   }
 
   async checkIn(entryId: string, userOrgId: string) {
@@ -187,7 +205,7 @@ export class EventsService {
     // Validate payment amount
     if (requiredAmount && paidAmount < requiredAmount) {
       throw new BadRequestException(
-        `Payment amount ($${(paidAmount/100).toFixed(2)}) is less than required entry fee ($${(requiredAmount/100).toFixed(2)})`
+        `Payment amount ($${(paidAmount / 100).toFixed(2)}) is less than required entry fee ($${(requiredAmount / 100).toFixed(2)})`
       );
     }
 
@@ -259,12 +277,12 @@ export class EventsService {
     const totalDistributed = distributions.reduce((sum, d) => sum + d.amount, 0);
     if (event.totalPrizeCredits && totalDistributed > event.totalPrizeCredits) {
       throw new BadRequestException(
-        `Total prize distribution ($${(totalDistributed/100).toFixed(2)}) exceeds event prize pool ($${(event.totalPrizeCredits/100).toFixed(2)})`
+        `Total prize distribution ($${(totalDistributed / 100).toFixed(2)}) exceeds event prize pool ($${(event.totalPrizeCredits / 100).toFixed(2)})`
       );
     }
 
     // Use transaction to ensure all distributions succeed or none do
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Create credit ledger entries for each distribution
       const ledgerEntries = await Promise.all(
         distributions.map((dist) =>
@@ -323,13 +341,44 @@ export class EventsService {
         distributions: ledgerEntries,
       };
     });
+
+    // Notify all prize winners (non-blocking)
+    distributions.forEach(dist => {
+      this.notificationsService.createAndSend({
+        userId: dist.userId,
+        orgId: userOrgId,
+        type: NotificationType.PRIZES_DISTRIBUTED,
+        priority: NotificationPriority.HIGH,
+        title: 'Prize Won!',
+        body: `You won $${(dist.amount / 100).toFixed(2)} for placing ${dist.placement} in ${event.name}`,
+        eventId: event.id,
+      }).catch(err => console.error('Failed to send prize notification:', err));
+    });
+
+    // Also notify admins
+    this.notificationsService.notifyAdmins(userOrgId, {
+      type: NotificationType.PRIZES_DISTRIBUTED,
+      priority: NotificationPriority.NORMAL,
+      title: 'Prizes Distributed',
+      body: `Prizes have been distributed for ${event.name}`,
+      eventId: event.id,
+    }).catch(err => console.error('Failed to send prize distribution notification to admins:', err));
+
+    return result;
   }
 
   async dropPlayer(entryId: string, userOrgId: string, currentRound?: number) {
     // Get entry with event details
     const entry = await this.prisma.entry.findUnique({
       where: { id: entryId },
-      include: { event: true },
+      include: {
+        event: true,
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
     if (!entry) {
@@ -341,13 +390,24 @@ export class EventsService {
       throw new ForbiddenException('Access denied');
     }
 
-    return this.prisma.entry.update({
+    const updatedEntry = await this.prisma.entry.update({
       where: { id: entryId },
       data: {
         droppedAt: new Date(),
         droppedAfterRound: currentRound,
       },
     });
+
+    // Notify admins about player dropping (non-blocking)
+    this.notificationsService.notifyAdmins(userOrgId, {
+      type: NotificationType.PLAYER_DROPPED,
+      priority: NotificationPriority.NORMAL,
+      title: 'Player Dropped',
+      body: `${entry.user.name} dropped from ${entry.event.name}`,
+      eventId: entry.event.id,
+    }).catch(err => console.error('Failed to send player dropped notification:', err));
+
+    return updatedEntry;
   }
 
   async updateEvent(eventId: string, userOrgId: string, dto: UpdateEventDto) {
@@ -369,10 +429,22 @@ export class EventsService {
       throw new BadRequestException('Cannot edit completed or cancelled events');
     }
 
-    return this.prisma.event.update({
+    const updatedEvent = await this.prisma.event.update({
       where: { id: eventId },
       data: dto,
     });
+
+    // Notify all registered players about event update (non-blocking)
+    this.notificationsService.broadcastToEvent(eventId, {
+      orgId: userOrgId,
+      type: NotificationType.EVENT_UPDATED,
+      priority: NotificationPriority.NORMAL,
+      title: 'Event Updated',
+      body: `${updatedEvent.name} details have been updated`,
+      eventId: updatedEvent.id,
+    }).catch(err => console.error('Failed to send event updated notification:', err));
+
+    return updatedEvent;
   }
 
   async addLatePlayer(eventId: string, userId: string, userOrgId: string) {
@@ -582,7 +654,7 @@ export class EventsService {
     // If playerBId is null or undefined, it's a BYE (opponent is null)
     // Otherwise, show the other player
     let opponent = null;
-    
+
     // Check if this is a BYE match (playerBId is null/undefined)
     // Also check if playerBId exists but is empty string (defensive check)
     if (!match.playerBId || match.playerBId === null || match.playerBId === undefined) {
@@ -666,6 +738,13 @@ export class EventsService {
         eventId,
         userId,
       },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
     if (!entry) {
@@ -676,12 +755,162 @@ export class EventsService {
       throw new BadRequestException('You have already dropped from this event');
     }
 
-    return this.prisma.entry.update({
+    const updatedEntry = await this.prisma.entry.update({
       where: { id: entry.id },
       data: {
         droppedAt: new Date(),
         droppedAfterRound: currentRound ?? event.currentRound,
       },
     });
+
+    // Notify admins about player dropping (non-blocking)
+    this.notificationsService.notifyAdmins(userOrgId, {
+      type: NotificationType.PLAYER_DROPPED,
+      priority: NotificationPriority.NORMAL,
+      title: 'Player Dropped',
+      body: `${entry.user.name} dropped from ${event.name}`,
+      eventId: event.id,
+    }).catch(err => console.error('Failed to send player dropped notification:', err));
+
+    return updatedEntry;
+  }
+
+  /**
+   * Manually cancel an event
+   */
+  async cancelEvent(eventId: string, userOrgId: string, userId: string, reason?: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        _count: {
+          select: { entries: true },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Validate organization
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied to this event');
+    }
+
+    // Cannot cancel already completed events
+    if (event.status === 'COMPLETED') {
+      throw new BadRequestException('Cannot cancel a completed event');
+    }
+
+    // Cannot cancel already cancelled events
+    if (event.status === 'CANCELLED') {
+      throw new BadRequestException('Event is already cancelled');
+    }
+
+    // Update event status to CANCELLED
+    const cancelledEvent = await this.prisma.event.update({
+      where: { id: eventId },
+      data: { status: 'CANCELLED' },
+    });
+
+    // Notify all registered players
+    if (event._count.entries > 0) {
+      const notificationBody = reason
+        ? `${event.name} has been cancelled. Reason: ${reason}`
+        : `${event.name} has been cancelled`;
+
+      this.notificationsService.broadcastToEvent(eventId, {
+        orgId: event.orgId,
+        type: NotificationType.EVENT_CANCELLED,
+        priority: NotificationPriority.HIGH,
+        title: 'Event Cancelled',
+        body: notificationBody,
+        eventId: event.id,
+      }).catch(err => console.error('Failed to broadcast event cancellation:', err));
+    }
+
+    // Notify admins about event cancellation (non-blocking)
+    this.notificationsService.notifyAdmins(userOrgId, {
+      type: NotificationType.EVENT_CANCELLED,
+      priority: NotificationPriority.HIGH,
+      title: 'Event Cancelled',
+      body: reason ? `${event.name} has been cancelled: ${reason}` : `${event.name} has been cancelled`,
+      eventId: event.id,
+    }).catch(err => console.error('Failed to send event cancelled notification to admins:', err));
+
+    return cancelledEvent;
+  }
+
+  /**
+   * Auto-cancel scheduled events that are past their start time
+   * Called by scheduled task (daily at 2 AM)
+   */
+  async cancelStaleScheduledEvents() {
+    // Find events that are still scheduled but 6+ hours past start time
+    const sixHoursAgo = new Date();
+    sixHoursAgo.setHours(sixHoursAgo.getHours() - 6);
+
+    const staleEvents = await this.prisma.event.findMany({
+      where: {
+        status: { in: ['SCHEDULED', 'REGISTRATION_CLOSED'] },
+        startAt: { lt: sixHoursAgo },
+      },
+      include: {
+        org: {
+          select: { id: true, name: true },
+        },
+        _count: {
+          select: { entries: true },
+        },
+      },
+    });
+
+    if (staleEvents.length === 0) {
+      return { cancelledCount: 0, events: [] };
+    }
+
+    // Cancel all stale events and notify admins
+    const cancelledEvents = await Promise.all(
+      staleEvents.map(async (event) => {
+        // Update event status to CANCELLED
+        const updated = await this.prisma.event.update({
+          where: { id: event.id },
+          data: { status: 'CANCELLED' },
+        });
+
+        // Notify admins about auto-cancellation
+        this.notificationsService.notifyAdmins(event.orgId, {
+          type: NotificationType.EVENT_CANCELLED,
+          priority: NotificationPriority.NORMAL,
+          title: 'Event Auto-Cancelled',
+          body: `${event.name} was automatically cancelled (missed start time by 6+ hours)`,
+          eventId: event.id,
+        }).catch(err => console.error('Failed to send auto-cancel notification:', err));
+
+        // If there were registered players, notify them too
+        if (event._count.entries > 0) {
+          this.notificationsService.broadcastToEvent(event.id, {
+            orgId: event.orgId,
+            type: NotificationType.EVENT_CANCELLED,
+            priority: NotificationPriority.HIGH,
+            title: 'Event Cancelled',
+            body: `${event.name} has been cancelled`,
+            eventId: event.id,
+          }).catch(err => console.error('Failed to broadcast event cancellation:', err));
+        }
+
+        return {
+          id: event.id,
+          name: event.name,
+          startAt: event.startAt,
+          entriesCount: event._count.entries,
+        };
+      })
+    );
+
+    return {
+      cancelledCount: cancelledEvents.length,
+      events: cancelledEvents,
+    };
   }
 }
