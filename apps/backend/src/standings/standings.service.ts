@@ -42,14 +42,33 @@ export class StandingsService {
       event.entries.map((e) => [e.userId, e.user.name])
     );
 
+    // Filter matches to only include confirmed/admin-reported results
+    // Exclude player-reported matches that haven't been confirmed yet
     const matches = event.rounds.flatMap((r) =>
-      r.matches.map((m) => ({
-        playerAId: m.playerAId,
-        playerBId: m.playerBId,
-        result: m.result,
-        gamesWonA: m.gamesWonA || 0,
-        gamesWonB: m.gamesWonB || 0,
-      }))
+      r.matches
+        .filter((m) => {
+          // No result = not reported yet
+          if (m.result === null) return false;
+          
+          // Admin override is always valid
+          if (m.overriddenBy) return true;
+          
+          // Player-reported matches need confirmation
+          // If reportedBy exists but confirmedBy doesn't, exclude from standings
+          if (m.reportedBy && !m.confirmedBy) {
+            return false; // Unconfirmed player report
+          }
+          
+          // Staff-reported (no confirmedBy needed) or confirmed matches
+          return true;
+        })
+        .map((m) => ({
+          playerAId: m.playerAId,
+          playerBId: m.playerBId,
+          result: m.result,
+          gamesWonA: m.gamesWonA || 0,
+          gamesWonB: m.gamesWonB || 0,
+        }))
     );
 
     const droppedPlayers = new Set(

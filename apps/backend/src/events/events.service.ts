@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { EventStatus } from '@prisma/client';
+import { NotificationType, NotificationPriority } from '@prisma/client';
 import { CreateEventDto, UpdateEventDto } from './dto';
 
 @Injectable()
 export class EventsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async createEvent(orgId: string, createdBy: string, dto: CreateEventDto) {
-    return this.prisma.event.create({
+    const event = await this.prisma.event.create({
       data: {
         ...dto,
         orgId,
@@ -16,6 +21,17 @@ export class EventsService {
         status: 'SCHEDULED',
       },
     });
+
+    // Notify all org members about new event (non-blocking)
+    this.notificationsService.notifyAdmins(orgId, {
+      type: NotificationType.EVENT_PUBLISHED,
+      priority: NotificationPriority.NORMAL,
+      title: 'New Event Published',
+      body: `${event.name} is now open for registration`,
+      eventId: event.id,
+    }).catch(err => console.error('Failed to send event published notification:', err));
+
+    return event;
   }
 
   async getEvents(orgId: string, status?: EventStatus, userId?: string) {

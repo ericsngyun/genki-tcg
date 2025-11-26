@@ -118,15 +118,35 @@ export function getTournamentStatus(state: TournamentState): TournamentStatus {
 
 /**
  * Check if all matches in a round have been reported
+ * For player-reported matches, requires confirmation before considering them "reported"
  */
 export function areAllMatchesReported(
-  matches: Array<{ result: string | null; playerBId: string | null }>
+  matches: Array<{ 
+    result: string | null; 
+    playerBId: string | null;
+    reportedBy?: string | null;
+    confirmedBy?: string | null;
+    overriddenBy?: string | null;
+  }>
 ): boolean {
   return matches.every((match) => {
     // Bye matches are auto-reported
     if (match.playerBId === null) return true;
-    // Regular matches need a result
-    return match.result !== null;
+    
+    // No result = not reported
+    if (match.result === null) return false;
+    
+    // Admin override is always valid
+    if (match.overriddenBy) return true;
+    
+    // Player-reported matches need confirmation
+    // If reportedBy exists but confirmedBy doesn't, match is not complete
+    if (match.reportedBy && !match.confirmedBy) {
+      return false; // Waiting for opponent confirmation
+    }
+    
+    // Staff-reported (no confirmedBy needed) or confirmed matches
+    return true;
   });
 }
 
