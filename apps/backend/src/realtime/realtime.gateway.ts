@@ -197,4 +197,15 @@ export class RealtimeGateway
     });
     console.log(`Emitted announcement for event ${eventId}: ${title}`);
   }
+
+  /**
+   * Broadcast tournament completion to all clients in event room
+   */
+  emitTournamentCompleted(eventId: string) {
+    this.server.to(`event:${eventId}`).emit('tournament-completed', {
+      eventId,
+      timestamp: new Date(),
+    });
+    console.log(`Emitted tournament-completed for event ${eventId}`);
+  }
 }
