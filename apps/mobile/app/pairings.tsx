@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
+import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 
 interface Pairing {
   id: string;
@@ -65,6 +67,26 @@ export default function PairingsScreen() {
     }
   }, [selectedRoundId]);
 
+  // Real-time updates: Auto-refresh when new rounds are posted
+  useRealtimeUpdates({
+    eventId,
+    onPairingsPosted: useCallback((roundNumber: number) => {
+      console.log(`New round ${roundNumber} pairings posted`);
+      // Reload event data to get new round
+      loadData();
+      // Show notification
+      Alert.alert(
+        'New Round!',
+        `Round ${roundNumber} pairings are now available`,
+        [{ text: 'OK' }]
+      );
+    }, []),
+    onRoundStarted: useCallback((roundNumber: number) => {
+      console.log(`Round ${roundNumber} started`);
+      loadPairings(selectedRoundId || '');
+    }, [selectedRoundId]),
+  });
+
   const loadData = async () => {
     try {
       // Load user data
@@ -102,6 +124,19 @@ export default function PairingsScreen() {
     loadData();
   };
 
+  const handleBack = () => {
+    // Check if we can dismiss (for modals) or go back
+    // If neither works, navigate to events tab as fallback
+    if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
+      router.dismiss();
+    } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
+      router.back();
+    } else {
+      // No screen to go back to - navigate to events tab
+      router.replace('/(tabs)/events');
+    }
+  };
+
   const getMyPairing = () => {
     if (!myUserId) return null;
     return pairings.find(
@@ -130,8 +165,14 @@ export default function PairingsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={theme.colors.primary.main} />
+      <View style={styles.mainContainer}>
+        <LinearGradient
+          colors={[theme.colors.background.primary, '#1a1a2e']}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary.main} />
+        </View>
       </View>
     );
   }
@@ -153,7 +194,7 @@ export default function PairingsScreen() {
         }
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
@@ -198,7 +239,7 @@ export default function PairingsScreen() {
         }
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
@@ -387,6 +428,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginTop: 2,
     fontWeight: theme.typography.fontWeight.medium,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
     padding: 40,

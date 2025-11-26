@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
+import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 
 interface Standing {
   userId: string;
@@ -50,6 +52,24 @@ export default function StandingsScreen() {
     loadData();
   }, [eventId]);
 
+  // Real-time updates with optimized performance
+  useRealtimeUpdates({
+    eventId,
+    onStandingsUpdated: useCallback(() => {
+      console.log('Standings updated - refreshing');
+      loadData();
+    }, []),
+    onTournamentCompleted: useCallback(() => {
+      console.log('Tournament completed');
+      loadData();
+      Alert.alert(
+        'Tournament Complete! 🏆',
+        'The tournament has finished. Check the final standings below.',
+        [{ text: 'OK' }]
+      );
+    }, []),
+  });
+
   const loadData = async () => {
     try {
       // Load user data
@@ -76,6 +96,19 @@ export default function StandingsScreen() {
     loadData();
   };
 
+  const handleBack = () => {
+    // Check if we can dismiss (for modals) or go back
+    // If neither works, navigate to events tab as fallback
+    if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
+      router.dismiss();
+    } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
+      router.back();
+    } else {
+      // No screen to go back to - navigate to events tab
+      router.replace('/(tabs)/events');
+    }
+  };
+
   const getMyStanding = () => {
     if (!myUserId) return null;
     return standings.find((s) => s.userId === myUserId);
@@ -90,7 +123,7 @@ export default function StandingsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
@@ -113,7 +146,7 @@ export default function StandingsScreen() {
         }
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
@@ -141,7 +174,7 @@ export default function StandingsScreen() {
       }
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
@@ -302,6 +335,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginTop: 2,
     fontWeight: theme.typography.fontWeight.medium,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.primary,
   },
   emptyContainer: {
     padding: 40,

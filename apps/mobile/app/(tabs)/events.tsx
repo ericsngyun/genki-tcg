@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,17 +12,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Image } from 'react-native';
+import { Image, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../lib/api';
-import { formatGameName, formatEventFormat } from '../../lib/formatters';
+import { formatGameName, formatEventFormat, getGameImagePath } from '../../lib/formatters';
 import { theme } from '../../lib/theme';
 import { usePressAnimation } from '../../lib/animations';
 import { EventActionSheet } from '../../components/EventActionSheet';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { AppHeader } from '../../components';
+import { useSocket } from '../../contexts/SocketContext';
 
 interface Event {
   id: string;
@@ -47,7 +48,6 @@ interface Event {
 }
 
 interface CategorizedEvents {
-  myActiveMatch: Event | null;
   myTournaments: Event[];
   activeTournaments: Event[];
   upcomingEvents: Event[];
@@ -83,6 +83,50 @@ export default function EventsScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Real-time updates: Subscribe to events for all tournaments user is in
+  const { isConnected, joinEvent, leaveEvent, onPairingsPosted, onRoundStarted } = useSocket();
+  
+  const loadDataCallback = useCallback(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (!isConnected || !myUserId || events.length === 0) return;
+
+    // Join event rooms for all tournaments user is registered for
+    const myEventIds = events
+      .filter((e) => {
+        const entry = e.entries?.find((entry) => entry.userId === myUserId);
+        return entry && !entry.droppedAt;
+      })
+      .map((e) => e.id);
+
+    myEventIds.forEach((eventId) => {
+      joinEvent(eventId);
+    });
+
+    // Subscribe to pairings and round updates
+    const unsubscribePairings = onPairingsPosted((data) => {
+      console.log(`Pairings posted for event ${data.eventId}, round ${data.roundNumber}`);
+      // Reload events to reflect tournament started and new rounds
+      setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
+    });
+
+    const unsubscribeRoundStarted = onRoundStarted((data) => {
+      console.log(`Round ${data.roundNumber} started for event ${data.eventId}`);
+      // Reload events to reflect status changes
+      setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
+    });
+
+    return () => {
+      myEventIds.forEach((eventId) => {
+        leaveEvent(eventId);
+      });
+      unsubscribePairings();
+      unsubscribeRoundStarted();
+    };
+  }, [isConnected, myUserId, events, joinEvent, leaveEvent, onPairingsPosted, onRoundStarted]);
 
   const loadData = async () => {
     try {
@@ -134,22 +178,15 @@ export default function EventsScreen() {
       return entry?.checkedInAt !== undefined && entry?.checkedInAt !== null;
     };
 
-    // Find active match (live tournament where user is checked in)
-    const myActiveMatch = events.find(
-      (e) => e.status === 'IN_PROGRESS' && isCheckedIn(e)
-    ) || null;
-
-    // My tournaments (registered but not the active match event)
+    // My tournaments (registered)
     const myTournaments = events.filter((e) => {
       if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return false;
-      if (myActiveMatch && e.id === myActiveMatch.id) return false;
       return isParticipating(e);
     });
 
     // Active tournaments (IN_PROGRESS, excluding ones user is in)
     const activeTournaments = events.filter((e) => {
       if (e.status !== 'IN_PROGRESS') return false;
-      if (myActiveMatch && e.id === myActiveMatch.id) return false;
       if (myTournaments.some((mt) => mt.id === e.id)) return false;
       return true;
     });
@@ -178,7 +215,6 @@ export default function EventsScreen() {
     }).sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
     return {
-      myActiveMatch,
       myTournaments,
       activeTournaments,
       upcomingEvents: upcomingEvents.filter((e) => !pastEvents.some((pe) => pe.id === e.id)),
@@ -203,18 +239,6 @@ export default function EventsScreen() {
     setTimeout(() => setSelectedEvent(null), 300);
   };
 
-  // Quick action - go directly to active match
-  const handleGoToActiveMatch = (event: Event) => {
-    handleHaptic();
-    router.push({
-      pathname: '/match-details',
-      params: {
-        eventId: event.id,
-        eventName: event.name,
-        gameType: event.game,
-      },
-    });
-  };
 
   // Action handlers with confirmation modals
   const handleApply = (eventId: string) => {
@@ -321,7 +345,12 @@ export default function EventsScreen() {
     return event.entries.find((entry) => entry.userId === myUserId);
   };
 
-  const isRegistered = (event: Event) => getMyEntry(event) !== null;
+  const hasEntry = (event: Event) => getMyEntry(event) !== null;
+
+  const isPaid = (event: Event) => {
+    const entry = getMyEntry(event);
+    return entry?.paidAt !== undefined && entry?.paidAt !== null;
+  };
 
   const isCheckedIn = (event: Event) => {
     const entry = getMyEntry(event);
@@ -332,6 +361,9 @@ export default function EventsScreen() {
     const entry = getMyEntry(event);
     return entry?.droppedAt !== undefined && entry?.droppedAt !== null;
   };
+
+  // Legacy function for backward compatibility
+  const isRegistered = (event: Event) => hasEntry(event);
 
   const getConfirmModalConfig = () => {
     if (!confirmModal.event || !confirmModal.type) return null;
@@ -391,8 +423,8 @@ export default function EventsScreen() {
     );
   }
 
-  const { myActiveMatch, myTournaments, activeTournaments, upcomingEvents, pastEvents } = categorizedEvents;
-  const hasNoEvents = !myActiveMatch && myTournaments.length === 0 && activeTournaments.length === 0 && upcomingEvents.length === 0;
+  const { myTournaments, activeTournaments, upcomingEvents, pastEvents } = categorizedEvents;
+  const hasNoEvents = myTournaments.length === 0 && activeTournaments.length === 0 && upcomingEvents.length === 0;
 
   return (
     <View style={styles.container}>
@@ -414,19 +446,6 @@ export default function EventsScreen() {
           showLogo={false}
         />
 
-        {/* My Active Match - Most Prominent */}
-        {myActiveMatch && (
-          <View style={styles.section}>
-            <ActiveMatchBanner
-              event={myActiveMatch}
-              onPress={() => handleGoToActiveMatch(myActiveMatch)}
-              onViewPairings={() => handleViewPairings(myActiveMatch.id)}
-              onViewStandings={() => handleViewStandings(myActiveMatch.id)}
-              onDrop={() => handleDrop(myActiveMatch.id)}
-            />
-          </View>
-        )}
-
         {/* My Tournaments */}
         {myTournaments.length > 0 && (
           <View style={styles.section}>
@@ -443,8 +462,8 @@ export default function EventsScreen() {
                   isRegistered={isRegistered(event)}
                   isCheckedIn={isCheckedIn(event)}
                   isDropped={isDropped(event)}
+                  myUserId={myUserId}
                   onPress={() => handleEventPress(event)}
-                  compact
                   showMyStatus
                 />
               ))}
@@ -469,6 +488,7 @@ export default function EventsScreen() {
                   isRegistered={isRegistered(event)}
                   isCheckedIn={isCheckedIn(event)}
                   isDropped={isDropped(event)}
+                  myUserId={myUserId}
                   onPress={() => handleEventPress(event)}
                   showMyStatus
                 />
@@ -493,6 +513,7 @@ export default function EventsScreen() {
                   isRegistered={isRegistered(event)}
                   isCheckedIn={isCheckedIn(event)}
                   isDropped={isDropped(event)}
+                  myUserId={myUserId}
                   onPress={() => handleEventPress(event)}
                   showMyStatus
                 />
@@ -546,6 +567,7 @@ export default function EventsScreen() {
                     isRegistered={isRegistered(event)}
                     isCheckedIn={isCheckedIn(event)}
                     isDropped={isDropped(event)}
+                    myUserId={myUserId}
                     onPress={() => handleEventPress(event)}
                     muted
                     showMyStatus
@@ -590,115 +612,6 @@ export default function EventsScreen() {
   );
 }
 
-// Active Match Banner - Prominent card for players in a live tournament
-interface ActiveMatchBannerProps {
-  event: Event;
-  onPress: () => void;
-  onViewPairings: () => void;
-  onViewStandings: () => void;
-  onDrop: () => void;
-}
-
-const ActiveMatchBanner: React.FC<ActiveMatchBannerProps> = ({
-  event,
-  onPress,
-  onViewPairings,
-  onViewStandings,
-  onDrop,
-}) => {
-  const handleHaptic = () => {
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  };
-
-  return (
-    <View style={styles.activeMatchContainer}>
-      <LinearGradient
-        colors={['#1a2e05', '#0f1a03']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.activeMatchGradient}
-      >
-        {/* Animated Live Indicator */}
-        <View style={styles.liveHeader}>
-          <View style={styles.liveIndicatorLarge}>
-            <View style={styles.liveDotAnimated} />
-            <Text style={styles.liveTextLarge}>LIVE</Text>
-          </View>
-          <Text style={styles.roundText}>
-            Round {event.currentRound || 1}
-          </Text>
-        </View>
-
-        <Text style={styles.activeMatchTitle}>{event.name}</Text>
-
-        <View style={styles.activeMatchMeta}>
-          <View style={styles.metaChip}>
-            <Ionicons name="game-controller" size={14} color="#A3E635" />
-            <Text style={styles.metaChipText}>{formatGameName(event.game)}</Text>
-          </View>
-          <View style={styles.metaChip}>
-            <Ionicons name="people" size={14} color="#A3E635" />
-            <Text style={styles.metaChipText}>{event._count.entries} players</Text>
-          </View>
-        </View>
-
-        {/* Primary Action - Go to Match */}
-        <TouchableOpacity
-          style={styles.goToMatchButton}
-          onPress={() => {
-            handleHaptic();
-            onPress();
-          }}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={[theme.colors.primary.main, theme.colors.primary.dark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.goToMatchGradient}
-          >
-            <Ionicons name="flash" size={20} color={theme.colors.primary.foreground} />
-            <Text style={styles.goToMatchText}>Go to Active Match</Text>
-            <Ionicons name="arrow-forward" size={20} color={theme.colors.primary.foreground} />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={onViewPairings}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="grid" size={18} color="#E5E7EB" />
-            <Text style={styles.quickActionTextDark}>Pairings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={onViewStandings}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="podium" size={18} color="#E5E7EB" />
-            <Text style={styles.quickActionTextDark}>Standings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionButton, styles.quickActionDanger]}
-            onPress={onDrop}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="exit" size={18} color={theme.colors.error.light} />
-            <Text style={[styles.quickActionTextDark, styles.quickActionTextDanger]}>Drop</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </View>
-  );
-};
-
 // Section Header Component
 interface SectionHeaderProps {
   title: string;
@@ -727,6 +640,7 @@ interface EventCardProps {
   isRegistered: boolean;
   isCheckedIn: boolean;
   isDropped: boolean;
+  myUserId: string | null;
   onPress: () => void;
   compact?: boolean;
   muted?: boolean;
@@ -738,6 +652,7 @@ const EventCard: React.FC<EventCardProps> = ({
   isRegistered,
   isCheckedIn,
   isDropped,
+  myUserId,
   onPress,
   compact = false,
   muted = false,
@@ -770,6 +685,12 @@ const EventCard: React.FC<EventCardProps> = ({
     return false;
   })();
 
+  // Helper to get user's entry from event
+  const getMyEntry = () => {
+    if (!myUserId || !event.entries) return null;
+    return event.entries.find((entry) => entry.userId === myUserId) || null;
+  };
+
   const getPlayerStatusBadge = () => {
     if (isDropped) {
       return { text: 'Dropped', bg: 'rgba(239, 68, 68, 0.2)', color: theme.colors.error.light };
@@ -777,13 +698,42 @@ const EventCard: React.FC<EventCardProps> = ({
     if (isCheckedIn) {
       return { text: 'Checked In', bg: 'rgba(16, 185, 129, 0.2)', color: theme.colors.success.light };
     }
-    if (isRegistered) {
-      return { text: 'Registered', bg: 'rgba(59, 130, 246, 0.2)', color: theme.colors.info.light };
+    // Check if they have an entry (applied/registered)
+    const entry = getMyEntry();
+    if (entry) {
+      // If paid, show "Registered", otherwise show "Applied"
+      if (entry.paidAt) {
+        return { text: 'Registered', bg: 'rgba(59, 130, 246, 0.2)', color: theme.colors.info.light };
+      } else {
+        return { text: 'Applied', bg: 'rgba(139, 92, 246, 0.2)', color: '#A78BFA' }; // Purple for "Applied"
+      }
     }
     return null;
   };
 
   const playerStatus = getPlayerStatusBadge();
+
+  const gameImage = getGameImagePath(event.game);
+  const cardBgColor = muted 
+    ? theme.colors.background.secondary 
+    : isLive 
+      ? theme.colors.background.card 
+      : theme.colors.background.card;
+  
+  // Convert hex color to rgba for gradient
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  
+  const gradientColors = [
+    cardBgColor,
+    hexToRgba(cardBgColor, 0.6),
+    hexToRgba(cardBgColor, 0.2),
+    'transparent'
+  ];
 
   return (
     <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
@@ -796,75 +746,95 @@ const EventCard: React.FC<EventCardProps> = ({
           compact && styles.eventCardCompact,
         ]}
       >
-        {/* Live Indicator */}
-        {isLive && !compact && (
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
-        )}
+        {/* Game Image Background with Gradient Overlay */}
+        <View style={styles.cardImageContainer}>
+          <ImageBackground
+            source={gameImage}
+            style={styles.cardImage}
+            resizeMode="cover"
+          >
+            <LinearGradient
+              colors={gradientColors}
+              locations={[0, 0.5, 0.7, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.cardImageGradient}
+            />
+          </ImageBackground>
+        </View>
 
-        {/* Event Header */}
-        <View style={styles.eventHeader}>
-          <View style={styles.eventTitleContainer}>
-            {isLive && compact && (
-              <View style={styles.liveDotSmall} />
-            )}
-            <Text style={[styles.eventName, muted && styles.eventNameMuted]} numberOfLines={compact ? 1 : 2}>
-              {event.name}
-            </Text>
-          </View>
-          <View style={[
-            styles.statusBadge,
-            isPast ? { backgroundColor: theme.colors.background.elevated } :
-              isStartingSoon ? { backgroundColor: 'rgba(245, 158, 11, 0.2)' } :
-                getStatusStyle(event.status)
-          ]}>
-            <Text style={[
-              styles.statusText,
-              isPast ? { color: theme.colors.text.tertiary } :
-                isStartingSoon ? { color: theme.colors.warning.light } :
-                  getStatusTextStyle(event.status)
+        {/* Content Container */}
+        <View style={styles.cardContent}>
+          {/* Live Indicator */}
+          {isLive && !compact && (
+            <View style={styles.liveIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          )}
+
+          {/* Event Header */}
+          <View style={styles.eventHeader}>
+            <View style={styles.eventTitleContainer}>
+              {isLive && compact && (
+                <View style={styles.liveDotSmall} />
+              )}
+              <Text style={[styles.eventName, muted && styles.eventNameMuted]} numberOfLines={compact ? 1 : 2}>
+                {event.name}
+              </Text>
+            </View>
+            <View style={[
+              styles.statusBadge,
+              isPast ? { backgroundColor: theme.colors.background.elevated } :
+                isStartingSoon ? { backgroundColor: 'rgba(245, 158, 11, 0.2)' } :
+                  getStatusStyle(event.status)
             ]}>
-              {isPast ? 'Past' : isStartingSoon ? 'Starting Soon' : formatStatus(event.status)}
-            </Text>
+              <Text style={[
+                styles.statusText,
+                isPast ? { color: theme.colors.text.tertiary } :
+                  isStartingSoon ? { color: theme.colors.warning.light } :
+                    getStatusTextStyle(event.status)
+              ]}>
+                {isPast ? 'Past' : isStartingSoon ? 'Starting Soon' : formatStatus(event.status)}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Event Details */}
-        <View style={styles.eventDetails}>
-          <View style={styles.detailRow}>
-            <Ionicons name="game-controller-outline" size={14} color={theme.colors.text.secondary} />
-            <Text style={styles.detailText}>{formatGameName(event.game)}</Text>
+          {/* Event Details */}
+          <View style={styles.eventDetails}>
+            <View style={styles.detailRow}>
+              <Ionicons name="game-controller-outline" size={14} color={theme.colors.text.secondary} />
+              <Text style={styles.detailText}>{formatGameName(event.game)}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
+              <Text style={styles.detailText}>
+                {new Date(event.startAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="people-outline" size={14} color={theme.colors.text.secondary} />
+              <Text style={styles.detailText}>
+                {event._count.entries}
+                {event.maxPlayers ? `/${event.maxPlayers}` : ''} players
+              </Text>
+            </View>
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
-            <Text style={styles.detailText}>
-              {new Date(event.startAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="people-outline" size={14} color={theme.colors.text.secondary} />
-            <Text style={styles.detailText}>
-              {event._count.entries}
-              {event.maxPlayers ? `/${event.maxPlayers}` : ''} players
-            </Text>
-          </View>
-        </View>
 
-        {/* Player Status Badge */}
-        {showMyStatus && playerStatus && (
-          <View style={[styles.playerStatusBadge, { backgroundColor: playerStatus.bg }]}>
-            <Text style={[styles.playerStatusText, { color: playerStatus.color }]}>
-              {playerStatus.text}
-            </Text>
-          </View>
-        )}
+          {/* Player Status Badge */}
+          {showMyStatus && playerStatus && (
+            <View style={[styles.playerStatusBadge, { backgroundColor: playerStatus.bg }]}>
+              <Text style={[styles.playerStatusText, { color: playerStatus.color }]}>
+                {playerStatus.text}
+              </Text>
+            </View>
+          )}
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -1001,9 +971,35 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: theme.colors.background.card,
     borderRadius: 16,
-    padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.border.light,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardImageContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '40%',
+    zIndex: 0,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardImageGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  cardContent: {
+    padding: 16,
+    position: 'relative',
+    zIndex: 1,
+    backgroundColor: 'transparent',
+  },
+  cardContentCompact: {
+    padding: 12,
   },
   eventCardLive: {
     borderColor: theme.colors.success.light,
@@ -1012,6 +1008,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
   },
   eventCardCompact: {
+    // Padding handled by cardContent
+  },
+  cardContentCompact: {
     padding: 12,
   },
   eventCardMuted: {
@@ -1131,135 +1130,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Active Match Banner Styles
-  activeMatchContainer: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: theme.colors.success.dark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  activeMatchGradient: {
-    padding: 24,
-  },
-  liveHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  liveIndicatorLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(163, 230, 53, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(163, 230, 53, 0.3)',
-  },
-  liveDotAnimated: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#A3E635',
-    marginRight: 6,
-  },
-  liveTextLarge: {
-    color: '#A3E635',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  roundText: {
-    color: '#E5E7EB',
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.8,
-  },
-  activeMatchTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 16,
-    lineHeight: 30,
-  },
-  activeMatchMeta: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  metaChipText: {
-    color: '#E5E7EB',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  goToMatchButton: {
-    marginBottom: 20,
-    shadowColor: theme.colors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  goToMatchGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  goToMatchText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  quickActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  quickActionDanger: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  quickActionText: {
-    color: theme.colors.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quickActionTextDark: {
-    color: '#E5E7EB',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quickActionTextDanger: {
-    color: theme.colors.error.light,
-  },
 });

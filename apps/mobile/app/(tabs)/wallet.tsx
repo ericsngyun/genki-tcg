@@ -51,7 +51,7 @@ export default function WalletScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
@@ -121,6 +121,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   balanceCard: {
     backgroundColor: theme.colors.background.card,

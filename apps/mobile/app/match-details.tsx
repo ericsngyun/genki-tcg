@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { ActiveMatchCard } from '../components';
 import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 
 interface ActiveMatch {
   match: {
@@ -50,6 +51,19 @@ export default function MatchDetailsScreen() {
     loadActiveMatch();
   }, [eventId]);
 
+  // Real-time updates: Refresh match when opponent reports/confirms
+  useRealtimeUpdates({
+    eventId,
+    onMatchResultReported: useCallback((matchId: string) => {
+      // Refresh match data when opponent reports result
+      loadActiveMatch();
+    }, []),
+    onStandingsUpdated: useCallback(() => {
+      // Refresh match data when standings update (match was confirmed)
+      loadActiveMatch();
+    }, []),
+  });
+
   const loadActiveMatch = async () => {
     try {
       const [matchData, userData] = await Promise.all([
@@ -62,6 +76,19 @@ export default function MatchDetailsScreen() {
       console.error('Failed to load active match:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    // Check if we can dismiss (for modals) or go back
+    // If neither works, navigate to events tab as fallback
+    if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
+      router.dismiss();
+    } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
+      router.back();
+    } else {
+      // No screen to go back to - navigate to events tab
+      router.replace('/(tabs)/events');
     }
   };
 
@@ -84,7 +111,7 @@ export default function MatchDetailsScreen() {
                 [
                   {
                     text: 'OK',
-                    onPress: () => router.back(),
+                    onPress: handleBack,
                   },
                 ]
               );
@@ -103,7 +130,7 @@ export default function MatchDetailsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
@@ -126,7 +153,7 @@ export default function MatchDetailsScreen() {
       />
       <ScrollView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
@@ -147,19 +174,6 @@ export default function MatchDetailsScreen() {
 
             {/* Additional Actions */}
             <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() =>
-                  router.push({
-                    pathname: '/pairings',
-                    params: { eventId },
-                  })
-                }
-              >
-                <Ionicons name="list" size={20} color={theme.colors.text.primary} />
-                <Text style={styles.actionButtonText}>View All Pairings</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() =>
