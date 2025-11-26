@@ -67,6 +67,8 @@ model User {
   matchesAsPlayerA         Match[]                   @relation("MatchPlayerA")
   matchesAsPlayerB         Match[]                   @relation("MatchPlayerB")
   notificationTokens       NotificationToken[]
+  notifications            Notification[]
+  notificationPreferences  UserNotificationPreference[]
   auditLogs                AuditLog[]                @relation("AuditPerformer")
   refreshTokens            RefreshToken[]
   passwordResetTokens      PasswordResetToken[]
@@ -450,6 +452,38 @@ enum NotificationPlatform {
   WEB
 }
 
+enum NotificationType {
+  EVENT_PUBLISHED
+  EVENT_STARTING_SOON
+  PAIRINGS_POSTED
+  ROUND_STARTED
+  MATCH_RESULT_CONFIRMED
+  TOURNAMENT_COMPLETED
+  PRIZES_DISTRIBUTED
+  EVENT_CANCELLED
+  EVENT_UPDATED
+  MATCH_RESULT_REPORTED
+  PLAYER_REGISTERED
+  ALL_PLAYERS_CHECKED_IN
+  MATCH_DISPUTED
+  ROUND_COMPLETION_READY
+  PLAYER_DROPPED
+  SYSTEM_ERROR
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model NotificationToken {
   id       String               @id @default(cuid())
   userId   String
@@ -464,6 +498,63 @@ model NotificationToken {
 
   @@unique([userId, platform, token])
   @@index([userId])
+}
+
+model Notification {
+  id     String               @id @default(cuid())
+  userId String
+  orgId  String
+
+  type     NotificationType
+  status   NotificationStatus   @default(UNREAD)
+  priority NotificationPriority @default(NORMAL)
+
+  title String
+  body  String
+  data  Json?
+
+  // Optional links to related entities
+  eventId String?
+  matchId String?
+  roundId String?
+
+  // Delivery tracking
+  sentViaWebSocket Boolean   @default(false)
+  sentViaPush      Boolean   @default(false)
+  pushSentAt       DateTime?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime // Auto-delete after 30 days
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([userId, orgId, status])
+  @@index([expiresAt])
+  @@index([type, status])
+}
+
+model UserNotificationPreference {
+  id     String           @id @default(cuid())
+  userId String
+  orgId  String
+
+  notificationType NotificationType
+
+  enableInApp Boolean @default(true)
+  enablePush  Boolean @default(true)
+  enableEmail Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId, notificationType])
+  @@index([userId, orgId])
 }
 
 // ============================================================================
