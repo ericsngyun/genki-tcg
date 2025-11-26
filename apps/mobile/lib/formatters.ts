@@ -34,3 +34,19 @@ export function formatEventFormat(format: string): string {
 export function formatEventStatus(status: string): string {
   return status.replace(/_/g, ' ');
 }
+
+/**
+ * Get the game image path based on game type
+ */
+export function getGameImagePath(gameType: string): any {
+  const gameImages: Record<string, any> = {
+    ONE_PIECE_TCG: require('../assets/images/optcg.jpg'),
+    AZUKI_TCG: require('../assets/images/azukitcg.jpg'),
+    RIFTBOUND: require('../assets/images/riftboundtcg.jpg'),
+    // Fallback to One Piece if unknown
+    OPTCG: require('../assets/images/optcg.jpg'),
+    AZUKI: require('../assets/images/azukitcg.jpg'),
+  };
+
+  return gameImages[gameType] || gameImages.ONE_PIECE_TCG;
+}
