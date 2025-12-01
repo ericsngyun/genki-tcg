@@ -86,7 +86,7 @@ export default function EventsScreen() {
 
   // Real-time updates: Subscribe to events for all tournaments user is in
   const { isConnected, joinEvent, leaveEvent, onPairingsPosted, onRoundStarted } = useSocket();
-  
+
   const loadDataCallback = useCallback(() => {
     loadData();
   }, []);
@@ -400,13 +400,16 @@ export default function EventsScreen() {
           ],
         };
       case 'drop':
+        // Different messaging for SCHEDULED (withdraw) vs IN_PROGRESS (drop)
+        const isWithdraw = event.status === 'SCHEDULED';
         return {
-          title: 'Drop from Tournament',
-          message:
-            'Are you sure you want to drop? This action cannot be undone and you will be removed from future rounds.',
+          title: isWithdraw ? 'Withdraw Application' : 'Drop from Tournament',
+          message: isWithdraw
+            ? 'Are you sure you want to withdraw from this event? You can re-apply later if spots are available.'
+            : 'Are you sure you want to drop? This action cannot be undone and you will be removed from future rounds.',
           icon: 'warning' as const,
-          variant: 'danger' as const,
-          confirmText: 'Drop Out',
+          variant: isWithdraw ? ('warning' as const) : ('danger' as const),
+          confirmText: isWithdraw ? 'Withdraw' : 'Drop Out',
           details: [{ label: 'Event', value: event.name }],
         };
       default:
@@ -714,12 +717,12 @@ const EventCard: React.FC<EventCardProps> = ({
   const playerStatus = getPlayerStatusBadge();
 
   const gameImage = getGameImagePath(event.game);
-  const cardBgColor = muted 
-    ? theme.colors.background.secondary 
-    : isLive 
-      ? theme.colors.background.card 
+  const cardBgColor = muted
+    ? theme.colors.background.secondary
+    : isLive
+      ? theme.colors.background.card
       : theme.colors.background.card;
-  
+
   // Convert hex color to rgba for gradient
   const hexToRgba = (hex: string, alpha: number) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -727,7 +730,7 @@ const EventCard: React.FC<EventCardProps> = ({
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
-  
+
   const gradientColors = [
     cardBgColor,
     hexToRgba(cardBgColor, 0.6),

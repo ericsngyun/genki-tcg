@@ -72,14 +72,14 @@ export default function DashboardPage() {
     // Active tournaments - IN_PROGRESS status
     const active = allEvents.filter(e => e.status === 'IN_PROGRESS');
 
-    // Ready to start - SCHEDULED events where start time has passed (within 24 hours)
+    // Ready to start - SCHEDULED events where start time has passed (within 6 hours)
     // These need admin action to start them
     const readyToStart = allEvents
       .filter(e => {
         if (e.status !== 'SCHEDULED') return false;
         const startTime = new Date(e.startAt);
         const hoursPastStart = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        return hoursPastStart > 0 && hoursPastStart <= 24;
+        return hoursPastStart > 0 && hoursPastStart <= 6;
       })
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
@@ -92,15 +92,15 @@ export default function DashboardPage() {
       })
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
-    // Past events - COMPLETED, CANCELLED, or start time passed without starting (24+ hours)
+    // Past events - COMPLETED, CANCELLED, or start time passed without starting (6+ hours)
     const past = allEvents
       .filter(e => {
         if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return true;
-        // Also include SCHEDULED events that are past their start time by 24+ hours
+        // Also include SCHEDULED events that are past their start time by 6+ hours
         if (e.status === 'SCHEDULED') {
           const startTime = new Date(e.startAt);
           const hoursPastStart = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-          return hoursPastStart > 24;
+          return hoursPastStart > 6;
         }
         return false;
       })
@@ -143,8 +143,8 @@ export default function DashboardPage() {
 
     // If database says SCHEDULED but time has passed significantly, mark as missed/past
     if (event.status === 'SCHEDULED' && hoursPastStart > 0) {
-      if (hoursPastStart > 24) {
-        return 'MISSED'; // More than 24 hours past - definitely missed
+      if (hoursPastStart > 6) {
+        return 'MISSED'; // More than 6 hours past - definitely missed
       } else {
         return 'STARTING_SOON'; // Within window, might be starting
       }

@@ -49,7 +49,7 @@ export default function MoreScreen() {
       icon: 'notifications',
       title: 'Notifications',
       subtitle: 'Manage your notifications',
-      onPress: () => alert('Coming soon'),
+      onPress: () => router.push('/notifications'),
     },
     {
       icon: 'time',

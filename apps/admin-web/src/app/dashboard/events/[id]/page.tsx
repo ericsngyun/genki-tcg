@@ -94,6 +94,9 @@ export default function EventDetailPage() {
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [roundActionLoading, setRoundActionLoading] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   // Socket.IO for real-time updates
   useEventSocket(eventId, {
@@ -363,6 +366,23 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleCancelEvent = async () => {
+    if (!event) return;
+
+    setCancelling(true);
+    try {
+      await api.cancelEvent(eventId, cancelReason || undefined);
+      await loadEvent();
+      setCancelModalOpen(false);
+      setCancelReason('');
+      alert('Event cancelled successfully');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to cancel event');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -438,6 +458,15 @@ export default function EventDetailPage() {
               className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Round {event.rounds.length + 1}
+            </button>
+          )}
+          {(event.status === 'SCHEDULED' || event.status === 'IN_PROGRESS') && (
+            <button
+              onClick={() => setCancelModalOpen(true)}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
+            >
+              <span>✕</span>
+              Cancel Event
             </button>
           )}
         </div>
@@ -893,6 +922,49 @@ export default function EventDetailPage() {
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
               >
                 Add Player
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Event Modal */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-foreground">Cancel Event</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Are you sure you want to cancel this event? Registered players will be notified.
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Reason (Optional)
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Enter a reason for cancellation..."
+                className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setCancelModalOpen(false);
+                  setCancelReason('');
+                }}
+                disabled={cancelling}
+                className="px-4 py-2 border border-border rounded-lg text-muted-foreground hover:bg-muted/50 transition disabled:opacity-50"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleCancelEvent}
+                disabled={cancelling}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel Event'}
               </button>
             </div>
           </div>

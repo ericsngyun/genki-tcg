@@ -64,6 +64,9 @@ export class RealtimeGateway
       // Store user info on socket for later use
       client.data.user = payload;
 
+      // Automatically join user's personal notification room
+      client.join(`user:${payload.sub}`);
+
       console.log(`Client ${client.id} connected (user: ${payload.sub})`);
     } catch (error) {
       console.log(`Client ${client.id} rejected: Invalid token`);

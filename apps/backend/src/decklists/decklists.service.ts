@@ -1,13 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-
-export interface SubmitDecklistDto {
-  entryId: string;
-  deckName?: string;
-  mainDeckUrl?: string;
-  mainDeckJson?: Prisma.InputJsonValue;
-}
+import { SubmitDecklistDto } from './dto';
 
 @Injectable()
 export class DecklistsService {

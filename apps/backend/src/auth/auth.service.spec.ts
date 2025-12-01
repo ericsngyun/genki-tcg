@@ -19,6 +19,9 @@ describe('AuthService', () => {
     organization: {
       findUnique: jest.fn(),
     },
+    refreshToken: {
+      create: jest.fn(),
+    },
   };
 
   const mockJwtService = {
@@ -43,10 +46,17 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     prisma = module.get<PrismaService>(PrismaService);
     jwtService = module.get<JwtService>(JwtService);
+
+    // Mock the grantWelcomeBonus method (it's a private method that creates credits)
+    jest.spyOn(service as any, 'grantWelcomeBonus').mockResolvedValue(undefined);
+
+    // Mock generateRefreshToken method
+    jest.spyOn(service as any, 'generateRefreshToken').mockResolvedValue('mock-refresh-token');
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe('signup', () => {
@@ -63,21 +73,31 @@ describe('AuthService', () => {
         id: 'user-1',
         email: signupDto.email,
         name: signupDto.name,
-        orgId: org.id,
-        role: 'PLAYER',
         passwordHash: 'hashed',
+        memberships: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            orgId: org.id,
+            role: 'PLAYER',
+          },
+        ],
       };
 
       mockPrismaService.organization.findUnique.mockResolvedValue(org);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(user);
-      mockJwtService.sign.mockReturnValue('mock-token');
+      mockPrismaService.refreshToken.create.mockResolvedValue({ token: 'mock-refresh-token' });
+      mockJwtService.sign.mockReturnValue('mock-access-token');
 
       const result = await service.signup(signupDto);
 
-      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('accessToken', 'mock-access-token');
+      expect(result).toHaveProperty('refreshToken', 'mock-refresh-token');
       expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('orgMembership');
       expect(result.user.email).toBe(signupDto.email);
+      expect(result.orgMembership.role).toBe('PLAYER');
       expect(mockPrismaService.organization.findUnique).toHaveBeenCalledWith({
         where: { inviteCode: signupDto.inviteCode },
       });
@@ -92,6 +112,9 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
 
       await expect(service.signup(signupDto)).rejects.toThrow(ConflictException);
+      expect(mockPrismaService.organization.findUnique).toHaveBeenCalledWith({
+        where: { inviteCode: signupDto.inviteCode },
+      });
     });
 
     it('should throw UnauthorizedException if invite code is invalid', async () => {
@@ -100,6 +123,9 @@ describe('AuthService', () => {
       await expect(service.signup(signupDto)).rejects.toThrow(
         UnauthorizedException,
       );
+      expect(mockPrismaService.organization.findUnique).toHaveBeenCalledWith({
+        where: { inviteCode: signupDto.inviteCode },
+      });
     });
 
     it('should hash the password before storing', async () => {
@@ -108,14 +134,21 @@ describe('AuthService', () => {
         id: 'user-1',
         email: signupDto.email,
         name: signupDto.name,
-        orgId: org.id,
-        role: 'PLAYER',
         passwordHash: 'hashed',
+        memberships: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            orgId: org.id,
+            role: 'PLAYER',
+          },
+        ],
       };
 
       mockPrismaService.organization.findUnique.mockResolvedValue(org);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(user);
+      mockPrismaService.refreshToken.create.mockResolvedValue({ token: 'mock-refresh-token' });
       mockJwtService.sign.mockReturnValue('mock-token');
 
       await service.signup(signupDto);
@@ -139,19 +172,34 @@ describe('AuthService', () => {
         email: loginDto.email,
         name: 'Test User',
         passwordHash: hashedPassword,
-        orgId: 'org-1',
-        role: 'PLAYER',
+        memberships: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            orgId: 'org-1',
+            role: 'PLAYER',
+            org: {
+              id: 'org-1',
+              name: 'Test Org',
+              slug: 'test-org',
+            },
+          },
+        ],
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
-      mockJwtService.sign.mockReturnValue('mock-token');
+      mockPrismaService.refreshToken.create.mockResolvedValue({ token: 'mock-refresh-token' });
+      mockJwtService.sign.mockReturnValue('mock-access-token');
 
       const result = await service.login(loginDto);
 
-      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('accessToken', 'mock-access-token');
+      expect(result).toHaveProperty('refreshToken', 'mock-refresh-token');
       expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('orgMembership');
       expect(result.user.email).toBe(loginDto.email);
       expect(result.user).not.toHaveProperty('passwordHash');
+      expect(result.orgMembership.role).toBe('PLAYER');
     });
 
     it('should throw UnauthorizedException for invalid email', async () => {
@@ -167,8 +215,19 @@ describe('AuthService', () => {
         id: 'user-1',
         email: loginDto.email,
         passwordHash: await bcrypt.hash('different-password', 10),
-        orgId: 'org-1',
-        role: 'PLAYER',
+        memberships: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            orgId: 'org-1',
+            role: 'PLAYER',
+            org: {
+              id: 'org-1',
+              name: 'Test Org',
+              slug: 'test-org',
+            },
+          },
+        ],
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
@@ -185,11 +244,23 @@ describe('AuthService', () => {
         email: loginDto.email,
         name: 'Test User',
         passwordHash: hashedPassword,
-        orgId: 'org-1',
-        role: 'PLAYER',
+        memberships: [
+          {
+            id: 'membership-1',
+            userId: 'user-1',
+            orgId: 'org-1',
+            role: 'PLAYER',
+            org: {
+              id: 'org-1',
+              name: 'Test Org',
+              slug: 'test-org',
+            },
+          },
+        ],
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
+      mockPrismaService.refreshToken.create.mockResolvedValue({ token: 'mock-refresh-token' });
       mockJwtService.sign.mockReturnValue('mock-token');
 
       const result = await service.login(loginDto);

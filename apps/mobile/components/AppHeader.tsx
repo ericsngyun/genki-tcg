@@ -1,5 +1,7 @@
 import React, { memo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ViewStyle, Animated } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Animated, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Logo } from './Logo';
 import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
@@ -11,6 +13,7 @@ interface AppHeaderProps {
   showLogo?: boolean;
   logoSize?: 'small' | 'medium' | 'large';
   animated?: boolean;
+  showBackButton?: boolean;
 }
 
 export const AppHeader = memo<AppHeaderProps>(({
@@ -19,8 +22,10 @@ export const AppHeader = memo<AppHeaderProps>(({
   style,
   showLogo = true,
   logoSize = 'small',
-  animated = true
+  animated = true,
+  showBackButton = false
 }) => {
+  const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
 
@@ -56,6 +61,15 @@ export const AppHeader = memo<AppHeaderProps>(({
       animatedStyle,
       style
     ]}>
+      {showBackButton && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+      )}
       {showLogo && (
         <View style={styles.logoContainer}>
           <Logo size={logoSize} />
@@ -87,6 +101,13 @@ const styles = StyleSheet.create({
   headerCompact: {
     paddingTop: 50,
     paddingBottom: 12,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    top: 52,
+    zIndex: 10,
+    padding: 4,
   },
   logoContainer: {
     marginBottom: 12,

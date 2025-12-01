@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function DashboardLayout({
   children,
@@ -72,6 +73,7 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex items-center space-x-4">
+              <NotificationBell />
               <div className="text-sm text-foreground" role="status" aria-label={`Logged in as ${user.name}`}>
                 <span className="font-medium">{user.name}</span>
               </div>

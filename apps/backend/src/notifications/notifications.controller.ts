@@ -35,7 +35,7 @@ export class NotificationsController {
     @Query() query: GetNotificationsDto,
   ) {
     return this.notificationsService.getUserNotifications(
-      user.sub,
+      user.id,
       user.orgId,
       query
     );
@@ -48,7 +48,7 @@ export class NotificationsController {
   @Get('unread-count')
   async getUnreadCount(@CurrentUser() user: AuthenticatedUser) {
     const count = await this.notificationsService.getUnreadCount(
-      user.sub,
+      user.id,
       user.orgId
     );
     return { count };
@@ -64,7 +64,7 @@ export class NotificationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: MarkAsReadDto,
   ) {
-    await this.notificationsService.markAsRead(dto.notificationIds, user.sub);
+    await this.notificationsService.markAsRead(dto.notificationIds, user.id);
     return { success: true };
   }
 
@@ -74,7 +74,7 @@ export class NotificationsController {
    */
   @Patch('read-all')
   async markAllAsRead(@CurrentUser() user: AuthenticatedUser) {
-    await this.notificationsService.markAllAsRead(user.sub, user.orgId);
+    await this.notificationsService.markAllAsRead(user.id, user.orgId);
     return { success: true };
   }
 
@@ -87,7 +87,7 @@ export class NotificationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') notificationId: string,
   ) {
-    await this.notificationsService.deleteNotification(notificationId, user.sub);
+    await this.notificationsService.deleteNotification(notificationId, user.id);
     return { success: true };
   }
 
@@ -97,7 +97,7 @@ export class NotificationsController {
    */
   @Get('preferences')
   async getPreferences(@CurrentUser() user: AuthenticatedUser) {
-    return this.notificationsService.getAllPreferences(user.sub, user.orgId);
+    return this.notificationsService.getAllPreferences(user.id, user.orgId);
   }
 
   /**
@@ -111,7 +111,7 @@ export class NotificationsController {
     @Body() dto: UpdatePreferenceDto,
   ) {
     return this.notificationsService.updatePreference(
-      user.sub,
+      user.id,
       user.orgId,
       dto
     );
@@ -128,7 +128,7 @@ export class NotificationsController {
     @Body() dto: RegisterTokenDto,
   ) {
     return this.notificationsService.registerToken(
-      user.sub,
+      user.id,
       dto.token,
       dto.platform as any
     );

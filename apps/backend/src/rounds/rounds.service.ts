@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { RatingsService } from '../ratings/ratings.service';
+import { NotificationType, NotificationPriority } from '@prisma/client';
 import {
   generateSwissPairings,
   getPlayerRecordsForPairing,
@@ -12,9 +15,14 @@ import {
 
 @Injectable()
 export class RoundsService {
+  private readonly logger = new Logger(RoundsService.name);
+
   constructor(
     private prisma: PrismaService,
-    private realtimeGateway: RealtimeGateway
+    private realtimeGateway: RealtimeGateway,
+    private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => RatingsService))
+    private ratingsService: RatingsService
   ) {}
 
   /**
@@ -161,6 +169,17 @@ export class RoundsService {
     // Emit real-time event
     this.realtimeGateway.emitPairingsPosted(eventId, nextRoundNumber);
 
+    // Notify all event participants about new pairings (non-blocking)
+    this.notificationsService.broadcastToEvent(eventId, {
+      orgId: event.orgId,
+      type: NotificationType.PAIRINGS_POSTED,
+      priority: NotificationPriority.HIGH,
+      title: `Round ${nextRoundNumber} Pairings Posted`,
+      body: `Pairings for Round ${nextRoundNumber} are now available`,
+      eventId: eventId,
+      roundId: result.round.id,
+    }).catch(err => console.error('Failed to send pairings posted notification:', err));
+
     return result;
   }
 
@@ -194,6 +213,17 @@ export class RoundsService {
     });
 
     this.realtimeGateway.emitRoundStarted(round.eventId, round.roundNumber);
+
+    // Notify all event participants that round has started (non-blocking)
+    this.notificationsService.broadcastToEvent(round.eventId, {
+      orgId: round.event.orgId,
+      type: NotificationType.ROUND_STARTED,
+      priority: NotificationPriority.HIGH,
+      title: `Round ${round.roundNumber} Started`,
+      body: `Round ${round.roundNumber} has started. Time to play!`,
+      eventId: round.eventId,
+      roundId: round.id,
+    }).catch(err => console.error('Failed to send round started notification:', err));
 
     return updatedRound;
   }
@@ -333,6 +363,25 @@ export class RoundsService {
       // Emit tournament completion event
       this.realtimeGateway.emitTournamentCompleted(round.eventId);
       this.realtimeGateway.emitStandingsUpdated(round.eventId);
+
+      // Notify all event participants about tournament completion (non-blocking)
+      this.notificationsService.broadcastToEvent(round.eventId, {
+        orgId: round.event.orgId,
+        type: NotificationType.TOURNAMENT_COMPLETED,
+        priority: NotificationPriority.HIGH,
+        title: 'Tournament Completed',
+        body: `The tournament has been completed! Check the final standings.`,
+        eventId: round.eventId,
+      }).catch(err => console.error('Failed to send tournament completed notification:', err));
+
+      // Auto-process ratings for the tournament (non-blocking)
+      this.ratingsService.processTournamentRatings(round.eventId)
+        .then(() => {
+          this.logger.log(`Ratings processed successfully for tournament ${round.eventId}`);
+        })
+        .catch(err => {
+          this.logger.error(`Failed to process ratings for tournament ${round.eventId}:`, err);
+        });
     }
 
     return result;

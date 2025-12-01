@@ -267,6 +267,61 @@ class ApiClient {
     const { data } = await this.client.post('/auth/discord/unlink');
     return data;
   }
+
+  // Notifications
+  async getNotifications(params?: { status?: string; type?: string; limit?: number; offset?: number }) {
+    const { data } = await this.client.get('/notifications', { params });
+    return data;
+  }
+
+  async getUnreadCount() {
+    const { data } = await this.client.get('/notifications/unread-count');
+    return data;
+  }
+
+  async markNotificationsAsRead(ids: string[]) {
+    const { data } = await this.client.patch('/notifications/read', { ids });
+    return data;
+  }
+
+  async markAllNotificationsAsRead() {
+    const { data } = await this.client.patch('/notifications/read-all');
+    return data;
+  }
+
+  async deleteNotification(id: string) {
+    const { data } = await this.client.delete(`/notifications/${id}`);
+    return data;
+  }
+
+  async getNotificationPreferences() {
+    const { data } = await this.client.get('/notifications/preferences');
+    return data;
+  }
+
+  async updateNotificationPreference(
+    notificationType: string,
+    preferences: { enableInApp?: boolean; enablePush?: boolean; enableEmail?: boolean }
+  ) {
+    const { data } = await this.client.patch('/notifications/preferences', {
+      notificationType,
+      ...preferences,
+    });
+    return data;
+  }
+
+  async registerPushToken(token: string, platform: 'IOS' | 'ANDROID' | 'WEB') {
+    const { data } = await this.client.post('/notifications/tokens', {
+      token,
+      platform,
+    });
+    return data;
+  }
+
+  async unregisterPushToken(token: string) {
+    const { data } = await this.client.delete(`/notifications/tokens/${token}`);
+    return data;
+  }
 }
 
 export const api = new ApiClient();

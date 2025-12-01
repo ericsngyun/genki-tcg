@@ -1,12 +1,12 @@
 import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import type { MatchResult } from '@prisma/client';
+import { MatchesService } from './matches.service';
 import {
-  MatchesService,
   ReportMatchResultDto,
   PlayerReportResultDto,
   ConfirmMatchResultDto,
-} from './matches.service';
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';

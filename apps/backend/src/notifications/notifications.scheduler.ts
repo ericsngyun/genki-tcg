@@ -19,7 +19,8 @@ export class NotificationsScheduler {
       const result = await this.notificationsService.cleanupExpiredNotifications();
       this.logger.log(`Daily cleanup complete: ${result.count} notifications deleted`);
     } catch (error) {
-      this.logger.error(`Daily cleanup failed: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Daily cleanup failed: ${message}`);
     }
   }
 
@@ -34,7 +35,8 @@ export class NotificationsScheduler {
       await this.notificationsService.sendEventReminders();
       this.logger.log('Event reminders sent');
     } catch (error) {
-      this.logger.error(`Event reminders failed: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Event reminders failed: ${message}`);
     }
   }
 

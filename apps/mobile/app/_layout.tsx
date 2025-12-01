@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { theme as customTheme } from '../lib/theme';
 import { SocketProvider } from '../contexts/SocketContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 // Integrate custom theme with React Native Paper's Material Design 3 Dark Theme
 const paperTheme = {
@@ -29,6 +30,9 @@ const paperTheme = {
 };
 
 export default function RootLayout() {
+  // Initialize push notifications on app launch
+  usePushNotifications();
+
   return (
     <SocketProvider>
       <PaperProvider theme={paperTheme}>
@@ -46,6 +50,8 @@ export default function RootLayout() {
           <Stack.Screen name="pairings" />
           <Stack.Screen name="standings" />
           <Stack.Screen name="match-details" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="notification-preferences" />
         </Stack>
       </PaperProvider>
     </SocketProvider>

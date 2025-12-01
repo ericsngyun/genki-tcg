@@ -518,7 +518,8 @@ export class NotificationsService {
           const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
           tickets.push(...ticketChunk);
         } catch (error) {
-          this.logger.error(`Error sending push notification chunk: ${error.message}`);
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Error sending push notification chunk: ${message}`);
         }
       }
 
@@ -533,7 +534,8 @@ export class NotificationsService {
 
       this.logger.debug(`Sent ${messages.length} push notifications to user ${userId}`);
     } catch (error) {
-      this.logger.error(`Failed to send push notification to user ${userId}: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to send push notification to user ${userId}: ${message}`);
     }
   }
 
@@ -558,7 +560,8 @@ export class NotificationsService {
 
       this.logger.debug(`Emitted notification via WebSocket to user ${userId}`);
     } catch (error) {
-      this.logger.error(`Failed to emit notification via WebSocket: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to emit notification via WebSocket: ${message}`);
     }
   }
 

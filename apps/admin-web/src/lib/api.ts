@@ -233,6 +233,11 @@ class ApiClient {
     return data;
   }
 
+  async cancelEvent(eventId: string, reason?: string) {
+    const { data } = await this.client.post(`/events/${eventId}/cancel`, { reason });
+    return data;
+  }
+
   async getMyMatches(eventId: string) {
     const { data } = await this.client.get(`/events/${eventId}/my-matches`);
     return data;
@@ -394,6 +399,135 @@ class ApiClient {
     const { data } = await this.client.get('/orgs/users', {
       params: { search },
     });
+    return data;
+  }
+
+  // Notifications
+  async getNotifications(params?: { status?: string; type?: string; limit?: number; offset?: number }) {
+    const { data } = await this.client.get('/notifications', { params });
+    return data;
+  }
+
+  async getUnreadCount() {
+    const { data } = await this.client.get('/notifications/unread-count');
+    return data;
+  }
+
+  async markNotificationsAsRead(notificationIds: string[]) {
+    const { data } = await this.client.patch('/notifications/read', { notificationIds });
+    return data;
+  }
+
+  async markAllNotificationsAsRead() {
+    const { data } = await this.client.patch('/notifications/read-all');
+    return data;
+  }
+
+  async deleteNotification(notificationId: string) {
+    const { data } = await this.client.delete(`/notifications/${notificationId}`);
+    return data;
+  }
+
+  // Ratings & Rankings
+  async getLifetimeLeaderboard(category: string, params?: { limit?: number; offset?: number; search?: string }) {
+    const { data } = await this.client.get('/ratings/leaderboard', {
+      params: { category, ...params },
+    });
+    return data;
+  }
+
+  async resetCategoryRatings(category: string) {
+    const { data } = await this.client.post(`/ratings/reset/${category}`);
+    return data;
+  }
+
+  async getPlayerRatingHistory(playerId: string, category: string, params?: { limit?: number; offset?: number }) {
+    const { data } = await this.client.get(`/ratings/players/${playerId}/history`, {
+      params: { category, ...params },
+    });
+    return data;
+  }
+
+  async exportLeaderboard(category: string) {
+    const data = await this.getLifetimeLeaderboard(category, { limit: 1000 });
+
+    // Convert to CSV
+    const headers = ['Rank', 'Player', 'Tier', 'Rating', 'Matches', 'Wins', 'Losses', 'Draws', 'Win Rate'];
+    const rows = data.ratings.map((r: any) => [
+      r.rank,
+      r.userName,
+      r.tier,
+      r.lifetimeRating,
+      r.matchesPlayed,
+      r.matchWins,
+      r.matchLosses,
+      r.matchDraws,
+      `${r.winRate}%`,
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row: any[]) => row.map(cell => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `leaderboard-${category}-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async getSeasonLeaderboard(seasonId: string, category: string, params?: { limit?: number; offset?: number }) {
+    const { data } = await this.client.get(`/ratings/seasons/${seasonId}/leaderboard`, {
+      params: { category, ...params },
+    });
+    return data;
+  }
+
+  async getPlayerRanks(playerId: string) {
+    const { data } = await this.client.get(`/ratings/players/${playerId}/ranks`);
+    return data;
+  }
+
+  async getMyRanks() {
+    const { data } = await this.client.get('/ratings/me/ranks');
+    return data;
+  }
+
+  async processTournamentRatings(tournamentId: string) {
+    const { data } = await this.client.post(`/ratings/tournaments/${tournamentId}/process-ratings`);
+    return data;
+  }
+
+  async createSeason(seasonData: { name: string; startDate: string; endDate: string; autoActivate?: boolean }) {
+    const { data } = await this.client.post('/ratings/seasons', seasonData);
+    return data;
+  }
+
+  async getActiveSeason() {
+    const { data } = await this.client.get('/ratings/seasons/active');
+    return data;
+  }
+
+  async getSeasons(status?: string) {
+    const { data } = await this.client.get('/ratings/seasons', {
+      params: { status },
+    });
+    return data;
+  }
+
+  async initializeSeasonRatings(seasonId: string) {
+    const { data } = await this.client.post(`/ratings/seasons/${seasonId}/initialize-ratings`);
+    return data;
+  }
+
+  async updateSeasonStatus(seasonId: string, status: string) {
+    const { data } = await this.client.post(`/ratings/seasons/${seasonId}/status`, { status });
     return data;
   }
 }

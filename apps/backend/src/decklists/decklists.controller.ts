@@ -7,7 +7,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
-import { DecklistsService, SubmitDecklistDto } from './decklists.service';
+import { DecklistsService } from './decklists.service';
+import { SubmitDecklistDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';

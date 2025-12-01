@@ -716,6 +716,8 @@ export class EventsService {
 
   /**
    * Player drops themselves from the tournament
+   * - For SCHEDULED events: Withdraws application (deletes entry)
+   * - For IN_PROGRESS events: Drops from tournament (marks as dropped)
    */
   async playerDrop(eventId: string, userId: string, userOrgId: string, currentRound?: number) {
     // Validate event exists
@@ -755,6 +757,32 @@ export class EventsService {
       throw new BadRequestException('You have already dropped from this event');
     }
 
+    // SCHEDULED events: Withdraw application (delete entry)
+    if (event.status === 'SCHEDULED') {
+      // Check if player has checked in - cannot withdraw after check-in
+      if (entry.checkedInAt) {
+        throw new BadRequestException('Cannot withdraw after checking in. Please contact staff.');
+      }
+
+      // Delete the entry entirely for clean withdrawal
+      await this.prisma.entry.delete({
+        where: { id: entry.id },
+      });
+
+      // Notify admins about withdrawal
+      this.notificationsService.notifyAdmins(userOrgId, {
+        type: NotificationType.PLAYER_DROPPED,
+        priority: NotificationPriority.NORMAL,
+        title: 'Player Withdrew',
+        body: `${entry.user.name} withdrew their application from ${event.name}`,
+        eventId: event.id,
+      }).catch(err => console.error('Failed to send withdrawal notification:', err));
+
+      // Return the deleted entry for confirmation
+      return entry;
+    }
+
+    // IN_PROGRESS or other events: Mark as dropped (existing behavior)
     const updatedEntry = await this.prisma.entry.update({
       where: { id: entry.id },
       data: {

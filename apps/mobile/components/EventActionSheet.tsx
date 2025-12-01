@@ -256,12 +256,22 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
                   />
                 )}
 
+                {isRegistered && !isCheckedIn && !isDropped && event.status === 'SCHEDULED' && (
+                  <ActionButton
+                    icon="remove-circle"
+                    label="Withdraw Application"
+                    description="Cancel your registration for this event"
+                    onPress={() => handleAction(() => onDrop(event.id))}
+                    variant="warning"
+                  />
+                )}
+
                 {isRegistered && requiresPayment && !isPaid && (
                   <ActionButton
                     icon="card"
                     label="Payment Required"
                     description={`$${((event.entryFeeCents || 0) / 100).toFixed(2)} entry fee - Pay at venue`}
-                    onPress={() => {}}
+                    onPress={() => { }}
                     variant="warning"
                     disabled
                   />

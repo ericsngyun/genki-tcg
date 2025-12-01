@@ -2,36 +2,24 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException 
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RatingsService } from '../ratings/ratings.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { MatchResult } from '@prisma/client';
+import { NotificationType, NotificationPriority } from '@prisma/client';
 import { validateMatchResult, isBo3Format } from './match-validation';
 import { areAllMatchesReported } from '@genki-tcg/tournament-logic';
-
-export interface ReportMatchResultDto {
-  matchId: string;
-  result: MatchResult;
-  gamesWonA: number;
-  gamesWonB: number;
-}
-
-export interface PlayerReportResultDto {
-  result: MatchResult;
-  gamesWonA: number;
-  gamesWonB: number;
-}
-
-export interface ConfirmMatchResultDto {
-  confirm: boolean;
-  counterResult?: MatchResult;
-  counterGamesWonA?: number;
-  counterGamesWonB?: number;
-}
+import {
+  ReportMatchResultDto,
+  PlayerReportResultDto,
+  ConfirmMatchResultDto,
+} from './dto';
 
 @Injectable()
 export class MatchesService {
   constructor(
     private prisma: PrismaService,
     private realtimeGateway: RealtimeGateway,
-    private ratingsService: RatingsService
+    private ratingsService: RatingsService,
+    private notificationsService: NotificationsService
   ) {}
 
   async reportMatchResult(dto: ReportMatchResultDto, reportedBy: string, userOrgId: string) {
@@ -83,90 +71,49 @@ export class MatchesService {
     // Update player ratings
     await this.updatePlayerRatings(match, updatedMatch, userOrgId);
 
+    // Notify both players about match result being reported by admin (non-blocking)
+    if (match.playerAId) {
+      this.notificationsService.createAndSend({
+        userId: match.playerAId,
+        orgId: userOrgId,
+        type: NotificationType.MATCH_RESULT_REPORTED,
+        priority: NotificationPriority.NORMAL,
+        title: 'Match Result Reported',
+        body: `Result reported for your match at Table ${match.tableNumber}`,
+        eventId: match.round.eventId,
+        matchId: match.id,
+      }).catch(err => console.error('Failed to send match reported notification:', err));
+    }
+    if (match.playerBId) {
+      this.notificationsService.createAndSend({
+        userId: match.playerBId,
+        orgId: userOrgId,
+        type: NotificationType.MATCH_RESULT_REPORTED,
+        priority: NotificationPriority.NORMAL,
+        title: 'Match Result Reported',
+        body: `Result reported for your match at Table ${match.tableNumber}`,
+        eventId: match.round.eventId,
+        matchId: match.id,
+      }).catch(err => console.error('Failed to send match reported notification:', err));
+    }
+
     return updatedMatch;
   }
 
   /**
    * Update player ratings based on match result
+   * NOTE: Ratings are now processed at the tournament level when the event completes.
+   * This method is kept as a no-op for backward compatibility.
+   * See RatingsService.processTournamentRatings() and RoundsService.completeRound()
    */
   private async updatePlayerRatings(
     match: any,
     updatedMatch: any,
     orgId: string
   ) {
-    try {
-      // Only update ratings if both players exist (not a bye)
-      if (!match.playerBId) {
-        return;
-      }
-
-      const gameType = match.round.event.game;
-
-      // Get current ratings for both players
-      const [playerARating, playerBRating] = await Promise.all([
-        this.prisma.playerRating.findUnique({
-          where: {
-            userId_orgId_gameType: {
-              userId: match.playerAId,
-              orgId,
-              gameType,
-            },
-          },
-        }),
-        this.prisma.playerRating.findUnique({
-          where: {
-            userId_orgId_gameType: {
-              userId: match.playerBId,
-              orgId,
-              gameType,
-            },
-          },
-        }),
-      ]);
-
-      // Use default rating if player doesn't have a rating yet
-      const playerARatingValue = playerARating?.rating || 1500;
-      const playerARD = playerARating?.ratingDeviation || 350;
-      const playerBRatingValue = playerBRating?.rating || 1500;
-      const playerBRD = playerBRating?.ratingDeviation || 350;
-
-      // Update both players' ratings
-      await Promise.all([
-        this.ratingsService.updateRating(
-          match.playerAId,
-          orgId,
-          gameType,
-          [
-            {
-              opponentId: match.playerBId,
-              opponentRating: playerBRatingValue,
-              opponentRD: playerBRD,
-              result: updatedMatch.result,
-              eventId: match.round.eventId,
-              matchId: match.id,
-            },
-          ]
-        ),
-        this.ratingsService.updateRating(
-          match.playerBId,
-          orgId,
-          gameType,
-          [
-            {
-              opponentId: match.playerAId,
-              opponentRating: playerARatingValue,
-              opponentRD: playerARD,
-              result: updatedMatch.result,
-              eventId: match.round.eventId,
-              matchId: match.id,
-            },
-          ]
-        ),
-      ]);
-    } catch (error) {
-      // Log error but don't fail the match result
-      console.error('Failed to update player ratings:', error);
-    }
+    // Ratings are now processed at tournament completion, not per-match
+    // This prevents rating churn and ensures proper Glicko-2 calculations
+    return;
   }
 
   async getMatch(matchId: string, userOrgId: string) {
@@ -394,6 +341,21 @@ export class MatchesService {
     // Check if round can be completed now
     await this.checkAndNotifyRoundCompletion(match.round);
 
+    // Notify both players that match result was confirmed (non-blocking)
+    const opponentId = isPlayerA ? updatedMatch.playerBId : updatedMatch.playerAId;
+    if (opponentId) {
+      this.notificationsService.createAndSend({
+        userId: opponentId,
+        orgId: userOrgId,
+        type: NotificationType.MATCH_RESULT_CONFIRMED,
+        priority: NotificationPriority.NORMAL,
+        title: 'Match Result Confirmed',
+        body: `Your match result for Table ${match.tableNumber} has been confirmed`,
+        eventId: match.round.eventId,
+        matchId: match.id,
+      }).catch(err => console.error('Failed to send match confirmed notification:', err));
+    }
+
     return {
       match: updatedMatch,
       requiresConfirmation: false,
@@ -527,6 +489,21 @@ export class MatchesService {
 
       // Check if round can be completed now
       await this.checkAndNotifyRoundCompletion(updatedMatch.round);
+
+      // Notify both players that match result was confirmed (non-blocking)
+      const reporterId = updatedMatch.reportedBy;
+      if (reporterId) {
+        this.notificationsService.createAndSend({
+          userId: reporterId,
+          orgId: userOrgId,
+          type: NotificationType.MATCH_RESULT_CONFIRMED,
+          priority: NotificationPriority.NORMAL,
+          title: 'Match Result Confirmed',
+          body: `Your opponent confirmed the match result for Table ${updatedMatch.tableNumber}`,
+          eventId: updatedMatch.round.eventId,
+          matchId: matchId,
+        }).catch(err => console.error('Failed to send match confirmed notification:', err));
+      }
 
       return {
         match: updatedMatch,
