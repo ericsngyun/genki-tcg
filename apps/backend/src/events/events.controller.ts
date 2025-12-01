@@ -104,4 +104,11 @@ export class EventsController {
   async playerDrop(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string, @Body() body?: { currentRound?: number }) {
     return this.eventsService.playerDrop(eventId, user.id, user.orgId, body?.currentRound);
   }
+
+  @Post(':id/cancel')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async cancelEvent(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string, @Body() body?: { reason?: string }) {
+    return this.eventsService.cancelEvent(eventId, user.orgId, user.id, body?.reason);
+  }
 }

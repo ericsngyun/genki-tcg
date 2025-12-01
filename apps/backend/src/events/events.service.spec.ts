@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   NotFoundException,
   ForbiddenException,
@@ -10,8 +11,9 @@ import {
 describe('EventsService', () => {
   let service: EventsService;
   let prisma: PrismaService;
+  let notificationsService: NotificationsService;
 
-  const mockPrismaService = {
+  const mockPrismaService: any = {
     event: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -25,7 +27,14 @@ describe('EventsService', () => {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+    $transaction: jest.fn((callback: any) => callback(mockPrismaService)),
+  };
+
+  const mockNotificationsService = {
+    notifyAdmins: jest.fn().mockResolvedValue(undefined),
+    createAndSend: jest.fn().mockResolvedValue(undefined),
+    broadcastToEvent: jest.fn().mockResolvedValue(undefined),
+    sendPushNotification: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -36,11 +45,16 @@ describe('EventsService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
       ],
     }).compile();
 
     service = module.get<EventsService>(EventsService);
     prisma = module.get<PrismaService>(PrismaService);
+    notificationsService = module.get<NotificationsService>(NotificationsService);
   });
 
   afterEach(() => {
@@ -338,7 +352,7 @@ describe('EventsService', () => {
       ];
 
       mockPrismaService.event.findUnique.mockResolvedValue(event);
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+      mockPrismaService.$transaction.mockImplementation(async (callback: any) => {
         return callback(mockPrismaService);
       });
 
