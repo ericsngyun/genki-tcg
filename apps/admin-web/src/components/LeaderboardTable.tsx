@@ -1,4 +1,5 @@
 import { TierBadge } from './TierBadge';
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 type PlayerTier =
   | 'SPROUT'
@@ -34,24 +35,23 @@ interface LeaderboardTableProps {
 function getRankStyle(rank: number): string {
   if (rank <= 3) {
     const colors = {
-      1: 'bg-yellow-500/10 border-l-4 border-l-yellow-500',
-      2: 'bg-slate-400/10 border-l-4 border-l-slate-400',
-      3: 'bg-orange-700/10 border-l-4 border-l-orange-700',
+      1: 'bg-yellow-500/5 hover:bg-yellow-500/10 border-l-4 border-l-yellow-500',
+      2: 'bg-slate-400/5 hover:bg-slate-400/10 border-l-4 border-l-slate-400',
+      3: 'bg-orange-700/5 hover:bg-orange-700/10 border-l-4 border-l-orange-700',
     };
     return colors[rank as 1 | 2 | 3];
   }
   if (rank <= 10) {
-    return 'bg-primary/5 border-l-2 border-l-primary/30';
+    return 'bg-primary/5 hover:bg-primary/10 border-l-2 border-l-primary/30';
   }
-  return 'hover:bg-muted/50';
+  return 'hover:bg-muted/50 border-l-2 border-l-transparent';
 }
 
-function getRankText(rank: number): string {
-  if (rank <= 3) {
-    const icons = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    return icons[rank as 1 | 2 | 3];
-  }
-  return `#${rank}`;
+function getRankIcon(rank: number) {
+  if (rank === 1) return <span className="text-2xl">👑</span>;
+  if (rank === 2) return <span className="text-2xl">🥈</span>;
+  if (rank === 3) return <span className="text-2xl">🥉</span>;
+  return <span className="text-muted-foreground font-mono font-bold">#{rank}</span>;
 }
 
 export function LeaderboardTable({
@@ -64,16 +64,16 @@ export function LeaderboardTable({
 }: LeaderboardTableProps) {
   if (loading) {
     return (
-      <div className="bg-card rounded-xl border border-border p-12 text-center">
+      <div className="bg-card rounded-xl border border-border p-12 text-center shadow-sm">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Loading leaderboard...</p>
+        <p className="text-muted-foreground font-medium">Loading leaderboard...</p>
       </div>
     );
   }
 
   if (entries.length === 0) {
     return (
-      <div className="bg-card/50 border border-border rounded-xl p-12 text-center">
+      <div className="bg-card/50 border border-border rounded-xl p-12 text-center animate-in fade-in zoom-in duration-300">
         <div className="text-4xl mb-4">📊</div>
         <h3 className="text-xl font-bold text-foreground mb-2">No Rankings Yet</h3>
         <p className="text-muted-foreground">
@@ -84,60 +84,63 @@ export function LeaderboardTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="overflow-x-auto max-h-[800px] overflow-y-auto custom-scrollbar">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm shadow-sm">
+              <tr className="border-b border-border">
+                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-24">
                   Rank
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                   Player
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+                <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-40">
                   Tier
                 </th>
-                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-32">
                   Rating
                 </th>
-                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-48">
                   Win Rate
                 </th>
-                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-sm uppercase tracking-wider">
+                <th className="text-right py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-32">
                   Matches
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {entries.map((entry) => (
+            <tbody className="divide-y divide-border/50">
+              {entries.map((entry, index) => (
                 <tr
                   key={entry.userId}
                   onClick={onPlayerClick ? () => onPlayerClick({ userId: entry.userId, userName: entry.userName }) : undefined}
                   className={`
-                    border-b border-border/50 transition-colors
+                    transition-all duration-200 group
                     ${getRankStyle(entry.rank)}
-                    ${onPlayerClick ? 'cursor-pointer hover:bg-muted/30' : ''}
+                    ${onPlayerClick ? 'cursor-pointer' : ''}
                   `}
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {/* Rank */}
                   <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-black text-foreground w-16">
-                        {getRankText(entry.rank)}
-                      </span>
-                      {entry.rank <= 10 && (
-                        <div className="w-1 h-8 bg-primary/20 rounded-full"></div>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 flex justify-center">
+                        {getRankIcon(entry.rank)}
+                      </div>
                     </div>
                   </td>
 
                   {/* Player */}
                   <td className="py-4 px-6">
-                    <div className="font-semibold text-foreground">
-                      {entry.userName}
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                        {entry.userName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {entry.userName}
+                      </div>
                     </div>
                   </td>
 
@@ -149,21 +152,22 @@ export function LeaderboardTable({
                   {/* Rating (Admin Only) */}
                   <td className="py-4 px-6 text-right">
                     <div className="font-mono font-bold text-foreground">
-                      {entry.lifetimeRating || entry.seasonalRatingHidden}
+                      {Math.round(entry.lifetimeRating || entry.seasonalRatingHidden || 0)}
                     </div>
-                    <div className="text-xs text-muted-foreground">Internal</div>
+                    <div className="text-[10px] text-muted-foreground uppercase">Internal</div>
                   </td>
 
                   {/* Win Rate */}
                   <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="flex items-center justify-end gap-3">
+                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all"
+                          className={`h-full transition-all duration-500 rounded-full ${parseFloat(entry.winRate) >= 50 ? 'bg-green-500' : 'bg-orange-500'
+                            }`}
                           style={{ width: `${entry.winRate}%` }}
                         />
                       </div>
-                      <span className="font-semibold text-foreground w-12 text-right">
+                      <span className="font-mono font-medium text-foreground w-12 text-right">
                         {entry.winRate}%
                       </span>
                     </div>
@@ -182,22 +186,22 @@ export function LeaderboardTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 bg-card rounded-xl border border-border">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
+        <div className="flex items-center justify-between px-6 py-4 bg-card rounded-xl border border-border shadow-sm">
+          <div className="text-sm text-muted-foreground font-medium">
+            Page <span className="text-foreground">{currentPage}</span> of <span className="text-foreground">{totalPages}</span>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-muted text-foreground rounded-lg font-medium hover:bg-muted/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-background border border-border text-foreground rounded-lg font-medium hover:bg-muted transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Previous
             </button>
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
             >
               Next
             </button>
