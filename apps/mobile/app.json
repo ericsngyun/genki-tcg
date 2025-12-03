@@ -39,7 +39,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "your-org-slug",
+          "project": "genki-tcg-mobile"
+        }
+      ]
     ],
     "scheme": "genki-tcg",
     "extra": {

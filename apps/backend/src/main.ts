@@ -1,3 +1,6 @@
+// Import Sentry instrumentation FIRST
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { json, urlencoded } from 'express';

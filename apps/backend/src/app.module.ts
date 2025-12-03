@@ -19,9 +19,14 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { SeedModule } from './seed/seed.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { SentryModule } from './sentry/sentry.module';
+import { SentryModule as SentryNestModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
+    // Sentry error tracking (must be first)
+    SentryNestModule.forRoot(),
+
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
@@ -61,6 +66,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     SeedModule,
     RatingsModule,
     LeaderboardModule,
+    SentryModule,
   ],
   providers: [
     // SECURITY: Enable global rate limiting

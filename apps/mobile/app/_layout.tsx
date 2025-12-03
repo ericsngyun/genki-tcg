@@ -4,6 +4,10 @@ import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import { theme as customTheme } from '../lib/theme';
 import { SocketProvider } from '../contexts/SocketContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { initSentry } from '../lib/sentry';
+
+// Initialize Sentry error tracking
+initSentry();
 
 // Integrate custom theme with React Native Paper's Material Design 3 Dark Theme
 const paperTheme = {
