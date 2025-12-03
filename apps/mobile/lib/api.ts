@@ -339,6 +339,44 @@ class ApiClient {
     });
     return data;
   }
+
+  // Player Stats & Profile
+  async getMyRanks() {
+    const { data } = await this.client.get('/ratings/me/ranks');
+    return data;
+  }
+
+  async getPlayerRanks(playerId: string) {
+    const { data } = await this.client.get(`/ratings/players/${playerId}/ranks`);
+    return data;
+  }
+
+  async getMyRatingHistory(gameType?: string) {
+    const { data } = await this.client.get('/ratings/me/history', {
+      params: { gameType },
+    });
+    return data;
+  }
+
+  async getMyEvents(params?: { status?: string; limit?: number; offset?: number }) {
+    const { data } = await this.client.get('/events/me', { params });
+    return data;
+  }
+
+  async getMyMatches(eventId: string) {
+    const { data } = await this.client.get(`/events/${eventId}/my-matches`);
+    return data;
+  }
+
+  async getMyTournamentHistory(params?: { limit?: number; offset?: number }) {
+    const { data } = await this.client.get('/events/me/history', { params });
+    return data;
+  }
+
+  async updateProfile(updates: { name?: string; avatarUrl?: string }) {
+    const { data } = await this.client.patch('/users/me', updates);
+    return data;
+  }
 }
 
 export const api = new ApiClient();
