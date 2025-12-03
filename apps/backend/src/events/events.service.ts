@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { EventStatus } from '@prisma/client';
@@ -7,6 +7,8 @@ import { CreateEventDto, UpdateEventDto } from './dto';
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
@@ -29,7 +31,7 @@ export class EventsService {
       title: 'New Event Published',
       body: `${event.name} is now open for registration`,
       eventId: event.id,
-    }).catch(err => console.error('Failed to send event published notification:', err));
+    }).catch(err => this.logger.error('Failed to send event published notification:', err));
 
     return event;
   }
@@ -127,6 +129,19 @@ export class EventsService {
       throw new BadRequestException('Already registered for this event');
     }
 
+    // Check event capacity if maxPlayers is set
+    if (event.maxPlayers) {
+      const currentEntryCount = await this.prisma.entry.count({
+        where: {
+          eventId,
+        },
+      });
+
+      if (currentEntryCount >= event.maxPlayers) {
+        throw new BadRequestException('Event is at maximum capacity');
+      }
+    }
+
     const entry = await this.prisma.entry.create({
       data: {
         eventId,
@@ -148,7 +163,7 @@ export class EventsService {
       title: 'New Player Registered',
       body: `${entry.user.name} registered for ${event.name}`,
       eventId: event.id,
-    }).catch(err => console.error('Failed to send player registered notification:', err));
+    }).catch(err => this.logger.error('Failed to send player registered notification:', err));
 
     return entry;
   }
@@ -352,7 +367,7 @@ export class EventsService {
         title: 'Prize Won!',
         body: `You won $${(dist.amount / 100).toFixed(2)} for placing ${dist.placement} in ${event.name}`,
         eventId: event.id,
-      }).catch(err => console.error('Failed to send prize notification:', err));
+      }).catch(err => this.logger.error('Failed to send prize notification:', err));
     });
 
     // Also notify admins
@@ -362,7 +377,7 @@ export class EventsService {
       title: 'Prizes Distributed',
       body: `Prizes have been distributed for ${event.name}`,
       eventId: event.id,
-    }).catch(err => console.error('Failed to send prize distribution notification to admins:', err));
+    }).catch(err => this.logger.error('Failed to send prize distribution notification to admins:', err));
 
     return result;
   }
@@ -405,7 +420,7 @@ export class EventsService {
       title: 'Player Dropped',
       body: `${entry.user.name} dropped from ${entry.event.name}`,
       eventId: entry.event.id,
-    }).catch(err => console.error('Failed to send player dropped notification:', err));
+    }).catch(err => this.logger.error('Failed to send player dropped notification:', err));
 
     return updatedEntry;
   }
@@ -442,7 +457,7 @@ export class EventsService {
       title: 'Event Updated',
       body: `${updatedEvent.name} details have been updated`,
       eventId: updatedEvent.id,
-    }).catch(err => console.error('Failed to send event updated notification:', err));
+    }).catch(err => this.logger.error('Failed to send event updated notification:', err));
 
     return updatedEvent;
   }
@@ -674,7 +689,7 @@ export class EventsService {
             });
           } catch (error) {
             // If user doesn't exist, treat as BYE
-            console.error(`Failed to fetch playerB with id ${match.playerBId}:`, error);
+            this.logger.error(`Failed to fetch playerB with id ${match.playerBId}:`, error);
             opponent = null;
           }
         }
@@ -689,7 +704,7 @@ export class EventsService {
               select: { id: true, name: true },
             });
           } catch (error) {
-            console.error(`Failed to fetch playerA with id ${match.playerAId}:`, error);
+            this.logger.error(`Failed to fetch playerA with id ${match.playerAId}:`, error);
             // PlayerA should always exist, but if not, we can't proceed
             throw new Error('Match data is invalid: playerA not found');
           }
@@ -776,7 +791,7 @@ export class EventsService {
         title: 'Player Withdrew',
         body: `${entry.user.name} withdrew their application from ${event.name}`,
         eventId: event.id,
-      }).catch(err => console.error('Failed to send withdrawal notification:', err));
+      }).catch(err => this.logger.error('Failed to send withdrawal notification:', err));
 
       // Return the deleted entry for confirmation
       return entry;
@@ -798,7 +813,7 @@ export class EventsService {
       title: 'Player Dropped',
       body: `${entry.user.name} dropped from ${event.name}`,
       eventId: event.id,
-    }).catch(err => console.error('Failed to send player dropped notification:', err));
+    }).catch(err => this.logger.error('Failed to send player dropped notification:', err));
 
     return updatedEntry;
   }
@@ -854,7 +869,7 @@ export class EventsService {
         title: 'Event Cancelled',
         body: notificationBody,
         eventId: event.id,
-      }).catch(err => console.error('Failed to broadcast event cancellation:', err));
+      }).catch(err => this.logger.error('Failed to broadcast event cancellation:', err));
     }
 
     // Notify admins about event cancellation (non-blocking)
@@ -864,7 +879,7 @@ export class EventsService {
       title: 'Event Cancelled',
       body: reason ? `${event.name} has been cancelled: ${reason}` : `${event.name} has been cancelled`,
       eventId: event.id,
-    }).catch(err => console.error('Failed to send event cancelled notification to admins:', err));
+    }).catch(err => this.logger.error('Failed to send event cancelled notification to admins:', err));
 
     return cancelledEvent;
   }
@@ -913,7 +928,7 @@ export class EventsService {
           title: 'Event Auto-Cancelled',
           body: `${event.name} was automatically cancelled (missed start time by 6+ hours)`,
           eventId: event.id,
-        }).catch(err => console.error('Failed to send auto-cancel notification:', err));
+        }).catch(err => this.logger.error('Failed to send auto-cancel notification:', err));
 
         // If there were registered players, notify them too
         if (event._count.entries > 0) {
@@ -924,7 +939,7 @@ export class EventsService {
             title: 'Event Cancelled',
             body: `${event.name} has been cancelled`,
             eventId: event.id,
-          }).catch(err => console.error('Failed to broadcast event cancellation:', err));
+          }).catch(err => this.logger.error('Failed to broadcast event cancellation:', err));
         }
 
         return {

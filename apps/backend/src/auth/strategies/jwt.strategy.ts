@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -7,6 +7,8 @@ import { AuthService, JwtPayload } from '../auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger(JwtStrategy.name);
+
   constructor(
     private authService: AuthService,
     private configService: ConfigService
@@ -26,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!jwtSecret) {
-      console.warn('⚠️  WARNING: Using default JWT secret. Set JWT_SECRET in production!');
+      this.logger.warn('WARNING: Using default JWT secret. Set JWT_SECRET in production!');
     }
   }
 

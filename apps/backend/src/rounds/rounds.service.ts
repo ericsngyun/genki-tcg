@@ -178,7 +178,7 @@ export class RoundsService {
       body: `Pairings for Round ${nextRoundNumber} are now available`,
       eventId: eventId,
       roundId: result.round.id,
-    }).catch(err => console.error('Failed to send pairings posted notification:', err));
+    }).catch(err => this.logger.error('Failed to send pairings posted notification:', err));
 
     return result;
   }
@@ -223,7 +223,7 @@ export class RoundsService {
       body: `Round ${round.roundNumber} has started. Time to play!`,
       eventId: round.eventId,
       roundId: round.id,
-    }).catch(err => console.error('Failed to send round started notification:', err));
+    }).catch(err => this.logger.error('Failed to send round started notification:', err));
 
     return updatedRound;
   }
@@ -372,7 +372,7 @@ export class RoundsService {
         title: 'Tournament Completed',
         body: `The tournament has been completed! Check the final standings.`,
         eventId: round.eventId,
-      }).catch(err => console.error('Failed to send tournament completed notification:', err));
+      }).catch(err => this.logger.error('Failed to send tournament completed notification:', err));
 
       // Auto-process ratings for the tournament (non-blocking)
       this.ratingsService.processTournamentRatings(round.eventId)

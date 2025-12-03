@@ -8,6 +8,7 @@ import {
   ConnectedSocket,
   WsException,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -36,6 +37,8 @@ interface AuthenticatedSocket extends Socket {
 export class RealtimeGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(RealtimeGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -51,7 +54,7 @@ export class RealtimeGateway
                     client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
-        console.log(`Client ${client.id} rejected: No token provided`);
+        this.logger.log(`Client ${client.id} rejected: No token provided`);
         client.emit('error', { message: 'Authentication required' });
         client.disconnect();
         return;
@@ -67,9 +70,9 @@ export class RealtimeGateway
       // Automatically join user's personal notification room
       client.join(`user:${payload.sub}`);
 
-      console.log(`Client ${client.id} connected (user: ${payload.sub})`);
+      this.logger.log(`Client ${client.id} connected (user: ${payload.sub})`);
     } catch (error) {
-      console.log(`Client ${client.id} rejected: Invalid token`);
+      this.logger.log(`Client ${client.id} rejected: Invalid token`);
       client.emit('error', { message: 'Invalid or expired token' });
       client.disconnect();
     }
@@ -77,7 +80,7 @@ export class RealtimeGateway
 
   handleDisconnect(client: AuthenticatedSocket) {
     const userId = client.data?.user?.sub || 'unknown';
-    console.log(`Client ${client.id} disconnected (user: ${userId})`);
+    this.logger.log(`Client ${client.id} disconnected (user: ${userId})`);
   }
 
   @SubscribeMessage('join-event')
@@ -95,7 +98,7 @@ export class RealtimeGateway
 
     // Join the event room
     client.join(`event:${eventId}`);
-    console.log(`User ${userId} joined event: ${eventId}`);
+    this.logger.log(`User ${userId} joined event: ${eventId}`);
     return { status: 'joined', eventId };
   }
 
@@ -113,7 +116,7 @@ export class RealtimeGateway
     const userId = client.data.user.sub;
 
     client.leave(`event:${eventId}`);
-    console.log(`User ${userId} left event: ${eventId}`);
+    this.logger.log(`User ${userId} left event: ${eventId}`);
     return { status: 'left', eventId };
   }
 
@@ -126,7 +129,7 @@ export class RealtimeGateway
       roundNumber,
       timestamp: new Date(),
     });
-    console.log(`Emitted pairings-posted for event ${eventId}, round ${roundNumber}`);
+    this.logger.log(`Emitted pairings-posted for event ${eventId}, round ${roundNumber}`);
   }
 
   /**
@@ -137,7 +140,7 @@ export class RealtimeGateway
       eventId,
       timestamp: new Date(),
     });
-    console.log(`Emitted standings-updated for event ${eventId}`);
+    this.logger.log(`Emitted standings-updated for event ${eventId}`);
   }
 
   /**
@@ -149,7 +152,7 @@ export class RealtimeGateway
       roundNumber,
       timestamp: new Date(),
     });
-    console.log(`Emitted round-started for event ${eventId}, round ${roundNumber}`);
+    this.logger.log(`Emitted round-started for event ${eventId}, round ${roundNumber}`);
   }
 
   /**
@@ -161,7 +164,7 @@ export class RealtimeGateway
       roundNumber,
       timestamp: new Date(),
     });
-    console.log(`Emitted round-ended for event ${eventId}, round ${roundNumber}`);
+    this.logger.log(`Emitted round-ended for event ${eventId}, round ${roundNumber}`);
   }
 
   /**
@@ -174,7 +177,7 @@ export class RealtimeGateway
       tableNumber,
       timestamp: new Date(),
     });
-    console.log(`Emitted match-result-reported for event ${eventId}, table ${tableNumber}`);
+    this.logger.log(`Emitted match-result-reported for event ${eventId}, table ${tableNumber}`);
   }
 
   /**
@@ -198,7 +201,7 @@ export class RealtimeGateway
       message,
       timestamp: new Date(),
     });
-    console.log(`Emitted announcement for event ${eventId}: ${title}`);
+    this.logger.log(`Emitted announcement for event ${eventId}: ${title}`);
   }
 
   /**
@@ -209,6 +212,6 @@ export class RealtimeGateway
       eventId,
       timestamp: new Date(),
     });
-    console.log(`Emitted tournament-completed for event ${eventId}`);
+    this.logger.log(`Emitted tournament-completed for event ${eventId}`);
   }
 }

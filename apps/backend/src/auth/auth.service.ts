@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -28,6 +29,8 @@ export interface JwtPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService
@@ -649,7 +652,7 @@ export class AuthService {
 
     // SECURITY: Validate redirect URI against whitelist
     if (!this.validateRedirectUri(redirectUri)) {
-      console.error('Redirect URI validation failed:', {
+      this.logger.error('Redirect URI validation failed:', {
         redirectUri,
         allowedUris: this.getAllowedRedirectUris(),
       });
@@ -718,7 +721,7 @@ export class AuthService {
 
     // SECURITY: Validate redirect URI again
     if (!this.validateRedirectUri(redirectUri)) {
-      console.error('Redirect URI validation failed in callback:', {
+      this.logger.error('Redirect URI validation failed in callback:', {
         redirectUri,
         allowedUris: this.getAllowedRedirectUris(),
       });
@@ -742,7 +745,7 @@ export class AuthService {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
-      console.error('Discord token exchange failed:', {
+      this.logger.error('Discord token exchange failed:', {
         status: tokenResponse.status,
         statusText: tokenResponse.statusText,
         error: errorData,
@@ -917,7 +920,7 @@ export class AuthService {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
-      console.error('Discord token exchange failed (linkAccount):', {
+      this.logger.error('Discord token exchange failed (linkAccount):', {
         status: tokenResponse.status,
         statusText: tokenResponse.statusText,
         error: errorData,
@@ -940,7 +943,7 @@ export class AuthService {
 
     if (!userResponse.ok) {
       const errorData = await userResponse.json().catch(() => null) as { error?: string; error_description?: string } | null;
-      console.error('Discord user info fetch failed:', {
+      this.logger.error('Discord user info fetch failed:', {
         status: userResponse.status,
         statusText: userResponse.statusText,
         error: errorData,

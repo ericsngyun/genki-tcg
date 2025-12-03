@@ -8,7 +8,7 @@ describe('RatingsService', () => {
   let prisma: PrismaService;
   let seasonsService: SeasonsService;
 
-  const mockPrismaService = {
+  const mockPrismaService: any = {
     playerCategoryLifetimeRating: {
       findFirst: jest.fn(),
       create: jest.fn(),

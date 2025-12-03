@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { DiscordStrategy } from './strategies/discord.strategy';
 import { OrgsModule } from '../orgs/orgs.module';
 
 @Module({
@@ -32,7 +33,7 @@ import { OrgsModule } from '../orgs/orgs.module';
     OrgsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, DiscordStrategy],
   exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

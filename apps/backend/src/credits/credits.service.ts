@@ -1,10 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AdjustCreditsDto, GetHistoryDto } from './dto';
 
 @Injectable()
 export class CreditsService {
+  private readonly logger = new Logger(CreditsService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService
@@ -35,16 +37,26 @@ export class CreditsService {
       throw new BadRequestException('User not found in organization');
     }
 
-    // Check if debit would cause negative balance
-    if (amount < 0) {
-      const currentBalance = await this.getBalance(orgId, userId);
-      if (currentBalance + amount < 0) {
-        throw new BadRequestException('Insufficient credits');
-      }
-    }
-
     // Create ledger entry and update balance in transaction
+    // IMPORTANT: Balance check is inside transaction to prevent race conditions
     const result = await this.prisma.$transaction(async (tx) => {
+      // Check if debit would cause negative balance (inside transaction for atomicity)
+      if (amount < 0) {
+        const currentBalance = await tx.creditBalance.findUnique({
+          where: {
+            orgId_userId: {
+              orgId,
+              userId,
+            },
+          },
+        });
+
+        const balance = currentBalance?.balance || 0;
+        if (balance + amount < 0) {
+          throw new BadRequestException('Insufficient credits');
+        }
+      }
+
       // Insert ledger entry
       const entry = await tx.creditLedgerEntry.create({
         data: {
@@ -224,8 +236,8 @@ export class CreditsService {
     const storedBalance = await this.getBalance(orgId, userId);
 
     if (calculatedBalance !== storedBalance) {
-      console.warn(
-        `⚠️ Balance mismatch for user ${userId}: calculated=${calculatedBalance}, stored=${storedBalance}`
+      this.logger.warn(
+        `Balance mismatch for user ${userId}: calculated=${calculatedBalance}, stored=${storedBalance}`
       );
 
       // Fix the balance

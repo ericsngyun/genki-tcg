@@ -27,6 +27,12 @@ describe('EventsService', () => {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
     },
+    creditLedgerEntry: {
+      create: jest.fn(),
+    },
+    creditBalance: {
+      upsert: jest.fn(),
+    },
     $transaction: jest.fn((callback: any) => callback(mockPrismaService)),
   };
 
@@ -109,12 +115,18 @@ describe('EventsService', () => {
     it('should create entry if user has access', async () => {
       const event = {
         id: 'event-1',
+        name: 'Test Event',
         orgId: 'org-1',
       };
       const entry = {
         id: 'entry-1',
         eventId: 'event-1',
         userId: 'user-1',
+        user: {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'test@example.com',
+        },
       };
 
       mockPrismaService.event.findUnique.mockResolvedValue(event);

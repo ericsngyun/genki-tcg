@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query, Logger } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -15,6 +15,8 @@ import type { AuthenticatedUser } from './types/jwt-payload.type';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private authService: AuthService) {}
 
   @Post('signup')
@@ -151,21 +153,21 @@ export class AuthController {
     @Query('state') state: string,
     @Query('error') error?: string,
   ) {
-    console.log('=== Discord Mobile Callback Received ===');
-    console.log('Has code:', !!code);
-    console.log('Has state:', !!state);
-    console.log('Error:', error);
+    this.logger.log('=== Discord Mobile Callback Received ===');
+    this.logger.log('Has code:', !!code);
+    this.logger.log('Has state:', !!state);
+    this.logger.log('Error:', error);
 
     // Handle OAuth errors (user cancelled, etc.)
     if (error) {
-      console.log('OAuth error, redirecting with error:', error);
+      this.logger.log('OAuth error, redirecting with error:', error);
       return this.generateDeepLinkRedirect({
         error: error === 'access_denied' ? 'Discord login cancelled' : error,
       });
     }
 
     if (!code || !state) {
-      console.error('Missing code or state in callback');
+      this.logger.error('Missing code or state in callback');
       return this.generateDeepLinkRedirect({
         error: 'Invalid callback - missing code or state',
       });
@@ -174,12 +176,12 @@ export class AuthController {
     try {
       // Use the backend callback URL as redirect URI since that's what Discord called
       const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/auth/discord/mobile-callback`;
-      console.log('Exchanging code with redirect URI:', redirectUri);
+      this.logger.log('Exchanging code with redirect URI:', redirectUri);
 
       const result = await this.authService.handleDiscordCallback(code, state, redirectUri);
 
-      console.log('Token exchange successful, generating deep link redirect');
-      console.log('User:', result.user.email);
+      this.logger.log('Token exchange successful, generating deep link redirect');
+      this.logger.log('User:', result.user.email);
 
       // Return HTML that opens deep link with tokens
       return this.generateDeepLinkRedirect({
@@ -187,7 +189,7 @@ export class AuthController {
         refreshToken: result.refreshToken,
       });
     } catch (err: any) {
-      console.error('Mobile Discord callback error:', err);
+      this.logger.error('Mobile Discord callback error:', err);
       return this.generateDeepLinkRedirect({
         error: err.message || 'Discord login failed',
       });

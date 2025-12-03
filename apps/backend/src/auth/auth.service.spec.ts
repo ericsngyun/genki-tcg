@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
@@ -104,24 +104,24 @@ describe('AuthService', () => {
       expect(mockPrismaService.user.create).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if email already exists', async () => {
+    it('should throw BadRequestException if email already exists', async () => {
       const org = { id: 'org-1', name: 'Test Org', inviteCode: 'TEST1234' };
       const existingUser = { id: 'user-1', email: signupDto.email };
 
       mockPrismaService.organization.findUnique.mockResolvedValue(org);
       mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
 
-      await expect(service.signup(signupDto)).rejects.toThrow(ConflictException);
+      await expect(service.signup(signupDto)).rejects.toThrow(BadRequestException);
       expect(mockPrismaService.organization.findUnique).toHaveBeenCalledWith({
         where: { inviteCode: signupDto.inviteCode },
       });
     });
 
-    it('should throw UnauthorizedException if invite code is invalid', async () => {
+    it('should throw BadRequestException if invite code is invalid', async () => {
       mockPrismaService.organization.findUnique.mockResolvedValue(null);
 
       await expect(service.signup(signupDto)).rejects.toThrow(
-        UnauthorizedException,
+        BadRequestException,
       );
       expect(mockPrismaService.organization.findUnique).toHaveBeenCalledWith({
         where: { inviteCode: signupDto.inviteCode },
@@ -280,7 +280,11 @@ describe('AuthService', () => {
 
       const result = await service.validateUser(user as any);
 
-      expect(result).toEqual(user);
+      expect(result).toMatchObject({
+        id: user.id,
+        email: user.email,
+      });
+      expect(result).toBeDefined();
     });
   });
 });

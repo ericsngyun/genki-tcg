@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RatingsService } from '../ratings/ratings.service';
@@ -15,6 +15,8 @@ import {
 
 @Injectable()
 export class MatchesService {
+  private readonly logger = new Logger(MatchesService.name);
+
   constructor(
     private prisma: PrismaService,
     private realtimeGateway: RealtimeGateway,
@@ -82,7 +84,7 @@ export class MatchesService {
         body: `Result reported for your match at Table ${match.tableNumber}`,
         eventId: match.round.eventId,
         matchId: match.id,
-      }).catch(err => console.error('Failed to send match reported notification:', err));
+      }).catch(err => this.logger.error('Failed to send match reported notification:', err));
     }
     if (match.playerBId) {
       this.notificationsService.createAndSend({
@@ -94,7 +96,7 @@ export class MatchesService {
         body: `Result reported for your match at Table ${match.tableNumber}`,
         eventId: match.round.eventId,
         matchId: match.id,
-      }).catch(err => console.error('Failed to send match reported notification:', err));
+      }).catch(err => this.logger.error('Failed to send match reported notification:', err));
     }
 
     return updatedMatch;
@@ -334,7 +336,7 @@ export class MatchesService {
     // Update player ratings (non-blocking)
     this.updatePlayerRatings(updatedMatch, updatedMatch, userOrgId).catch(
       (error) => {
-        console.error('Failed to update player ratings:', error);
+        this.logger.error('Failed to update player ratings:', error);
       }
     );
 
@@ -353,7 +355,7 @@ export class MatchesService {
         body: `Your match result for Table ${match.tableNumber} has been confirmed`,
         eventId: match.round.eventId,
         matchId: match.id,
-      }).catch(err => console.error('Failed to send match confirmed notification:', err));
+      }).catch(err => this.logger.error('Failed to send match confirmed notification:', err));
     }
 
     return {
@@ -482,7 +484,7 @@ export class MatchesService {
       // Update player ratings (non-blocking)
       this.updatePlayerRatings(updatedMatch, updatedMatch, userOrgId).catch(
         (error) => {
-          console.error('Failed to update player ratings:', error);
+          this.logger.error('Failed to update player ratings:', error);
           // Don't fail the confirmation if ratings fail
         }
       );
@@ -502,7 +504,7 @@ export class MatchesService {
           body: `Your opponent confirmed the match result for Table ${updatedMatch.tableNumber}`,
           eventId: updatedMatch.round.eventId,
           matchId: matchId,
-        }).catch(err => console.error('Failed to send match confirmed notification:', err));
+        }).catch(err => this.logger.error('Failed to send match confirmed notification:', err));
       }
 
       return {
@@ -593,7 +595,7 @@ export class MatchesService {
       }
     } catch (error) {
       // Don't fail match confirmation if this check fails
-      console.error('Error checking round completion:', error);
+      this.logger.error('Error checking round completion:', error);
     }
   }
 }
