@@ -323,6 +323,17 @@ class ApiClient {
     const { data } = await this.client.delete(`/notifications/tokens/${token}`);
     return data;
   }
+
+  // Leaderboard
+  async getLifetimeLeaderboard(gameType: string, params?: { limit?: number; offset?: number }) {
+    const { data } = await this.client.get('/leaderboard/lifetime', {
+      params: {
+        gameType,
+        ...params,
+      },
+    });
+    return data;
+  }
 }
 
 export const api = new ApiClient();

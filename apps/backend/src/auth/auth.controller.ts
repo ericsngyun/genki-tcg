@@ -285,30 +285,18 @@ export class AuthController {
           <script>
             const authData = ${authData};
 
-            console.log('=== Auth Callback HTML Loaded ===');
-            console.log('Has window.opener:', !!window.opener);
-            console.log('Auth data:', authData);
-            console.log('Current URL:', window.location.href);
-
             // For web: try to post message to opener window
             if (window.opener && !window.opener.closed) {
-              console.log('Posting auth data to opener window');
-
               // Post message to parent window
               const message = { type: 'DISCORD_AUTH_CALLBACK', ...authData };
-              console.log('Message to send:', message);
-
               window.opener.postMessage(message, '*');
-              console.log('Message posted successfully');
 
               // Try posting again after a short delay to ensure it's received
               setTimeout(() => {
-                console.log('Posting message again (retry)');
                 window.opener.postMessage(message, '*');
               }, 100);
 
               setTimeout(() => {
-                console.log('Closing popup window');
                 window.close();
               }, 1000);
             } else if (!window.opener) {
@@ -319,7 +307,6 @@ export class AuthController {
             }
             // For mobile: try to open deep link
             else {
-              console.log('Opening deep link:', ${JSON.stringify(deepLink)});
               window.location.href = ${JSON.stringify(deepLink)};
 
               // Try multiple methods to ensure deep link opens

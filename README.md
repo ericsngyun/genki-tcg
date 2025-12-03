@@ -127,13 +127,34 @@ npm run db:seed          # Seed database with initial data
 
 ## Documentation
 
+### Getting Started
+- **[Quick Start](./QUICK_START.md)** - Get up and running quickly
 - **[Setup Guide](./SETUP_GUIDE.md)** - Complete setup instructions for Windows
+- **[Seeding Instructions](./SEEDING_INSTRUCTIONS.md)** - How to seed the database with test data
+
+### Architecture & Development
 - **[Backend Architecture](./BACKEND_ARCHITECTURE.md)** - Technical architecture and design decisions
-- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Production deployment to Railway
-- **[Testing Guide](./TESTING_GUIDE.md)** - Testing strategy and running tests
-- **[Product Roadmap](./PRODUCT_ROADMAP.md)** - Future features and enhancements
+- **[Mobile App Strategy](./MOBILE_APP_STRATEGY.md)** - Mobile app architecture and approach
+- **[Tournament Flow API](./TOURNAMENT_FLOW_API.md)** - Tournament system API documentation
+- **[Implementation Guide](./IMPLEMENTATION_GUIDE.md)** - Development best practices
+
+### Deployment & Production
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Production deployment overview
+- **[Railway Database Setup](./RAILWAY_DATABASE_SETUP.md)** - Database setup on Railway
+- **[Railway Production Setup](./RAILWAY_PRODUCTION_SETUP.md)** - Production environment setup
+- **[Discord OAuth Setup](./DISCORD_OAUTH_SETUP.md)** - Configure Discord OAuth
+- **[Production Ready Checklist](./PRODUCTION_READY_CHECKLIST.md)** - Pre-launch checklist
+
+### Security & Operations  
 - **[Security Audit](./SECURITY_AUDIT.md)** - Security review and best practices
+- **[Security Rotation Guide](./SECURITY_ROTATION_GUIDE.md)** - Credential rotation procedures
+- **[Testing Guide](./TESTING_GUIDE.md)** - Testing strategy and running tests
+
+### Project Management
+- **[Sprint Progress](./SPRINT_PROGRESS.md)** - Current sprint status and daily progress
+- **[Product Roadmap](./PRODUCT_ROADMAP.md)** - Future features and enhancements
 
 ## License
 
 Proprietary - Genki TCG
+

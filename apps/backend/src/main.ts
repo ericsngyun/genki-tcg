@@ -1,12 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  console.log('🔧 Bootstrapping NestJS application...');
+  const logger = new Logger('Bootstrap');
+  logger.log('🔧 Bootstrapping NestJS application...');
 
   const app = await NestFactory.create(AppModule, {
     logger: process.env.NODE_ENV === 'production'
@@ -14,7 +15,7 @@ async function bootstrap() {
       : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  console.log('✅ NestJS application created');
+  logger.log('✅ NestJS application created');
 
   // SECURITY: Add Helmet for HTTP security headers
   app.use(helmet({
@@ -94,7 +95,7 @@ async function bootstrap() {
       if (isAllowed) {
         callback(null, true);
       } else {
-        console.warn(`CORS blocked origin: ${origin}`);
+        logger.warn(`CORS blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -108,22 +109,22 @@ async function bootstrap() {
   const port = process.env.PORT || process.env.API_PORT || 3001;
   const host = '0.0.0.0';
 
-  console.log('🌐 Starting server...');
-  console.log(`📍 Host: ${host}`);
-  console.log(`📍 Port: ${port}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.log('🌐 Starting server...');
+  logger.log(`📍 Host: ${host}`);
+  logger.log(`📍 Port: ${port}`);
+  logger.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // In Docker, we need to bind to 0.0.0.0 to accept external connections
   await app.listen(port, host);
 
-  console.log('');
-  console.log('='.repeat(60));
-  console.log(`🚀 Genki TCG API running on http://localhost:${port}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌍 CORS origins: ${allowedOrigins.join(', ')}`);
-  console.log(`✅ Server is ready to accept connections`);
-  console.log('='.repeat(60));
-  console.log('');
+  logger.log('');
+  logger.log('='.repeat(60));
+  logger.log(`🚀 Genki TCG API running on http://localhost:${port}`);
+  logger.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.log(`🌍 CORS origins: ${allowedOrigins.join(', ')}`);
+  logger.log(`✅ Server is ready to accept connections`);
+  logger.log('='.repeat(60));
+  logger.log('');
 }
 
 bootstrap();
