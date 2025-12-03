@@ -4,6 +4,7 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { AppHeader } from '../components';
+import { logger } from '../lib/logger';
 
 interface NotificationPreference {
   notificationType: string;
@@ -15,7 +16,6 @@ interface NotificationPreference {
 const notificationTypeLabels: Record<string, { label: string; description: string }> = {
   EVENT_PUBLISHED: {
     label: 'Event Published',
-import { logger } from '../lib/logger';
     description: 'When a new event is created',
   },
   EVENT_UPDATED: {

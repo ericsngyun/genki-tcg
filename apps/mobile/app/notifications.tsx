@@ -6,6 +6,7 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { AppHeader } from '../components';
+import { logger } from '../lib/logger';
 
 type NotificationStatus = 'UNREAD' | 'READ' | 'ARCHIVED';
 type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -15,7 +16,6 @@ interface Notification {
   type: string;
   status: NotificationStatus;
   priority: NotificationPriority;
-import { logger } from '../lib/logger';
   title: string;
   body: string;
   eventId?: string;

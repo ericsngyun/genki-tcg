@@ -224,6 +224,7 @@ model CreditBalance {
 
   @@unique([orgId, userId])
   @@index([userId])
+  @@index([orgId, balance])
 }
 
 // ============================================================================
@@ -624,6 +625,7 @@ model AuditLog {
   performer User         @relation("AuditPerformer", fields: [performedBy], references: [id], onDelete: Cascade)
 
   @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, action, createdAt(sort: Desc)])
   @@index([performedBy])
   @@index([targetEventId])
 }

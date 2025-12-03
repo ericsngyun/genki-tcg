@@ -18,7 +18,9 @@
       "Bash(git checkout:*)",
       "Bash(npx expo start:*)",
       "Bash(git reset:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
