@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { logger } from '../lib/logger';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { pushNotificationService } from '../lib/push-notifications';
@@ -19,7 +20,7 @@ export function usePushNotifications() {
         // Check if user is logged in
         const accessToken = await secureStorage.getItem('access_token');
         if (!accessToken) {
-          console.log('User not logged in, skipping push notification registration');
+          logger.debug('User not logged in, skipping push notification registration');
           return;
         }
 
@@ -29,7 +30,7 @@ export function usePushNotifications() {
           hasRegistered.current = true;
         }
       } catch (error) {
-        console.error('Failed to register push notifications:', error);
+        logger.error('Failed to register push notifications:', error);
       }
     };
 
@@ -40,12 +41,12 @@ export function usePushNotifications() {
     pushNotificationService.setupNotificationListeners(
       // On notification received (app foregrounded)
       (notification) => {
-        console.log('Notification received while app is open:', notification);
+        logger.debug('Notification received while app is open:', notification);
         // Update badge count or show in-app notification
       },
       // On notification tapped
       (response) => {
-        console.log('Notification tapped:', response);
+        logger.debug('Notification tapped:', response);
         const data = response.notification.request.content.data;
 
         // Navigate based on notification data

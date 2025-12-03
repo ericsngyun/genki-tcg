@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import { theme } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 
+import { logger } from '../lib/logger';
 interface Standing {
   userId: string;
   userName: string;
@@ -56,11 +57,11 @@ export default function StandingsScreen() {
   useRealtimeUpdates({
     eventId,
     onStandingsUpdated: useCallback(() => {
-      console.log('Standings updated - refreshing');
+      logger.debug('Standings updated - refreshing');
       loadData();
     }, []),
     onTournamentCompleted: useCallback(() => {
-      console.log('Tournament completed');
+      logger.debug('Tournament completed');
       loadData();
       Alert.alert(
         'Tournament Complete! 🏆',
@@ -84,7 +85,7 @@ export default function StandingsScreen() {
       const standingsData = await api.getStandings(eventId);
       setStandings(standingsData);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      logger.error('Failed to load data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

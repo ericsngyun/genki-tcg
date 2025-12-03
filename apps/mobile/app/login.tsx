@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Animated,
   Image,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -20,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
 import { secureStorage } from '../lib/secure-storage';
+import { logger } from '../lib/logger';
 
 // Required for web browser auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -43,6 +45,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   // Animated values for background effects
   const blob1Anim = useRef(new Animated.Value(0)).current;
@@ -86,25 +90,25 @@ export default function LoginScreen() {
   useEffect(() => {
     const handleDeepLink = async (event: { url: string }) => {
       const { url } = event;
-      console.log('Deep link event received:', url);
+      logger.debug('Deep link event received:', url);
       if (url.includes('auth/callback')) {
         await handleAuthCallback(url);
       }
     };
 
-    console.log('Setting up deep link listener...');
+    logger.debug('Setting up deep link listener...');
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
     // Check if app was opened with a deep link
     Linking.getInitialURL().then((url) => {
-      console.log('Initial URL:', url);
+      logger.debug('Initial URL:', url);
       if (url && url.includes('auth/callback')) {
         handleAuthCallback(url);
       }
     });
 
     return () => {
-      console.log('Removing deep link listener');
+      logger.debug('Removing deep link listener');
       subscription.remove();
     };
   }, []);
@@ -112,22 +116,22 @@ export default function LoginScreen() {
   // Handle postMessage for Discord callback (web)
   useEffect(() => {
     if (Platform.OS === 'web') {
-      console.log('Setting up postMessage listener for web...');
+      logger.debug('Setting up postMessage listener for web...');
 
       const handleMessage = async (event: MessageEvent) => {
-        console.log('=== postMessage Received ===');
-        console.log('Origin:', event.origin);
-        console.log('Data:', event.data);
-        console.log('Data type:', event.data?.type);
+        logger.debug('=== postMessage Received ===');
+        logger.debug('Origin:', event.origin);
+        logger.debug('Data:', event.data);
+        logger.debug('Data type:', event.data?.type);
 
         if (event.data.type === 'DISCORD_AUTH_CALLBACK') {
-          console.log('Discord auth callback received!');
-          console.log('Has accessToken:', !!event.data.accessToken);
-          console.log('Has refreshToken:', !!event.data.refreshToken);
-          console.log('Error:', event.data.error);
+          logger.debug('Discord auth callback received!');
+          logger.debug('Has accessToken:', !!event.data.accessToken);
+          logger.debug('Has refreshToken:', !!event.data.refreshToken);
+          logger.debug('Error:', event.data.error);
 
           if (event.data.error) {
-            console.error('OAuth error:', event.data.error);
+            logger.error('OAuth error:', event.data.error);
             setError(event.data.error);
             setLoading(false);
             return;
@@ -135,36 +139,36 @@ export default function LoginScreen() {
 
           if (event.data.accessToken && event.data.refreshToken) {
             try {
-              console.log('Storing tokens securely...');
+              logger.debug('Storing tokens securely...');
               // Store tokens securely
               await secureStorage.setItem('access_token', event.data.accessToken);
               await secureStorage.setItem('refresh_token', event.data.refreshToken);
-              console.log('Tokens stored successfully');
+              logger.debug('Tokens stored successfully');
 
               // Navigate to events screen
-              console.log('Navigating to events screen...');
+              logger.debug('Navigating to events screen...');
               router.replace('/(tabs)/events');
             } catch (err: any) {
-              console.error('Error storing tokens:', err);
+              logger.error('Error storing tokens:', err);
               setError('Failed to store authentication tokens');
               setLoading(false);
             }
           } else {
-            console.error('Missing tokens in callback');
+            logger.error('Missing tokens in callback');
             setError('Authentication failed - missing tokens');
             setLoading(false);
           }
         } else {
-          console.log('Message type not DISCORD_AUTH_CALLBACK, ignoring');
+          logger.debug('Message type not DISCORD_AUTH_CALLBACK, ignoring');
         }
       };
 
-      console.log('Adding message event listener...');
+      logger.debug('Adding message event listener...');
       window.addEventListener('message', handleMessage);
-      console.log('Message listener added successfully');
+      logger.debug('Message listener added successfully');
 
       return () => {
-        console.log('Removing message event listener');
+        logger.debug('Removing message event listener');
         window.removeEventListener('message', handleMessage);
       };
     }
@@ -172,8 +176,8 @@ export default function LoginScreen() {
 
   const handleAuthCallback = async (url: string) => {
     try {
-      console.log('=== Deep Link Callback Received ===');
-      console.log('URL:', url);
+      logger.debug('=== Deep Link Callback Received ===');
+      logger.debug('URL:', url);
 
       setLoading(true);
       setError('');
@@ -181,7 +185,7 @@ export default function LoginScreen() {
       // Parse the deep link URL
       // Format: genki-tcg://auth/callback?accessToken=...&refreshToken=...&error=...
       const parsed = Linking.parse(url);
-      console.log('Parsed URL:', {
+      logger.debug('Parsed URL:', {
         scheme: parsed.scheme,
         hostname: parsed.hostname,
         path: parsed.path,
@@ -193,29 +197,29 @@ export default function LoginScreen() {
       const errorParam = parsed.queryParams?.error as string;
 
       if (errorParam) {
-        console.error('OAuth error in callback:', errorParam);
+        logger.error('OAuth error in callback:', errorParam);
         throw new Error(errorParam);
       }
 
       if (!accessToken || !refreshToken) {
-        console.error('Missing tokens in callback:', {
+        logger.error('Missing tokens in callback:', {
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
         });
         throw new Error('Invalid callback - missing tokens');
       }
 
-      console.log('Tokens received, storing securely...');
+      logger.debug('Tokens received, storing securely...');
       // Store tokens securely
       await secureStorage.setItem('access_token', accessToken);
       await secureStorage.setItem('refresh_token', refreshToken);
-      console.log('Tokens stored successfully');
+      logger.debug('Tokens stored successfully');
 
       // Navigate to events screen
-      console.log('Navigating to events screen...');
+      logger.debug('Navigating to events screen...');
       router.replace('/(tabs)/events');
     } catch (err: any) {
-      console.error('Auth callback error:', err);
+      logger.error('Auth callback error:', err);
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -229,9 +233,9 @@ export default function LoginScreen() {
 
       const redirectUri = getRedirectUri();
 
-      console.log('=== Starting Discord OAuth ===');
-      console.log('Platform:', Platform.OS);
-      console.log('Redirect URI:', redirectUri);
+      logger.debug('=== Starting Discord OAuth ===');
+      logger.debug('Platform:', Platform.OS);
+      logger.debug('Redirect URI:', redirectUri);
 
       // Get the Discord auth URL from backend
       const response = await api.getDiscordAuthUrl(redirectUri);
@@ -241,26 +245,41 @@ export default function LoginScreen() {
         throw new Error('Discord OAuth not configured on server');
       }
 
-      console.log('Discord OAuth URL:', url);
+      logger.debug('Discord OAuth URL:', url);
 
       if (Platform.OS === 'web') {
-        // WEB: Simple redirect to Discord, which redirects back to /auth/discord/callback
-        console.log('Redirecting to Discord (web)...');
-        window.location.href = url;
-        // Loading state will persist until callback route loads
+        // WEB: Open Discord auth in popup window
+        logger.debug('Opening Discord auth popup (web)...');
+        const width = 500;
+        const height = 700;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+
+        const popup = window.open(
+          url,
+          'Discord Login',
+          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+        );
+
+        if (!popup) {
+          throw new Error('Popup blocked. Please allow popups for this site.');
+        }
+
+        logger.debug('Popup opened, waiting for callback...');
+        // Loading state will persist until postMessage is received
       } else {
         // NATIVE: Backend-mediated flow with deep links
-        console.log('Opening Discord OAuth (native)...');
+        logger.debug('Opening Discord OAuth (native)...');
         const result = await WebBrowser.openAuthSessionAsync(url, 'genki-tcg://auth/callback');
 
-        console.log('WebBrowser result:', result);
+        logger.debug('WebBrowser result:', result);
 
         if (result.type === 'cancel') {
           setError('Discord login cancelled');
           setLoading(false);
         } else if (result.type === 'dismiss') {
           // Browser closed - wait for deep link handler
-          console.log('Waiting for deep link...');
+          logger.debug('Waiting for deep link...');
           setTimeout(() => {
             // If still loading after 2 seconds, something went wrong
             setLoading(false);
@@ -270,8 +289,44 @@ export default function LoginScreen() {
         // On success, the deep link handler will take over
       }
     } catch (err: any) {
-      console.error('Discord login error:', err);
+      logger.error('Discord login error:', err);
       setError(err.response?.data?.message || err.message || 'Discord login failed');
+      setLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      if (!email || !password) {
+        setError('Please enter both email and password');
+        setLoading(false);
+        return;
+      }
+
+      logger.debug('=== Email Login ===');
+      logger.debug('Email:', email);
+
+      // Call the login API
+      const response = await api.login(email, password);
+
+      if (!response.accessToken || !response.refreshToken) {
+        throw new Error('Invalid response from server');
+      }
+
+      logger.debug('Login successful, storing tokens...');
+      // Store tokens securely
+      await secureStorage.setItem('access_token', response.accessToken);
+      await secureStorage.setItem('refresh_token', response.refreshToken);
+
+      logger.debug('Navigating to events screen...');
+      // Navigate to events screen
+      router.replace('/(tabs)/events');
+    } catch (err: any) {
+      logger.error('Email login error:', err);
+      setError(err.response?.data?.message || err.message || 'Login failed');
       setLoading(false);
     }
   };
@@ -469,14 +524,18 @@ export default function LoginScreen() {
               styles.logoImageContainer,
               {
                 transform: [
-                  { rotate: blob1Anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['-1.5deg', '1.5deg'],
-                  }) },
-                  { scale: blob1Anim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [1, 1.02, 1],
-                  }) },
+                  {
+                    rotate: blob1Anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['-1.5deg', '1.5deg'],
+                    })
+                  },
+                  {
+                    scale: blob1Anim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [1, 1.02, 1],
+                    })
+                  },
                 ],
               },
             ]}
@@ -506,6 +565,60 @@ export default function LoginScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
+
+          {/* Email/Password Login - Temporary Testing */}
+          <View style={styles.emailLoginContainer}>
+            <Text style={styles.emailLoginLabel}>Email/Password Login (Testing)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={theme.colors.text.tertiary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!loading}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={theme.colors.text.tertiary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.emailLoginButton}
+              onPress={handleEmailLogin}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={['#DC2626', '#B91C1C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.emailLoginButtonGradient}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <View style={styles.emailLoginButtonContent}>
+                    <Ionicons name="mail" size={20} color="#FFFFFF" />
+                    <Text style={styles.emailLoginButtonText}>Login with Email</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
           <TouchableOpacity
             style={styles.discordButton}
@@ -686,6 +799,70 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.medium,
     flex: 1,
+  },
+  emailLoginContainer: {
+    width: '100%',
+    gap: theme.spacing.md,
+  },
+  emailLoginLabel: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.medium,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  emailLoginButton: {
+    width: '100%',
+    height: 50,
+    borderRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+    ...theme.shadows.md,
+  },
+  emailLoginButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emailLoginButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  emailLoginButtonText: {
+    color: '#FFFFFF',
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+    letterSpacing: 0.3,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dividerText: {
+    color: theme.colors.text.tertiary,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.medium,
+    letterSpacing: 0.5,
   },
   discordButton: {
     width: '100%',

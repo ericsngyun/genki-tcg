@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logger } from '../../lib/logger';
 import {
   View,
   Text,
@@ -37,7 +38,7 @@ export default function WalletScreen() {
       setBalance(data.balance);
       setTransactions(data.recentTransactions);
     } catch (error) {
-      console.error('Failed to load balance:', error);
+      logger.error('Failed to load balance:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

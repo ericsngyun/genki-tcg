@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { api } from './api';
 import { secureStorage } from './secure-storage';
+import { logger } from './logger';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -10,6 +11,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -32,7 +35,7 @@ export class PushNotificationService {
    */
   async registerForPushNotifications(): Promise<string | null> {
     if (!Device.isDevice) {
-      console.log('Push notifications are only available on physical devices');
+      logger.debug('Push notifications are only available on physical devices');
       return null;
     }
 
@@ -48,7 +51,7 @@ export class PushNotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Push notification permissions not granted');
+        logger.debug('Push notification permissions not granted');
         return null;
       }
 
@@ -68,10 +71,10 @@ export class PushNotificationService {
       // Store token locally for unregistration on logout
       await secureStorage.setItem('push_token', token);
 
-      console.log('Push token registered:', token);
+      logger.debug('Push token registered:', token);
       return token;
     } catch (error) {
-      console.error('Error registering for push notifications:', error);
+      logger.error('Error registering for push notifications:', error);
       return null;
     }
   }
@@ -85,10 +88,10 @@ export class PushNotificationService {
       if (token) {
         await api.unregisterPushToken(token);
         await secureStorage.removeItem('push_token');
-        console.log('Push token unregistered');
+        logger.debug('Push token unregistered');
       }
     } catch (error) {
-      console.error('Error unregistering push token:', error);
+      logger.error('Error unregistering push token:', error);
     }
   }
 
@@ -101,13 +104,13 @@ export class PushNotificationService {
   ) {
     // Listen for notifications received while app is foregrounded
     this.notificationListener = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification);
+      logger.debug('Notification received:', notification);
       onNotificationReceived?.(notification);
     });
 
     // Listen for notification taps
     this.responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification tapped:', response);
+      logger.debug('Notification tapped:', response);
       onNotificationTapped?.(response);
     });
   }

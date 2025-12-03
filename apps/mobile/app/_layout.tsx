@@ -52,6 +52,7 @@ export default function RootLayout() {
           <Stack.Screen name="match-details" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="notification-preferences" />
+          <Stack.Screen name="leaderboard" />
         </Stack>
       </PaperProvider>
     </SocketProvider>

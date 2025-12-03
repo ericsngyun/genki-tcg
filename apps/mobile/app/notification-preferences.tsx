@@ -15,6 +15,7 @@ interface NotificationPreference {
 const notificationTypeLabels: Record<string, { label: string; description: string }> = {
   EVENT_PUBLISHED: {
     label: 'Event Published',
+import { logger } from '../lib/logger';
     description: 'When a new event is created',
   },
   EVENT_UPDATED: {
@@ -77,7 +78,7 @@ export default function NotificationPreferencesScreen() {
       const data = await api.getNotificationPreferences();
       setPreferences(data);
     } catch (error) {
-      console.error('Error fetching preferences:', error);
+      logger.error('Error fetching preferences:', error);
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export default function NotificationPreferencesScreen() {
         )
       );
     } catch (error) {
-      console.error('Error updating preference:', error);
+      logger.error('Error updating preference:', error);
     } finally {
       setUpdating(null);
     }

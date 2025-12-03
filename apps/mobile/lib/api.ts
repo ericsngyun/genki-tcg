@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { secureStorage } from './secure-storage';
 
@@ -149,7 +150,7 @@ class ApiClient {
       await this.client.post('/auth/logout');
     } catch (error) {
       // Continue with local logout even if backend call fails
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       // Clear all tokens from local storage
       await secureStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);

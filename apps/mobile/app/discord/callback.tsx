@@ -13,8 +13,9 @@ import { secureStorage } from '../../lib/secure-storage';
  * This route:
  * 1. Extracts code and state from URL
  * 2. Sends to backend to exchange for JWT tokens
- * 3. Stores tokens
- * 4. Redirects to main app
+ * 3. If popup: posts tokens to parent window
+ * 4. If direct: stores tokens and navigates to app
+import { logger } from '../lib/logger';
  */
 export default function DiscordCallbackScreen() {
   const router = useRouter();
@@ -26,29 +27,56 @@ export default function DiscordCallbackScreen() {
 
   const handleCallback = async () => {
     try {
-      console.log('=== Discord Web Callback ===');
-      console.log('Code:', params.code);
-      console.log('State:', params.state);
-      console.log('Error:', params.error);
+      logger.debug('=== Discord Web Callback ===');
+      logger.debug('Code:', params.code);
+      logger.debug('State:', params.state);
+      logger.debug('Error:', params.error);
+      logger.debug('Has window.opener:', typeof window !== 'undefined' && !!window.opener);
 
       // Handle OAuth errors
       if (params.error) {
-        console.error('OAuth error:', params.error);
+        logger.error('OAuth error:', params.error);
+
+        // If opened in popup, post error to parent
+        if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+          logger.debug('Posting error to parent window');
+          window.opener.postMessage({
+            type: 'DISCORD_AUTH_CALLBACK',
+            error: params.error as string,
+          }, '*');
+          setTimeout(() => window.close(), 500);
+          return;
+        }
+
         router.replace('/login?error=' + encodeURIComponent(params.error as string));
         return;
       }
 
       // Validate required params
       if (!params.code || !params.state) {
-        console.error('Missing code or state in callback');
-        router.replace('/login?error=Invalid callback');
+        logger.error('Missing code or state in callback');
+
+        const error = 'Invalid callback - missing code or state';
+
+        // If opened in popup, post error to parent
+        if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+          logger.debug('Posting error to parent window');
+          window.opener.postMessage({
+            type: 'DISCORD_AUTH_CALLBACK',
+            error,
+          }, '*');
+          setTimeout(() => window.close(), 500);
+          return;
+        }
+
+        router.replace('/login?error=' + encodeURIComponent(error));
         return;
       }
 
       // Exchange code for tokens via backend
-      console.log('Exchanging code for tokens...');
+      logger.debug('Exchanging code for tokens...');
       const redirectUri = `${window.location.origin}/discord/callback`;
-      console.log('Redirect URI:', redirectUri);
+      logger.debug('Redirect URI:', redirectUri);
 
       const result = await api.handleDiscordCallback(
         params.code as string,
@@ -56,21 +84,52 @@ export default function DiscordCallbackScreen() {
         redirectUri
       );
 
-      console.log('Token exchange successful');
-      console.log('User:', result.user.email);
+      logger.debug('Token exchange successful');
+      logger.debug('User:', result.user.email);
 
-      // Store tokens securely
-      console.log('Storing tokens...');
-      await secureStorage.setItem('access_token', result.accessToken);
-      await secureStorage.setItem('refresh_token', result.refreshToken);
-      console.log('Tokens stored successfully');
+      // Check if this is a popup (opened from another window)
+      const isPopup = typeof window !== 'undefined' && window.opener && !window.opener.closed;
+      logger.debug('Is popup:', isPopup);
 
-      // Navigate to main app
-      console.log('Redirecting to events...');
-      router.replace('/(tabs)/events');
+      if (isPopup) {
+        // POPUP FLOW: Post tokens to parent window
+        logger.debug('Posting auth data to parent window...');
+        window.opener.postMessage({
+          type: 'DISCORD_AUTH_CALLBACK',
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+        }, '*');
+
+        logger.debug('Message posted, closing popup in 500ms...');
+        setTimeout(() => {
+          window.close();
+        }, 500);
+      } else {
+        // DIRECT NAVIGATION FLOW: Store tokens and navigate
+        logger.debug('Storing tokens locally...');
+        await secureStorage.setItem('access_token', result.accessToken);
+        await secureStorage.setItem('refresh_token', result.refreshToken);
+        logger.debug('Tokens stored successfully');
+
+        // Navigate to main app
+        logger.debug('Redirecting to events...');
+        router.replace('/(tabs)/events');
+      }
     } catch (err: any) {
-      console.error('Discord callback error:', err);
+      logger.error('Discord callback error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Authentication failed';
+
+      // If opened in popup, post error to parent
+      if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+        logger.debug('Posting error to parent window');
+        window.opener.postMessage({
+          type: 'DISCORD_AUTH_CALLBACK',
+          error: errorMessage,
+        }, '*');
+        setTimeout(() => window.close(), 500);
+        return;
+      }
+
       router.replace('/login?error=' + encodeURIComponent(errorMessage));
     }
   };

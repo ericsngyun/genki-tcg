@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../lib/api';
 import { theme } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
+import { logger } from '../lib/logger';
 
 interface Pairing {
   id: string;
@@ -71,7 +72,7 @@ export default function PairingsScreen() {
   useRealtimeUpdates({
     eventId,
     onPairingsPosted: useCallback((roundNumber: number) => {
-      console.log(`New round ${roundNumber} pairings posted`);
+      logger.debug(`New round ${roundNumber} pairings posted`);
       // Reload event data to get new round
       loadData();
       // Show notification
@@ -82,7 +83,7 @@ export default function PairingsScreen() {
       );
     }, []),
     onRoundStarted: useCallback((roundNumber: number) => {
-      console.log(`Round ${roundNumber} started`);
+      logger.debug(`Round ${roundNumber} started`);
       loadPairings(selectedRoundId || '');
     }, [selectedRoundId]),
   });
@@ -103,7 +104,7 @@ export default function PairingsScreen() {
         setSelectedRoundId(latestRound.id);
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
+      logger.error('Failed to load data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -115,7 +116,7 @@ export default function PairingsScreen() {
       const data = await api.getPairings(roundId);
       setPairings(data);
     } catch (error) {
-      console.error('Failed to load pairings:', error);
+      logger.error('Failed to load pairings:', error);
     }
   };
 

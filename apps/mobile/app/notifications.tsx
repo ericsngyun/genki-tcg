@@ -15,6 +15,7 @@ interface Notification {
   type: string;
   status: NotificationStatus;
   priority: NotificationPriority;
+import { logger } from '../lib/logger';
   title: string;
   body: string;
   eventId?: string;
@@ -37,7 +38,7 @@ export default function NotificationsScreen() {
       const data = await api.getNotifications(params);
       setNotifications(data.notifications || []);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      logger.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -62,7 +63,7 @@ export default function NotificationsScreen() {
         )
       );
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
     }
   };
 
@@ -77,7 +78,7 @@ export default function NotificationsScreen() {
         }))
       );
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      logger.error('Error marking all as read:', error);
     }
   };
 
@@ -86,7 +87,7 @@ export default function NotificationsScreen() {
       await api.deleteNotification(id);
       setNotifications(prev => prev.filter(notif => notif.id !== id));
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      logger.error('Error deleting notification:', error);
     }
   };
 

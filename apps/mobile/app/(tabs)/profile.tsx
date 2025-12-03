@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { logger } from '../../lib/logger';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { shadows } from '../../lib/shadows';
@@ -29,7 +30,7 @@ export default function ProfileScreen() {
       const response = await api.getMe();
       setUser(response.user || response);
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      logger.error('Failed to load user profile:', error);
     } finally {
       setLoading(false);
     }
@@ -133,7 +134,14 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 3,
     borderColor: theme.colors.primary.main,
-    ...shadows.base,
+    // Image components don't support all ViewStyle properties like overflow
+    // Manually apply shadow properties that are compatible
+    ...(Platform.OS === 'ios' ? {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+    } : {}),
   },
   avatarPlaceholder: {
     width: 100,

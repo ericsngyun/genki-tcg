@@ -1,10 +1,11 @@
 import { io, Socket } from 'socket.io-client';
 import { secureStorage } from './secure-storage';
+import { logger } from './logger';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 // Extract WebSocket URL from API URL (same host, different protocol)
 // Handle both http:// and https://, convert to ws:// and wss://
-const WS_URL = API_URL.replace(/^https?/, (match) => match === 'https' ? 'wss' : 'ws');
+const WS_URL = API_URL.replace(/^https?/, (match: string) => match === 'https' ? 'wss' : 'ws');
 
 /**
  * Create a Socket.IO connection with authentication
@@ -35,19 +36,19 @@ export async function createSocket(): Promise<Socket> {
 
   // Update auth token if it changes (e.g., after refresh)
   socket.on('connect', () => {
-    console.log('Socket connected:', socket.id);
+    logger.debug('Socket connected:', socket.id);
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason);
+    logger.debug('Socket disconnected:', reason);
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error.message);
+    logger.error('Socket connection error:', error.message);
   });
 
   socket.on('error', (error: { message: string }) => {
-    console.error('Socket error:', error.message);
+    logger.error('Socket error:', error.message);
   });
 
   return socket;

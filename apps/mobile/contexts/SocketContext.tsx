@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { logger } from '../lib/logger';
 import { Socket } from 'socket.io-client';
 import { createSocket, SOCKET_EVENTS, type PairingsPostedEvent, type StandingsUpdatedEvent, type RoundStartedEvent, type RoundEndedEvent, type MatchResultReportedEvent, type TimerUpdateEvent, type AnnouncementEvent, type TournamentCompletedEvent } from '../lib/socket';
 import { secureStorage } from '../lib/secure-storage';
@@ -59,14 +60,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       // Set up connection handlers
       newSocket.on('connect', () => {
-        console.log('Socket connected');
+        logger.debug('Socket connected');
         setIsConnected(true);
         setIsConnecting(false);
         setError(null);
       });
 
       newSocket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
+        logger.debug('Socket disconnected:', reason);
         setIsConnected(false);
         
         // Don't set error for intentional disconnects
@@ -76,17 +77,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       });
 
       newSocket.on('connect_error', (err) => {
-        console.error('Socket connection error:', err.message);
+        logger.error('Socket connection error:', err.message);
         setError(err.message);
         setIsConnecting(false);
       });
 
       newSocket.on('error', (err: { message: string }) => {
-        console.error('Socket error:', err.message);
+        logger.error('Socket error:', err.message);
         setError(err.message);
       });
     } catch (err: any) {
-      console.error('Failed to create socket:', err);
+      logger.error('Failed to create socket:', err);
       setError(err.message || 'Failed to connect to server');
       setIsConnecting(false);
     }
@@ -124,16 +125,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const joinEvent = useCallback((eventId: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(SOCKET_EVENTS.JOIN_EVENT, { eventId });
-      console.log('Joined event room:', eventId);
+      logger.debug('Joined event room:', eventId);
     } else {
-      console.warn('Cannot join event: socket not connected');
+      logger.warn('Cannot join event: socket not connected');
     }
   }, []);
 
   const leaveEvent = useCallback((eventId: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(SOCKET_EVENTS.LEAVE_EVENT, { eventId });
-      console.log('Left event room:', eventId);
+      logger.debug('Left event room:', eventId);
     }
   }, []);
 

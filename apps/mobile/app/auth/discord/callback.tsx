@@ -15,6 +15,7 @@ import { secureStorage } from '../../../lib/secure-storage';
  * 2. Sends to backend to exchange for JWT tokens
  * 3. Stores tokens
  * 4. Redirects to main app
+import { logger } from '../../../lib/logger';
  */
 export default function DiscordCallbackScreen() {
   const router = useRouter();
@@ -26,29 +27,29 @@ export default function DiscordCallbackScreen() {
 
   const handleCallback = async () => {
     try {
-      console.log('=== Discord Web Callback ===');
-      console.log('Code:', params.code);
-      console.log('State:', params.state);
-      console.log('Error:', params.error);
+      logger.debug('=== Discord Web Callback ===');
+      logger.debug('Code:', params.code);
+      logger.debug('State:', params.state);
+      logger.debug('Error:', params.error);
 
       // Handle OAuth errors
       if (params.error) {
-        console.error('OAuth error:', params.error);
+        logger.error('OAuth error:', params.error);
         router.replace('/login?error=' + encodeURIComponent(params.error as string));
         return;
       }
 
       // Validate required params
       if (!params.code || !params.state) {
-        console.error('Missing code or state in callback');
+        logger.error('Missing code or state in callback');
         router.replace('/login?error=Invalid callback');
         return;
       }
 
       // Exchange code for tokens via backend
-      console.log('Exchanging code for tokens...');
+      logger.debug('Exchanging code for tokens...');
       const redirectUri = `${window.location.origin}/auth/discord/callback`;
-      console.log('Redirect URI:', redirectUri);
+      logger.debug('Redirect URI:', redirectUri);
 
       const result = await api.handleDiscordCallback(
         params.code as string,
@@ -56,20 +57,20 @@ export default function DiscordCallbackScreen() {
         redirectUri
       );
 
-      console.log('Token exchange successful');
-      console.log('User:', result.user.email);
+      logger.debug('Token exchange successful');
+      logger.debug('User:', result.user.email);
 
       // Store tokens securely
-      console.log('Storing tokens...');
+      logger.debug('Storing tokens...');
       await secureStorage.setItem('access_token', result.accessToken);
       await secureStorage.setItem('refresh_token', result.refreshToken);
-      console.log('Tokens stored successfully');
+      logger.debug('Tokens stored successfully');
 
       // Navigate to main app
-      console.log('Redirecting to events...');
+      logger.debug('Redirecting to events...');
       router.replace('/(tabs)/events');
     } catch (err: any) {
-      console.error('Discord callback error:', err);
+      logger.error('Discord callback error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Authentication failed';
       router.replace('/login?error=' + encodeURIComponent(errorMessage));
     }

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { logger } from '../../lib/logger';
 import { useRouter } from 'expo-router';
 import { theme } from '../../lib/theme';
 import { shadows } from '../../lib/shadows';
@@ -15,7 +16,7 @@ export default function MoreScreen() {
         router.replace('/login');
       })
       .catch((error) => {
-        console.error('Logout error:', error);
+        logger.error('Logout error:', error);
         // Still navigate to login even on error
         router.replace('/login');
       });
@@ -50,6 +51,12 @@ export default function MoreScreen() {
       title: 'Notifications',
       subtitle: 'Manage your notifications',
       onPress: () => router.push('/notifications'),
+    },
+    {
+      icon: 'podium',
+      title: 'Leaderboard',
+      subtitle: 'View player rankings',
+      onPress: () => router.push('/leaderboard'),
     },
     {
       icon: 'time',

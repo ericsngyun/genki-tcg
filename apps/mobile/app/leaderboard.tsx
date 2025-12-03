@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
+import { logger } from '../lib/logger';
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -60,7 +61,7 @@ export default function LeaderboardScreen() {
       });
       setLeaderboardData(data.ratings || []);
     } catch (err: any) {
-      console.error('Failed to load leaderboard:', err);
+      logger.error('Failed to load leaderboard:', err);
       setError(err.response?.data?.message || 'Failed to load leaderboard');
     } finally {
       setLoading(false);

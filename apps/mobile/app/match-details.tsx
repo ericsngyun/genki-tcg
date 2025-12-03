@@ -15,6 +15,7 @@ import { theme } from '../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
+import { logger } from '../lib/logger';
 
 interface ActiveMatch {
   match: {
@@ -73,7 +74,7 @@ export default function MatchDetailsScreen() {
       setActiveMatch(matchData);
       setMyUserId(userData.user.id);
     } catch (error) {
-      console.error('Failed to load active match:', error);
+      logger.error('Failed to load active match:', error);
     } finally {
       setLoading(false);
     }

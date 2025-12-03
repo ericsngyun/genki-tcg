@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { logger } from '../../lib/logger';
 import {
   View,
   Text,
@@ -108,13 +109,13 @@ export default function EventsScreen() {
 
     // Subscribe to pairings and round updates
     const unsubscribePairings = onPairingsPosted((data) => {
-      console.log(`Pairings posted for event ${data.eventId}, round ${data.roundNumber}`);
+      logger.debug(`Pairings posted for event ${data.eventId}, round ${data.roundNumber}`);
       // Reload events to reflect tournament started and new rounds
       setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
     });
 
     const unsubscribeRoundStarted = onRoundStarted((data) => {
-      console.log(`Round ${data.roundNumber} started for event ${data.eventId}`);
+      logger.debug(`Round ${data.roundNumber} started for event ${data.eventId}`);
       // Reload events to reflect status changes
       setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
     });
@@ -146,7 +147,7 @@ export default function EventsScreen() {
 
       setEvents([...inProgressEvents, ...scheduledEvents, ...completedEvents]);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      logger.error('Failed to load data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -181,6 +182,14 @@ export default function EventsScreen() {
     // My tournaments (registered)
     const myTournaments = events.filter((e) => {
       if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return false;
+
+      // Exclude SCHEDULED events that are more than 24 hours past their start time
+      if (e.status === 'SCHEDULED') {
+        const startTime = new Date(e.startAt);
+        const hoursPassed = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+        if (hoursPassed > 24) return false;
+      }
+
       return isParticipating(e);
     });
 
@@ -736,7 +745,7 @@ const EventCard: React.FC<EventCardProps> = ({
     hexToRgba(cardBgColor, 0.6),
     hexToRgba(cardBgColor, 0.2),
     'transparent'
-  ];
+  ] as const;
 
   return (
     <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
@@ -1012,9 +1021,6 @@ const styles = StyleSheet.create({
   },
   eventCardCompact: {
     // Padding handled by cardContent
-  },
-  cardContentCompact: {
-    padding: 12,
   },
   eventCardMuted: {
     opacity: 0.7,
