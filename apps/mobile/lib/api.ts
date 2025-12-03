@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { getFriendlyError } from './errors';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { secureStorage } from './secure-storage';
 
@@ -86,6 +87,10 @@ class ApiClient {
             this.isRefreshing = false;
           }
         }
+
+        // Add friendly error message
+        const friendlyError = getFriendlyError(error);
+        error.friendlyMessage = friendlyError;
 
         return Promise.reject(error);
       }

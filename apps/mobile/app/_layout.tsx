@@ -5,6 +5,7 @@ import { theme as customTheme } from '../lib/theme';
 import { SocketProvider } from '../contexts/SocketContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { initSentry } from '../lib/sentry';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // Initialize Sentry error tracking
 initSentry();
@@ -38,10 +39,11 @@ export default function RootLayout() {
   usePushNotifications();
 
   return (
-    <SocketProvider>
-      <PaperProvider theme={paperTheme}>
-        <StatusBar style="light" />
-        <Stack
+    <ErrorBoundary>
+      <SocketProvider>
+        <PaperProvider theme={paperTheme}>
+          <StatusBar style="light" />
+          <Stack
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: customTheme.colors.background.primary },
@@ -57,8 +59,9 @@ export default function RootLayout() {
           <Stack.Screen name="notifications" />
           <Stack.Screen name="notification-preferences" />
           <Stack.Screen name="leaderboard" />
-        </Stack>
-      </PaperProvider>
-    </SocketProvider>
+          </Stack>
+        </PaperProvider>
+      </SocketProvider>
+    </ErrorBoundary>
   );
 }
