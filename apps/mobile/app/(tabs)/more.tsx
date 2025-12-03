@@ -59,40 +59,57 @@ export default function MoreScreen() {
       onPress: () => router.push('/leaderboard'),
     },
     {
-      icon: 'time',
-      title: 'Match History',
-      subtitle: 'View your past matches',
-      onPress: () => alert('Coming soon'),
-    },
-    {
-      icon: 'trophy',
-      title: 'Achievements',
-      subtitle: 'View your achievements',
-      onPress: () => alert('Coming soon'),
-    },
-    {
-      icon: 'location',
-      title: 'Store Locator',
-      subtitle: 'Find nearby stores',
-      onPress: () => alert('Coming soon'),
+      icon: 'person',
+      title: 'My Profile',
+      subtitle: 'View stats and match history',
+      onPress: () => router.push('/(tabs)/profile'),
     },
     {
       icon: 'settings',
       title: 'Settings',
-      subtitle: 'App preferences',
-      onPress: () => alert('Coming soon'),
+      subtitle: 'App preferences and account',
+      onPress: () => router.push('/settings'),
     },
     {
       icon: 'help-circle',
       title: 'Help & Support',
-      subtitle: 'Get help or contact us',
-      onPress: () => alert('Coming soon'),
+      subtitle: 'Privacy, Terms, and Support',
+      onPress: () => {
+        Alert.alert(
+          'Help & Support',
+          'Choose an option:',
+          [
+            {
+              text: 'Privacy Policy',
+              onPress: () => router.push('/settings'),
+            },
+            {
+              text: 'Terms of Service',
+              onPress: () => router.push('/settings'),
+            },
+            {
+              text: 'Report a Bug',
+              onPress: () => router.push('/settings'),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]
+        );
+      },
     },
     {
       icon: 'information-circle',
       title: 'About',
       subtitle: 'Version 0.1.0',
-      onPress: () => alert('Genki TCG Mobile App\nVersion 0.1.0'),
+      onPress: () => {
+        Alert.alert(
+          'About Genki TCG',
+          'Version 0.1.0\n\nTournament Management & Rankings\n\nSupported Games:\n• One Piece TCG\n• Azuki TCG\n• Riftbound\n\n© 2025 Genki TCG. All rights reserved.',
+          [{ text: 'OK' }]
+        );
+      },
     },
   ];
 

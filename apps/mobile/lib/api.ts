@@ -81,7 +81,11 @@ class ApiClient {
             this.failedQueue = [];
 
             await secureStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
-            // TODO: Navigate to login screen
+
+            // Token refresh failed - user needs to log in again
+            // The app will handle this via error boundaries and auth guards
+            logger.warn('Token refresh failed, user needs to re-authenticate');
+
             return Promise.reject(refreshError);
           } finally {
             this.isRefreshing = false;
