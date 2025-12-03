@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '../../lib/api';
 import { secureStorage } from '../../lib/secure-storage';
+import { logger } from '../../lib/logger';
 
 /**
  * Discord OAuth Callback Route (Web Only)
