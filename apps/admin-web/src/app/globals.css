@@ -93,4 +93,66 @@
       transform: rotate(360deg);
     }
   }
+
+  /* Custom Scrollbar Styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(0 84% 60%) hsl(0 0% 14%);
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(0 0% 14%);
+    border-radius: 5px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(0 84% 60% / 0.5);
+    border-radius: 5px;
+    border: 2px solid hsl(0 0% 14%);
+    transition: background 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(0 84% 60% / 0.8);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: hsl(0 84% 60%);
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for specific elements */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(0 84% 60% / 0.5) hsl(0 0% 14%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(0 0% 14%);
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(0 84% 60% / 0.5);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(0 84% 60% / 0.8);
+  }
 }
