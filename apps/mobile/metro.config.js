@@ -8,6 +8,21 @@ const config = getDefaultConfig(__dirname);
 // Enable CSS support for web
 config.resolver.sourceExts.push('css');
 
+// Block watching of non-mobile directories to prevent Metro errors
+config.resolver.blockList = [
+  // Ignore admin-web build artifacts and node_modules
+  /apps\/admin-web\/.next\/.*/,
+  /apps\/admin-web\/node_modules\/.*/,
+  /apps\/admin-web\/\.turbo\/.*/,
+
+  // Ignore backend directories
+  /apps\/backend\/dist\/.*/,
+  /apps\/backend\/node_modules\/.*/,
+
+  // Ignore root level directories that shouldn't be watched
+  /node_modules\/.*\/node_modules\/.*/,
+];
+
 // CRITICAL: Force single React instance by resolving to exact paths
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const reactPath = path.resolve(__dirname, 'node_modules/react');
