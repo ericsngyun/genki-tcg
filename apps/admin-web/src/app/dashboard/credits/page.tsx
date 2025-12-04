@@ -18,6 +18,10 @@ interface User {
   memberships: Array<{
     role: string;
   }>;
+  lifetimeRatings?: Array<{
+    rating: number;
+    category: string;
+  }>;
 }
 
 interface Transaction {

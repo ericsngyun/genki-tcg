@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { UserAvatar } from '../UserAvatar';
+import { RankedAvatar, mapRatingToTier, PlayerTier } from '../RankedAvatar';
 
 interface User {
     id: string;
@@ -9,6 +9,10 @@ interface User {
     balance?: number;
     memberships: Array<{
         role: string;
+    }>;
+    lifetimeRatings?: Array<{
+        rating: number;
+        category: string;
     }>;
 }
 
@@ -29,6 +33,13 @@ export function UserListSection({
     onUserSelect,
     loading,
 }: UserListSectionProps) {
+    // Helper to get highest tier
+    const getHighestTier = (user: User): PlayerTier => {
+        if (!user.lifetimeRatings || user.lifetimeRatings.length === 0) return 'UNRANKED';
+        const highestRating = Math.max(...user.lifetimeRatings.map(r => r.rating));
+        return mapRatingToTier(highestRating);
+    };
+
     return (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500">
             {/* Search Header */}
@@ -69,19 +80,21 @@ export function UserListSection({
                             key={user.id}
                             onClick={() => onUserSelect(user)}
                             className={`w-full p-4 border-b border-border text-left hover:bg-muted/50 transition-all group animate-in fade-in slide-in-from-left-2 duration-300 ${selectedUser?.id === user.id
-                                    ? 'bg-primary/5 border-l-4 border-l-primary'
-                                    : 'border-l-4 border-l-transparent'
+                                ? 'bg-primary/5 border-l-4 border-l-primary'
+                                : 'border-l-4 border-l-transparent'
                                 }`}
                             style={{ animationDelay: `${index * 30}ms` }}
                         >
                             <div className="flex items-center gap-3">
                                 {/* Avatar */}
-                                <UserAvatar
+                                <RankedAvatar
                                     user={{ name: user.name, avatarUrl: user.avatarUrl }}
+                                    tier={getHighestTier(user)}
                                     size="md"
+                                    showTierBadge={true}
                                     className={`transition-all ${selectedUser?.id === user.id
-                                            ? 'ring-2 ring-primary shadow-lg shadow-primary/25'
-                                            : ''
+                                        ? 'scale-110'
+                                        : ''
                                         }`}
                                 />
 
@@ -89,8 +102,8 @@ export function UserListSection({
                                 <div className="flex-1 min-w-0">
                                     <div
                                         className={`font-semibold truncate transition-colors ${selectedUser?.id === user.id
-                                                ? 'text-foreground'
-                                                : 'text-foreground/90 group-hover:text-foreground'
+                                            ? 'text-foreground'
+                                            : 'text-foreground/90 group-hover:text-foreground'
                                             }`}
                                     >
                                         {user.name}
@@ -102,10 +115,10 @@ export function UserListSection({
                                 <div className="flex flex-col items-end gap-0.5 mr-2">
                                     <div
                                         className={`text-lg font-bold tabular-nums ${(user.balance ?? 0) > 0
-                                                ? 'text-green-400'
-                                                : (user.balance ?? 0) < 0
-                                                    ? 'text-destructive'
-                                                    : 'text-muted-foreground'
+                                            ? 'text-green-400'
+                                            : (user.balance ?? 0) < 0
+                                                ? 'text-destructive'
+                                                : 'text-muted-foreground'
                                             }`}
                                     >
                                         {(user.balance ?? 0).toLocaleString()}

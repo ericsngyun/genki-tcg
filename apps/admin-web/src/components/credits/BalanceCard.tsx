@@ -1,6 +1,6 @@
 import { Download, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useMemo } from 'react';
-import { UserAvatar } from '../UserAvatar';
+import { RankedAvatar, mapRatingToTier, PlayerTier } from '../RankedAvatar';
 
 interface Transaction {
     id: string;
@@ -15,6 +15,10 @@ interface User {
     name: string;
     email: string;
     avatarUrl?: string | null;
+    lifetimeRatings?: Array<{
+        rating: number;
+        category: string;
+    }>;
 }
 
 interface BalanceCardProps {
@@ -49,6 +53,13 @@ export function BalanceCard({
         return { totalEarned, totalSpent, totalTransactions };
     }, [transactions]);
 
+    // Helper to get highest tier
+    const getHighestTier = (): PlayerTier => {
+        if (!user.lifetimeRatings || user.lifetimeRatings.length === 0) return 'UNRANKED';
+        const highestRating = Math.max(...user.lifetimeRatings.map(r => r.rating));
+        return mapRatingToTier(highestRating);
+    };
+
     return (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Header */}
@@ -56,9 +67,11 @@ export function BalanceCard({
                 <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-4 flex-1">
                         {/* Avatar */}
-                        <UserAvatar
+                        <RankedAvatar
                             user={{ name: user.name, avatarUrl: user.avatarUrl }}
+                            tier={getHighestTier()}
                             size="lg"
+                            showTierBadge={true}
                             className="shadow-lg"
                         />
 
