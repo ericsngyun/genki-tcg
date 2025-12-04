@@ -22,7 +22,7 @@ import Animated, {
   Layout,
   SlideInRight,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import { RankedAvatar, mapRatingToTier } from '../components/RankedAvatar';
 
 const { width } = Dimensions.get('window');
 
@@ -161,18 +161,15 @@ export default function LeaderboardScreen() {
                     entering={FadeInDown.delay(200).springify()}
                     style={[styles.podiumPosition, { marginTop: 30 }]}
                   >
-                    <View style={styles.avatarContainer}>
-                      <LinearGradient
-                        colors={['#C0C0C0', '#E5E4E2']}
-                        style={[styles.avatarBorder, { borderColor: '#C0C0C0' }]}
-                      >
-                        <View style={styles.avatarPlaceholder}>
-                          <Text style={styles.avatarInitial}>{leaderboardData[1].userName[0]}</Text>
-                        </View>
-                      </LinearGradient>
-                      <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
-                        <Text style={styles.rankBadgeText}>2</Text>
-                      </View>
+                    <RankedAvatar
+                      avatarUrl={null}
+                      name={leaderboardData[1].userName}
+                      tier={mapRatingToTier(leaderboardData[1].lifetimeRating)}
+                      size={64}
+                      showTierBadge={true}
+                    />
+                    <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0', marginTop: 8 }]}>
+                      <Text style={styles.rankBadgeText}>2</Text>
                     </View>
                     <Text style={styles.podiumName} numberOfLines={1}>{leaderboardData[1].userName}</Text>
                     <Text style={styles.podiumRating}>{Math.round(leaderboardData[1].lifetimeRating)}</Text>
@@ -186,18 +183,17 @@ export default function LeaderboardScreen() {
                     <View style={styles.crownContainer}>
                       <Ionicons name="trophy" size={24} color="#FFD700" />
                     </View>
-                    <View style={[styles.avatarContainer, { transform: [{ scale: 1.1 }] }]}>
-                      <LinearGradient
-                        colors={['#FFD700', '#FDB931']}
-                        style={[styles.avatarBorder, { borderColor: '#FFD700' }]}
-                      >
-                        <View style={styles.avatarPlaceholder}>
-                          <Text style={styles.avatarInitial}>{leaderboardData[0].userName[0]}</Text>
-                        </View>
-                      </LinearGradient>
-                      <View style={[styles.rankBadge, { backgroundColor: '#FFD700' }]}>
-                        <Text style={styles.rankBadgeText}>1</Text>
-                      </View>
+                    <View style={{ transform: [{ scale: 1.1 }] }}>
+                      <RankedAvatar
+                        avatarUrl={null}
+                        name={leaderboardData[0].userName}
+                        tier={mapRatingToTier(leaderboardData[0].lifetimeRating)}
+                        size={64}
+                        showTierBadge={true}
+                      />
+                    </View>
+                    <View style={[styles.rankBadge, { backgroundColor: '#FFD700', marginTop: 8 }]}>
+                      <Text style={styles.rankBadgeText}>1</Text>
                     </View>
                     <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>
                       {leaderboardData[0].userName}
@@ -212,18 +208,15 @@ export default function LeaderboardScreen() {
                     entering={FadeInDown.delay(300).springify()}
                     style={[styles.podiumPosition, { marginTop: 40 }]}
                   >
-                    <View style={styles.avatarContainer}>
-                      <LinearGradient
-                        colors={['#CD7F32', '#B87333']}
-                        style={[styles.avatarBorder, { borderColor: '#CD7F32' }]}
-                      >
-                        <View style={styles.avatarPlaceholder}>
-                          <Text style={styles.avatarInitial}>{leaderboardData[2].userName[0]}</Text>
-                        </View>
-                      </LinearGradient>
-                      <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
-                        <Text style={styles.rankBadgeText}>3</Text>
-                      </View>
+                    <RankedAvatar
+                      avatarUrl={null}
+                      name={leaderboardData[2].userName}
+                      tier={mapRatingToTier(leaderboardData[2].lifetimeRating)}
+                      size={64}
+                      showTierBadge={true}
+                    />
+                    <View style={[styles.rankBadge, { backgroundColor: '#CD7F32', marginTop: 8 }]}>
+                      <Text style={styles.rankBadgeText}>3</Text>
                     </View>
                     <Text style={styles.podiumName} numberOfLines={1}>{leaderboardData[2].userName}</Text>
                     <Text style={styles.podiumRating}>{Math.round(leaderboardData[2].lifetimeRating)}</Text>
@@ -394,46 +387,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: width * 0.28,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  avatarBorder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    padding: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 30,
-    backgroundColor: theme.colors.background.elevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: theme.colors.text.secondary,
-  },
   rankBadge: {
-    position: 'absolute',
-    bottom: -6,
-    alignSelf: 'center',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: theme.colors.background.primary,
   },
   rankBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#FFF',
   },
   crownContainer: {

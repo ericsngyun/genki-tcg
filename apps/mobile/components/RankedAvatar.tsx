@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Circle, Path, G, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Circle, Path, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
 
@@ -28,51 +28,47 @@ const TIER_CONFIG: Record<PlayerTier, {
   icon: string;
   accent: string;
   glow: string;
-  hasWings?: boolean;
-  hasGems?: boolean; // New: Gem accents at cardinal points
+  hasFlairs?: boolean; // 4-corner accents
 }> = {
   BRONZE: {
-    colors: ['#5D4037', '#CD7F32', '#8D6E63'], // Darker bronze to lighter
+    colors: ['#5D4037', '#CD7F32', '#8D6E63'],
     icon: 'shield',
     accent: '#A1887F',
     glow: 'rgba(141, 110, 99, 0.2)',
   },
   SILVER: {
-    colors: ['#455A64', '#CFD8DC', '#90A4AE'], // Blue-grey silver
+    colors: ['#455A64', '#CFD8DC', '#90A4AE'],
     icon: 'shield',
     accent: '#B0BEC5',
     glow: 'rgba(144, 164, 174, 0.3)',
   },
   GOLD: {
-    colors: ['#8D6E63', '#FFD700', '#FFECB3'], // Deep gold to pale gold
+    colors: ['#8D6E63', '#FFD700', '#FFECB3'],
     icon: 'shield',
     accent: '#FFE082',
     glow: 'rgba(255, 215, 0, 0.4)',
-    hasGems: true,
+    hasFlairs: true,
   },
   PLATINUM: {
-    colors: ['#004D40', '#64FFDA', '#1DE9B6'], // Deep teal to bright teal
+    colors: ['#004D40', '#64FFDA', '#1DE9B6'],
     icon: 'diamond',
     accent: '#A7FFEB',
     glow: 'rgba(29, 233, 182, 0.5)',
-    hasWings: true,
-    hasGems: true,
+    hasFlairs: true,
   },
   DIAMOND: {
-    colors: ['#1A237E', '#448AFF', '#82B1FF'], // Deep blue to light blue
+    colors: ['#1A237E', '#448AFF', '#82B1FF'],
     icon: 'diamond',
     accent: '#82B1FF',
     glow: 'rgba(68, 138, 255, 0.6)',
-    hasWings: true,
-    hasGems: true,
+    hasFlairs: true,
   },
   GENKI: {
-    colors: ['#3E2723', '#FF3D00', '#FF9E80'], // Deep red/brown to bright orange/red
+    colors: ['#3E2723', '#FF3D00', '#FF9E80'],
     icon: 'flame',
     accent: '#FF9E80',
     glow: 'rgba(255, 61, 0, 0.7)',
-    hasWings: true,
-    hasGems: true,
+    hasFlairs: true,
   },
   UNRANKED: {
     colors: ['#263238', '#546E7A', '#78909C'],
@@ -93,16 +89,15 @@ export function RankedAvatar({
   const initial = name?.charAt(0).toUpperCase() || '?';
   const config = TIER_CONFIG[tier];
 
-  // Dimensions
-  const strokeWidth = size * 0.06; // Slightly thinner main ring
-  const outerRingWidth = size * 0.02;
+  // Dimensions - Bold & Sharp
+  const strokeWidth = size * 0.08; // Thick border
   const radius = size / 2;
   const center = size / 2;
   const badgeSize = size * 0.3;
 
-  // Wing path scaling - Sharper, more detailed wings
-  const wingWidth = size * 0.5;
-  const wingHeight = size * 0.7;
+  // Flair dimensions
+  const flairLength = size * 0.25;
+  const flairOffset = size * 0.1;
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
@@ -112,8 +107,8 @@ export function RankedAvatar({
         {
           borderRadius: size,
           backgroundColor: config.glow,
-          transform: [{ scale: 1.25 }], // Larger glow
-          opacity: 0.5,
+          transform: [{ scale: 1.1 }],
+          opacity: 0.6,
           zIndex: -1
         }
       ]} />
@@ -127,78 +122,75 @@ export function RankedAvatar({
               <Stop offset="0.5" stopColor={config.colors[1]} />
               <Stop offset="1" stopColor={config.colors[2]} />
             </LinearGradient>
-            <LinearGradient id="gemGrad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={config.accent} stopOpacity="0.9" />
-              <Stop offset="1" stopColor="white" stopOpacity="0.6" />
-            </LinearGradient>
           </Defs>
 
-          {/* Wings (for high tiers) - Sharper Design */}
-          {config.hasWings && (
+          {/* 4-Corner Flairs (Sharp & Angular) */}
+          {config.hasFlairs && (
             <G>
-              {/* Left Wing - 3 feathers */}
+              {/* Top Left */}
               <Path
                 d={`
-                  M${center - radius + strokeWidth} ${center} 
-                  C${center - radius - wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center - radius - wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center - radius - wingWidth} ${center - wingHeight}
-                  L${center - radius - wingWidth * 0.8} ${center - wingHeight * 0.5}
-                  L${center - radius - wingWidth * 0.6} ${center - wingHeight * 0.8}
-                  L${center - radius - wingWidth * 0.4} ${center - wingHeight * 0.4}
+                  M${center - radius + flairOffset} ${center - radius + flairOffset + flairLength}
+                  L${center - radius + flairOffset} ${center - radius + flairOffset}
+                  L${center - radius + flairOffset + flairLength} ${center - radius + flairOffset}
+                  L${center - radius + flairOffset + flairLength - 5} ${center - radius + flairOffset + 5}
+                  L${center - radius + flairOffset + 5} ${center - radius + flairOffset + 5}
+                  L${center - radius + flairOffset + 5} ${center - radius + flairOffset + flairLength - 5}
                   Z
                 `}
                 fill="url(#borderGrad)"
-                opacity={0.9}
               />
-              {/* Right Wing - 3 feathers (Mirrored) */}
+              {/* Top Right */}
               <Path
                 d={`
-                  M${center + radius - strokeWidth} ${center} 
-                  C${center + radius + wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center + radius + wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center + radius + wingWidth} ${center - wingHeight}
-                  L${center + radius + wingWidth * 0.8} ${center - wingHeight * 0.5}
-                  L${center + radius + wingWidth * 0.6} ${center - wingHeight * 0.8}
-                  L${center + radius + wingWidth * 0.4} ${center - wingHeight * 0.4}
+                  M${center + radius - flairOffset - flairLength} ${center - radius + flairOffset}
+                  L${center + radius - flairOffset} ${center - radius + flairOffset}
+                  L${center + radius - flairOffset} ${center - radius + flairOffset + flairLength}
+                  L${center + radius - flairOffset - 5} ${center - radius + flairOffset + flairLength - 5}
+                  L${center + radius - flairOffset - 5} ${center - radius + flairOffset + 5}
+                  L${center + radius - flairOffset - flairLength + 5} ${center - radius + flairOffset + 5}
                   Z
                 `}
                 fill="url(#borderGrad)"
-                opacity={0.9}
+              />
+              {/* Bottom Left */}
+              <Path
+                d={`
+                  M${center - radius + flairOffset} ${center + radius - flairOffset - flairLength}
+                  L${center - radius + flairOffset} ${center + radius - flairOffset}
+                  L${center - radius + flairOffset + flairLength} ${center + radius - flairOffset}
+                  L${center - radius + flairOffset + flairLength - 5} ${center + radius - flairOffset - 5}
+                  L${center - radius + flairOffset + 5} ${center + radius - flairOffset - 5}
+                  L${center - radius + flairOffset + 5} ${center + radius - flairOffset - flairLength + 5}
+                  Z
+                `}
+                fill="url(#borderGrad)"
+              />
+              {/* Bottom Right */}
+              <Path
+                d={`
+                  M${center + radius - flairOffset - flairLength} ${center + radius - flairOffset}
+                  L${center + radius - flairOffset} ${center + radius - flairOffset}
+                  L${center + radius - flairOffset} ${center + radius - flairOffset - flairLength}
+                  L${center + radius - flairOffset - 5} ${center + radius - flairOffset - flairLength + 5}
+                  L${center + radius - flairOffset - 5} ${center + radius - flairOffset - 5}
+                  L${center + radius - flairOffset - flairLength + 5} ${center + radius - flairOffset - 5}
+                  Z
+                `}
+                fill="url(#borderGrad)"
               />
             </G>
           )}
 
-          {/* Outer Ring (Thin) */}
+          {/* Main Ring (Thick) */}
           <Circle
             cx={center}
             cy={center}
-            r={radius - outerRingWidth / 2}
-            stroke="url(#borderGrad)"
-            strokeWidth={outerRingWidth}
-            strokeOpacity={0.6}
-            fill="none"
-          />
-
-          {/* Main Ring (Thicker) */}
-          <Circle
-            cx={center}
-            cy={center}
-            r={radius - outerRingWidth - strokeWidth / 2 - 2} // Spaced inward
+            r={radius - strokeWidth / 2}
             stroke="url(#borderGrad)"
             strokeWidth={strokeWidth}
             fill="none"
           />
-
-          {/* Gem Accents (Cardinal Points) */}
-          {config.hasGems && (
-            <G>
-              {/* Top */}
-              <Rect x={center - 3} y={0} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${center} 3)`} />
-              {/* Bottom */}
-              <Rect x={center - 3} y={size - 6} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${center} ${size - 3})`} />
-              {/* Left */}
-              <Rect x={0} y={center - 3} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 3 ${center})`} />
-              {/* Right */}
-              <Rect x={size - 6} y={center - 3} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${size - 3} ${center})`} />
-            </G>
-          )}
         </Svg>
       </View>
 
@@ -206,10 +198,10 @@ export function RankedAvatar({
       <View style={[
         styles.avatarContainer,
         {
-          width: size - (outerRingWidth + strokeWidth + 4) * 2,
-          height: size - (outerRingWidth + strokeWidth + 4) * 2,
-          borderRadius: (size - (outerRingWidth + strokeWidth + 4) * 2) / 2,
-          // Centered automatically by flex container
+          width: size - strokeWidth * 2,
+          height: size - strokeWidth * 2,
+          borderRadius: (size - strokeWidth * 2) / 2,
+          margin: strokeWidth
         }
       ]}>
         {avatarUrl ? (
@@ -219,7 +211,7 @@ export function RankedAvatar({
           />
         ) : (
           <View style={[styles.placeholder, { backgroundColor: theme.colors.background.elevated }]}>
-            <Text style={[styles.initial, { fontSize: size * 0.35, color: config.accent }]}>
+            <Text style={[styles.initial, { fontSize: size * 0.4, color: config.accent }]}>
               {initial}
             </Text>
           </View>

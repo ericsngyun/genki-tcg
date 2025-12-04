@@ -1,4 +1,4 @@
-// Reusable Ranked Avatar Component with premium tier-based metallic borders and effects
+// Reusable Ranked Avatar Component with bold & sharp tier-based metallic borders
 import React from 'react';
 
 interface RankedAvatarProps {
@@ -28,8 +28,7 @@ const TIER_CONFIG: Record<PlayerTier, {
     icon: string;
     accent: string;
     glow: string;
-    hasWings?: boolean;
-    hasGems?: boolean;
+    hasFlairs?: boolean; // 4-corner accents
     textColor: string;
 }> = {
     SPROUT: {
@@ -58,7 +57,7 @@ const TIER_CONFIG: Record<PlayerTier, {
         icon: '🛡️',
         accent: '#FFE082',
         glow: 'rgba(255, 215, 0, 0.5)',
-        hasGems: true,
+        hasFlairs: true,
         textColor: 'text-[#FFD700]',
     },
     PLATINUM: {
@@ -66,8 +65,7 @@ const TIER_CONFIG: Record<PlayerTier, {
         icon: '💎',
         accent: '#A7FFEB',
         glow: 'rgba(29, 233, 182, 0.6)',
-        hasWings: true,
-        hasGems: true,
+        hasFlairs: true,
         textColor: 'text-[#1DE9B6]',
     },
     DIAMOND: {
@@ -75,8 +73,7 @@ const TIER_CONFIG: Record<PlayerTier, {
         icon: '💎',
         accent: '#82B1FF',
         glow: 'rgba(68, 138, 255, 0.7)',
-        hasWings: true,
-        hasGems: true,
+        hasFlairs: true,
         textColor: 'text-[#448AFF]',
     },
     GENKI: {
@@ -84,8 +81,7 @@ const TIER_CONFIG: Record<PlayerTier, {
         icon: '🔥',
         accent: '#FF9E80',
         glow: 'rgba(255, 61, 0, 0.8)',
-        hasWings: true,
-        hasGems: true,
+        hasFlairs: true,
         textColor: 'text-[#FF3D00]',
     },
     UNRANKED: {
@@ -116,20 +112,18 @@ export function RankedAvatar({
     const config = TIER_CONFIG[tier];
     const pxSize = SIZE_MAP[size];
 
-    // Dimensions
-    const strokeWidth = pxSize * 0.06;
-    const outerRingWidth = pxSize * 0.02;
+    // Dimensions - Bold & Sharp
+    const strokeWidth = pxSize * 0.08;
     const radius = pxSize / 2;
     const center = pxSize / 2;
     const badgeSize = pxSize * 0.3;
 
-    // Wing path scaling
-    const wingWidth = pxSize * 0.5;
-    const wingHeight = pxSize * 0.7;
+    // Flair dimensions
+    const flairLength = pxSize * 0.25;
+    const flairOffset = pxSize * 0.1;
 
     // Unique ID for gradient to avoid conflicts
     const gradientId = `borderGrad-${tier}-${size}-${user.name.replace(/\s/g, '')}`;
-    const gemGradientId = `gemGrad-${tier}-${size}-${user.name.replace(/\s/g, '')}`;
 
     return (
         <div
@@ -139,7 +133,7 @@ export function RankedAvatar({
             {/* Glow Layer */}
             <div
                 className="absolute inset-0 rounded-full blur-md opacity-60 pointer-events-none"
-                style={{ backgroundColor: config.glow, transform: 'scale(1.25)' }}
+                style={{ backgroundColor: config.glow, transform: 'scale(1.1)' }}
             />
 
             {/* SVG Border Layer */}
@@ -155,82 +149,83 @@ export function RankedAvatar({
                         <stop offset="50%" stopColor={config.colors[1]} />
                         <stop offset="100%" stopColor={config.colors[2]} />
                     </linearGradient>
-                    <linearGradient id={gemGradientId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={config.accent} stopOpacity="0.9" />
-                        <stop offset="100%" stopColor="white" stopOpacity="0.6" />
-                    </linearGradient>
                 </defs>
 
-                {/* Wings */}
-                {config.hasWings && (
+                {/* 4-Corner Flairs (Sharp & Angular) */}
+                {config.hasFlairs && (
                     <g>
-                        {/* Left Wing */}
+                        {/* Top Left */}
                         <path
                             d={`
-                                M${center - radius + strokeWidth} ${center} 
-                                C${center - radius - wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center - radius - wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center - radius - wingWidth} ${center - wingHeight}
-                                L${center - radius - wingWidth * 0.8} ${center - wingHeight * 0.5}
-                                L${center - radius - wingWidth * 0.6} ${center - wingHeight * 0.8}
-                                L${center - radius - wingWidth * 0.4} ${center - wingHeight * 0.4}
+                                M${center - radius + flairOffset} ${center - radius + flairOffset + flairLength}
+                                L${center - radius + flairOffset} ${center - radius + flairOffset}
+                                L${center - radius + flairOffset + flairLength} ${center - radius + flairOffset}
+                                L${center - radius + flairOffset + flairLength - 5} ${center - radius + flairOffset + 5}
+                                L${center - radius + flairOffset + 5} ${center - radius + flairOffset + 5}
+                                L${center - radius + flairOffset + 5} ${center - radius + flairOffset + flairLength - 5}
                                 Z
                             `}
                             fill={`url(#${gradientId})`}
-                            opacity="0.9"
                         />
-                        {/* Right Wing */}
+                        {/* Top Right */}
                         <path
                             d={`
-                                M${center + radius - strokeWidth} ${center} 
-                                C${center + radius + wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center + radius + wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center + radius + wingWidth} ${center - wingHeight}
-                                L${center + radius + wingWidth * 0.8} ${center - wingHeight * 0.5}
-                                L${center + radius + wingWidth * 0.6} ${center - wingHeight * 0.8}
-                                L${center + radius + wingWidth * 0.4} ${center - wingHeight * 0.4}
+                                M${center + radius - flairOffset - flairLength} ${center - radius + flairOffset}
+                                L${center + radius - flairOffset} ${center - radius + flairOffset}
+                                L${center + radius - flairOffset} ${center - radius + flairOffset + flairLength}
+                                L${center + radius - flairOffset - 5} ${center - radius + flairOffset + flairLength - 5}
+                                L${center + radius - flairOffset - 5} ${center - radius + flairOffset + 5}
+                                L${center + radius - flairOffset - flairLength + 5} ${center - radius + flairOffset + 5}
                                 Z
                             `}
                             fill={`url(#${gradientId})`}
-                            opacity="0.9"
+                        />
+                        {/* Bottom Left */}
+                        <path
+                            d={`
+                                M${center - radius + flairOffset} ${center + radius - flairOffset - flairLength}
+                                L${center - radius + flairOffset} ${center + radius - flairOffset}
+                                L${center - radius + flairOffset + flairLength} ${center + radius - flairOffset}
+                                L${center - radius + flairOffset + flairLength - 5} ${center + radius - flairOffset - 5}
+                                L${center - radius + flairOffset + 5} ${center + radius - flairOffset - 5}
+                                L${center - radius + flairOffset + 5} ${center + radius - flairOffset - flairLength + 5}
+                                Z
+                            `}
+                            fill={`url(#${gradientId})`}
+                        />
+                        {/* Bottom Right */}
+                        <path
+                            d={`
+                                M${center + radius - flairOffset - flairLength} ${center + radius - flairOffset}
+                                L${center + radius - flairOffset} ${center + radius - flairOffset}
+                                L${center + radius - flairOffset} ${center + radius - flairOffset - flairLength}
+                                L${center + radius - flairOffset - 5} ${center + radius - flairOffset - flairLength + 5}
+                                L${center + radius - flairOffset - 5} ${center + radius - flairOffset - 5}
+                                L${center + radius - flairOffset - flairLength + 5} ${center + radius - flairOffset - 5}
+                                Z
+                            `}
+                            fill={`url(#${gradientId})`}
                         />
                     </g>
                 )}
 
-                {/* Outer Ring */}
+                {/* Main Ring (Thick) */}
                 <circle
                     cx={center}
                     cy={center}
-                    r={radius - outerRingWidth / 2}
-                    stroke={`url(#${gradientId})`}
-                    strokeWidth={outerRingWidth}
-                    strokeOpacity="0.6"
-                    fill="none"
-                />
-
-                {/* Main Ring */}
-                <circle
-                    cx={center}
-                    cy={center}
-                    r={radius - outerRingWidth - strokeWidth / 2 - 2}
+                    r={radius - strokeWidth / 2}
                     stroke={`url(#${gradientId})`}
                     strokeWidth={strokeWidth}
                     fill="none"
                 />
-
-                {/* Gem Accents */}
-                {config.hasGems && (
-                    <g>
-                        <rect x={center - 3} y={0} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${center} 3)`} />
-                        <rect x={center - 3} y={pxSize - 6} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${center} ${pxSize - 3})`} />
-                        <rect x={0} y={center - 3} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 3 ${center})`} />
-                        <rect x={pxSize - 6} y={center - 3} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${pxSize - 3} ${center})`} />
-                    </g>
-                )}
             </svg>
 
             {/* Avatar Image */}
             <div
                 className="relative overflow-hidden rounded-full bg-background flex items-center justify-center"
                 style={{
-                    width: pxSize - (outerRingWidth + strokeWidth + 4) * 2,
-                    height: pxSize - (outerRingWidth + strokeWidth + 4) * 2,
+                    width: pxSize - strokeWidth * 2,
+                    height: pxSize - strokeWidth * 2,
                     // Centered automatically
                 }}
             >
@@ -246,7 +241,7 @@ export function RankedAvatar({
                             if (parent) {
                                 const fallback = document.createElement('div');
                                 fallback.className = `w-full h-full flex items-center justify-center font-bold ${config.textColor}`;
-                                fallback.style.fontSize = `${pxSize * 0.35}px`;
+                                fallback.style.fontSize = `${pxSize * 0.4}px`;
                                 fallback.innerText = initial;
                                 parent.appendChild(fallback);
                             }
@@ -256,7 +251,7 @@ export function RankedAvatar({
                     <div className="w-full h-full flex items-center justify-center bg-muted">
                         <span
                             className={`font-bold ${config.textColor}`}
-                            style={{ fontSize: pxSize * 0.35 }}
+                            style={{ fontSize: pxSize * 0.4 }}
                         >
                             {initial}
                         </span>

@@ -139,7 +139,7 @@ export function LeaderboardTable({
                       <RankedAvatar
                         user={{ name: entry.userName, avatarUrl: entry.userAvatar }}
                         tier={entry.tier}
-                        size={entry.rank === 1 ? 'xl' : entry.rank <= 3 ? 'lg' : 'sm'}
+                        size="md"
                         showTierBadge={true}
                       />
                       <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
