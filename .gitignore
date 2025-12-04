@@ -30,6 +30,8 @@ yarn-error.log*
 # Expo
 .expo/
 .expo-shared/
+apps/mobile/android/
+apps/mobile/ios/
 
 # IDEs
 .idea/
