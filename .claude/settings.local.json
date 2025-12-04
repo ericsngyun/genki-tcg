@@ -21,7 +21,8 @@
       "Bash(test:*)",
       "Bash(find:*)",
       "Bash(npx tsc:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(railway status:*)"
     ],
     "deny": [],
     "ask": []
