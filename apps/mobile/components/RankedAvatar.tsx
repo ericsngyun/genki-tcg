@@ -28,47 +28,47 @@ const TIER_CONFIG: Record<PlayerTier, {
   icon: string;
   accent: string;
   glow: string;
-  hasFlairs?: boolean; // 4-corner accents
+  hasWings?: boolean;
 }> = {
   BRONZE: {
     colors: ['#5D4037', '#CD7F32', '#8D6E63'],
     icon: 'shield',
     accent: '#A1887F',
-    glow: 'rgba(141, 110, 99, 0.2)',
+    glow: 'rgba(141, 110, 99, 0.3)',
   },
   SILVER: {
     colors: ['#455A64', '#CFD8DC', '#90A4AE'],
     icon: 'shield',
     accent: '#B0BEC5',
-    glow: 'rgba(144, 164, 174, 0.3)',
+    glow: 'rgba(144, 164, 174, 0.4)',
   },
   GOLD: {
     colors: ['#8D6E63', '#FFD700', '#FFECB3'],
     icon: 'shield',
     accent: '#FFE082',
-    glow: 'rgba(255, 215, 0, 0.4)',
-    hasFlairs: true,
+    glow: 'rgba(255, 215, 0, 0.5)',
+    hasWings: true,
   },
   PLATINUM: {
     colors: ['#004D40', '#64FFDA', '#1DE9B6'],
     icon: 'diamond',
     accent: '#A7FFEB',
-    glow: 'rgba(29, 233, 182, 0.5)',
-    hasFlairs: true,
+    glow: 'rgba(29, 233, 182, 0.6)',
+    hasWings: true,
   },
   DIAMOND: {
     colors: ['#1A237E', '#448AFF', '#82B1FF'],
     icon: 'diamond',
     accent: '#82B1FF',
-    glow: 'rgba(68, 138, 255, 0.6)',
-    hasFlairs: true,
+    glow: 'rgba(68, 138, 255, 0.7)',
+    hasWings: true,
   },
   GENKI: {
     colors: ['#3E2723', '#FF3D00', '#FF9E80'],
     icon: 'flame',
     accent: '#FF9E80',
-    glow: 'rgba(255, 61, 0, 0.7)',
-    hasFlairs: true,
+    glow: 'rgba(255, 61, 0, 0.8)',
+    hasWings: true,
   },
   UNRANKED: {
     colors: ['#263238', '#546E7A', '#78909C'],
@@ -89,15 +89,15 @@ export function RankedAvatar({
   const initial = name?.charAt(0).toUpperCase() || '?';
   const config = TIER_CONFIG[tier];
 
-  // Dimensions - Bold & Sharp
-  const strokeWidth = size * 0.08; // Thick border
+  // Dimensions
+  const strokeWidth = size * 0.08;
   const radius = size / 2;
   const center = size / 2;
   const badgeSize = size * 0.3;
 
-  // Flair dimensions
-  const flairLength = size * 0.25;
-  const flairOffset = size * 0.1;
+  // Wing dimensions - larger and contained
+  const wingExtension = size * 0.35;
+  const wingHeight = size * 0.5;
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
@@ -107,14 +107,14 @@ export function RankedAvatar({
         {
           borderRadius: size,
           backgroundColor: config.glow,
-          transform: [{ scale: 1.1 }],
-          opacity: 0.6,
+          transform: [{ scale: 1.05 }],
+          opacity: 0.5,
           zIndex: -1
         }
       ]} />
 
-      {/* SVG Border Layer */}
-      <View style={[StyleSheet.absoluteFill, { zIndex: 10, pointerEvents: 'none' }]}>
+      {/* SVG Border Layer - FIXED: proper clipping */}
+      <View style={[StyleSheet.absoluteFill, { zIndex: 10, pointerEvents: 'none', overflow: 'hidden' }]}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <Defs>
             <LinearGradient id="borderGrad" x1="0" y1="0" x2="1" y2="1">
@@ -122,73 +122,134 @@ export function RankedAvatar({
               <Stop offset="0.5" stopColor={config.colors[1]} />
               <Stop offset="1" stopColor={config.colors[2]} />
             </LinearGradient>
+            <LinearGradient id="wingGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={config.colors[1]} stopOpacity="0.9" />
+              <Stop offset="0.5" stopColor={config.accent} stopOpacity="0.7" />
+              <Stop offset="1" stopColor={config.colors[0]} stopOpacity="0.5" />
+            </LinearGradient>
           </Defs>
 
-          {/* 4-Corner Flairs (Sharp & Angular) */}
-          {config.hasFlairs && (
+          {/* Professional Wings (Side only) */}
+          {config.hasWings && (
             <G>
-              {/* Top Left */}
-              <Path
-                d={`
-                  M${center - radius + flairOffset} ${center - radius + flairOffset + flairLength}
-                  L${center - radius + flairOffset} ${center - radius + flairOffset}
-                  L${center - radius + flairOffset + flairLength} ${center - radius + flairOffset}
-                  L${center - radius + flairOffset + flairLength - 5} ${center - radius + flairOffset + 5}
-                  L${center - radius + flairOffset + 5} ${center - radius + flairOffset + 5}
-                  L${center - radius + flairOffset + 5} ${center - radius + flairOffset + flairLength - 5}
-                  Z
-                `}
-                fill="url(#borderGrad)"
-              />
-              {/* Top Right */}
-              <Path
-                d={`
-                  M${center + radius - flairOffset - flairLength} ${center - radius + flairOffset}
-                  L${center + radius - flairOffset} ${center - radius + flairOffset}
-                  L${center + radius - flairOffset} ${center - radius + flairOffset + flairLength}
-                  L${center + radius - flairOffset - 5} ${center - radius + flairOffset + flairLength - 5}
-                  L${center + radius - flairOffset - 5} ${center - radius + flairOffset + 5}
-                  L${center + radius - flairOffset - flairLength + 5} ${center - radius + flairOffset + 5}
-                  Z
-                `}
-                fill="url(#borderGrad)"
-              />
-              {/* Bottom Left */}
-              <Path
-                d={`
-                  M${center - radius + flairOffset} ${center + radius - flairOffset - flairLength}
-                  L${center - radius + flairOffset} ${center + radius - flairOffset}
-                  L${center - radius + flairOffset + flairLength} ${center + radius - flairOffset}
-                  L${center - radius + flairOffset + flairLength - 5} ${center + radius - flairOffset - 5}
-                  L${center - radius + flairOffset + 5} ${center + radius - flairOffset - 5}
-                  L${center - radius + flairOffset + 5} ${center + radius - flairOffset - flairLength + 5}
-                  Z
-                `}
-                fill="url(#borderGrad)"
-              />
-              {/* Bottom Right */}
-              <Path
-                d={`
-                  M${center + radius - flairOffset - flairLength} ${center + radius - flairOffset}
-                  L${center + radius - flairOffset} ${center + radius - flairOffset}
-                  L${center + radius - flairOffset} ${center + radius - flairOffset - flairLength}
-                  L${center + radius - flairOffset - 5} ${center + radius - flairOffset - flairLength + 5}
-                  L${center + radius - flairOffset - 5} ${center + radius - flairOffset - 5}
-                  L${center + radius - flairOffset - flairLength + 5} ${center + radius - flairOffset - 5}
-                  Z
-                `}
-                fill="url(#borderGrad)"
-              />
+              {/* Left Wing - Layered feathers */}
+              <G>
+                {/* Outer feather */}
+                <Path
+                  d={`
+                    M${center - radius + strokeWidth / 2} ${center}
+                    C${center - radius - wingExtension * 0.8} ${center - wingHeight * 0.4},
+                     ${center - radius - wingExtension} ${center - wingHeight * 0.2},
+                     ${center - radius - wingExtension} ${center}
+                    C${center - radius - wingExtension} ${center + wingHeight * 0.2},
+                     ${center - radius - wingExtension * 0.8} ${center + wingHeight * 0.4},
+                     ${center - radius + strokeWidth / 2} ${center}
+                    Z
+                  `}
+                  fill="url(#wingGrad)"
+                  opacity={0.7}
+                />
+                {/* Middle feather */}
+                <Path
+                  d={`
+                    M${center - radius + strokeWidth} ${center}
+                    C${center - radius - wingExtension * 0.6} ${center - wingHeight * 0.3},
+                     ${center - radius - wingExtension * 0.75} ${center - wingHeight * 0.15},
+                     ${center - radius - wingExtension * 0.75} ${center}
+                    C${center - radius - wingExtension * 0.75} ${center + wingHeight * 0.15},
+                     ${center - radius - wingExtension * 0.6} ${center + wingHeight * 0.3},
+                     ${center - radius + strokeWidth} ${center}
+                    Z
+                  `}
+                  fill="url(#borderGrad)"
+                  opacity={0.85}
+                />
+                {/* Inner highlight */}
+                <Path
+                  d={`
+                    M${center - radius + strokeWidth * 1.5} ${center}
+                    C${center - radius - wingExtension * 0.4} ${center - wingHeight * 0.2},
+                     ${center - radius - wingExtension * 0.5} ${center - wingHeight * 0.1},
+                     ${center - radius - wingExtension * 0.5} ${center}
+                    C${center - radius - wingExtension * 0.5} ${center + wingHeight * 0.1},
+                     ${center - radius - wingExtension * 0.4} ${center + wingHeight * 0.2},
+                     ${center - radius + strokeWidth * 1.5} ${center}
+                    Z
+                  `}
+                  fill={config.accent}
+                  opacity={0.6}
+                />
+              </G>
+
+              {/* Right Wing - Mirrored */}
+              <G>
+                {/* Outer feather */}
+                <Path
+                  d={`
+                    M${center + radius - strokeWidth / 2} ${center}
+                    C${center + radius + wingExtension * 0.8} ${center - wingHeight * 0.4},
+                     ${center + radius + wingExtension} ${center - wingHeight * 0.2},
+                     ${center + radius + wingExtension} ${center}
+                    C${center + radius + wingExtension} ${center + wingHeight * 0.2},
+                     ${center + radius + wingExtension * 0.8} ${center + wingHeight * 0.4},
+                     ${center + radius - strokeWidth / 2} ${center}
+                    Z
+                  `}
+                  fill="url(#wingGrad)"
+                  opacity={0.7}
+                />
+                {/* Middle feather */}
+                <Path
+                  d={`
+                    M${center + radius - strokeWidth} ${center}
+                    C${center + radius + wingExtension * 0.6} ${center - wingHeight * 0.3},
+                     ${center + radius + wingExtension * 0.75} ${center - wingHeight * 0.15},
+                     ${center + radius + wingExtension * 0.75} ${center}
+                    C${center + radius + wingExtension * 0.75} ${center + wingHeight * 0.15},
+                     ${center + radius + wingExtension * 0.6} ${center + wingHeight * 0.3},
+                     ${center + radius - strokeWidth} ${center}
+                    Z
+                  `}
+                  fill="url(#borderGrad)"
+                  opacity={0.85}
+                />
+                {/* Inner highlight */}
+                <Path
+                  d={`
+                    M${center + radius - strokeWidth * 1.5} ${center}
+                    C${center + radius + wingExtension * 0.4} ${center - wingHeight * 0.2},
+                     ${center + radius + wingExtension * 0.5} ${center - wingHeight * 0.1},
+                     ${center + radius + wingExtension * 0.5} ${center}
+                    C${center + radius + wingExtension * 0.5} ${center + wingHeight * 0.1},
+                     ${center + radius + wingExtension * 0.4} ${center + wingHeight * 0.2},
+                     ${center + radius - strokeWidth * 1.5} ${center}
+                    Z
+                  `}
+                  fill={config.accent}
+                  opacity={0.6}
+                />
+              </G>
             </G>
           )}
 
-          {/* Main Ring (Thick) */}
+          {/* Main Ring */}
           <Circle
             cx={center}
             cy={center}
             r={radius - strokeWidth / 2}
             stroke="url(#borderGrad)"
             strokeWidth={strokeWidth}
+            fill="none"
+          />
+
+          {/* Inner subtle ring for depth */}
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius - strokeWidth - 1}
+            stroke={config.accent}
+            strokeWidth={0.5}
+            strokeOpacity={0.3}
             fill="none"
           />
         </Svg>
