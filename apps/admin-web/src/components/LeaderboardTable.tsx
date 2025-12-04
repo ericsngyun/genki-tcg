@@ -1,6 +1,6 @@
 import { TierBadge } from './TierBadge';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { UserAvatar } from './UserAvatar';
+import { RankedAvatar } from './RankedAvatar';
 
 type PlayerTier =
   | 'SPROUT'
@@ -136,9 +136,11 @@ export function LeaderboardTable({
                   {/* Player */}
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
-                      <UserAvatar
+                      <RankedAvatar
                         user={{ name: entry.userName, avatarUrl: entry.userAvatar }}
-                        size="sm"
+                        tier={entry.tier}
+                        size={entry.rank === 1 ? 'xl' : entry.rank <= 3 ? 'lg' : 'sm'}
+                        showTierBadge={true}
                       />
                       <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
                         {entry.userName}

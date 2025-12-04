@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Circle, Path, G } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Circle, Path, G, Rect } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
 
@@ -29,54 +29,55 @@ const TIER_CONFIG: Record<PlayerTier, {
   accent: string;
   glow: string;
   hasWings?: boolean;
-  hasTopDetail?: boolean;
+  hasGems?: boolean; // New: Gem accents at cardinal points
 }> = {
   BRONZE: {
-    colors: ['#804A00', '#CD7F32', '#804A00'],
+    colors: ['#5D4037', '#CD7F32', '#8D6E63'], // Darker bronze to lighter
     icon: 'shield',
-    accent: '#CD7F32',
-    glow: 'rgba(205, 127, 50, 0.3)',
+    accent: '#A1887F',
+    glow: 'rgba(141, 110, 99, 0.2)',
   },
   SILVER: {
-    colors: ['#707070', '#E0E0E0', '#707070'],
+    colors: ['#455A64', '#CFD8DC', '#90A4AE'], // Blue-grey silver
     icon: 'shield',
-    accent: '#C0C0C0',
-    glow: 'rgba(192, 192, 192, 0.3)',
+    accent: '#B0BEC5',
+    glow: 'rgba(144, 164, 174, 0.3)',
   },
   GOLD: {
-    colors: ['#B8860B', '#FFD700', '#B8860B'],
+    colors: ['#8D6E63', '#FFD700', '#FFECB3'], // Deep gold to pale gold
     icon: 'shield',
-    accent: '#FFD700',
+    accent: '#FFE082',
     glow: 'rgba(255, 215, 0, 0.4)',
-    hasTopDetail: true,
+    hasGems: true,
   },
   PLATINUM: {
-    colors: ['#2E8B57', '#7FFFD4', '#2E8B57'], // Greenish tint for Plat usually or just silver-blue. Let's go Teal/Cyan for distinctiveness
+    colors: ['#004D40', '#64FFDA', '#1DE9B6'], // Deep teal to bright teal
     icon: 'diamond',
-    accent: '#4FD1C5',
-    glow: 'rgba(79, 209, 197, 0.5)',
+    accent: '#A7FFEB',
+    glow: 'rgba(29, 233, 182, 0.5)',
     hasWings: true,
+    hasGems: true,
   },
   DIAMOND: {
-    colors: ['#1E3A8A', '#60A5FA', '#1E3A8A'],
+    colors: ['#1A237E', '#448AFF', '#82B1FF'], // Deep blue to light blue
     icon: 'diamond',
-    accent: '#3B82F6',
-    glow: 'rgba(59, 130, 246, 0.6)',
+    accent: '#82B1FF',
+    glow: 'rgba(68, 138, 255, 0.6)',
     hasWings: true,
-    hasTopDetail: true,
+    hasGems: true,
   },
   GENKI: {
-    colors: ['#7F1D1D', '#EF4444', '#7F1D1D'],
+    colors: ['#3E2723', '#FF3D00', '#FF9E80'], // Deep red/brown to bright orange/red
     icon: 'flame',
-    accent: '#EF4444',
-    glow: 'rgba(239, 68, 68, 0.7)',
+    accent: '#FF9E80',
+    glow: 'rgba(255, 61, 0, 0.7)',
     hasWings: true,
-    hasTopDetail: true,
+    hasGems: true,
   },
   UNRANKED: {
-    colors: ['#374151', '#6B7280', '#374151'],
+    colors: ['#263238', '#546E7A', '#78909C'],
     icon: '',
-    accent: '#6B7280',
+    accent: '#90A4AE',
     glow: 'transparent',
   },
 };
@@ -93,14 +94,15 @@ export function RankedAvatar({
   const config = TIER_CONFIG[tier];
 
   // Dimensions
-  const strokeWidth = size * 0.08;
+  const strokeWidth = size * 0.06; // Slightly thinner main ring
+  const outerRingWidth = size * 0.02;
   const radius = size / 2;
   const center = size / 2;
   const badgeSize = size * 0.3;
 
-  // Wing path scaling
-  const wingWidth = size * 0.4;
-  const wingHeight = size * 0.6;
+  // Wing path scaling - Sharper, more detailed wings
+  const wingWidth = size * 0.5;
+  const wingHeight = size * 0.7;
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
@@ -110,8 +112,8 @@ export function RankedAvatar({
         {
           borderRadius: size,
           backgroundColor: config.glow,
-          transform: [{ scale: 1.15 }],
-          opacity: 0.6,
+          transform: [{ scale: 1.25 }], // Larger glow
+          opacity: 0.5,
           zIndex: -1
         }
       ]} />
@@ -125,44 +127,77 @@ export function RankedAvatar({
               <Stop offset="0.5" stopColor={config.colors[1]} />
               <Stop offset="1" stopColor={config.colors[2]} />
             </LinearGradient>
+            <LinearGradient id="gemGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={config.accent} stopOpacity="0.9" />
+              <Stop offset="1" stopColor="white" stopOpacity="0.6" />
+            </LinearGradient>
           </Defs>
 
-          {/* Wings (for high tiers) */}
+          {/* Wings (for high tiers) - Sharper Design */}
           {config.hasWings && (
             <G>
-              {/* Left Wing */}
+              {/* Left Wing - 3 feathers */}
               <Path
-                d={`M${center - radius} ${center} Q${center - radius - wingWidth / 2} ${center - wingHeight / 2} ${center - radius} ${center - wingHeight} L${center - radius + 5} ${center - wingHeight + 10} Z`}
+                d={`
+                  M${center - radius + strokeWidth} ${center} 
+                  C${center - radius - wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center - radius - wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center - radius - wingWidth} ${center - wingHeight}
+                  L${center - radius - wingWidth * 0.8} ${center - wingHeight * 0.5}
+                  L${center - radius - wingWidth * 0.6} ${center - wingHeight * 0.8}
+                  L${center - radius - wingWidth * 0.4} ${center - wingHeight * 0.4}
+                  Z
+                `}
                 fill="url(#borderGrad)"
                 opacity={0.9}
               />
-              {/* Right Wing */}
+              {/* Right Wing - 3 feathers (Mirrored) */}
               <Path
-                d={`M${center + radius} ${center} Q${center + radius + wingWidth / 2} ${center - wingHeight / 2} ${center + radius} ${center - wingHeight} L${center + radius - 5} ${center - wingHeight + 10} Z`}
+                d={`
+                  M${center + radius - strokeWidth} ${center} 
+                  C${center + radius + wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center + radius + wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center + radius + wingWidth} ${center - wingHeight}
+                  L${center + radius + wingWidth * 0.8} ${center - wingHeight * 0.5}
+                  L${center + radius + wingWidth * 0.6} ${center - wingHeight * 0.8}
+                  L${center + radius + wingWidth * 0.4} ${center - wingHeight * 0.4}
+                  Z
+                `}
                 fill="url(#borderGrad)"
                 opacity={0.9}
               />
             </G>
           )}
 
-          {/* Main Ring */}
+          {/* Outer Ring (Thin) */}
           <Circle
             cx={center}
             cy={center}
-            r={radius - strokeWidth / 2}
+            r={radius - outerRingWidth / 2}
+            stroke="url(#borderGrad)"
+            strokeWidth={outerRingWidth}
+            strokeOpacity={0.6}
+            fill="none"
+          />
+
+          {/* Main Ring (Thicker) */}
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius - outerRingWidth - strokeWidth / 2 - 2} // Spaced inward
             stroke="url(#borderGrad)"
             strokeWidth={strokeWidth}
             fill="none"
           />
 
-          {/* Top Detail (Gem/Crown) */}
-          {config.hasTopDetail && (
-            <Path
-              d={`M${center} ${0} L${center - 10} ${15} L${center} ${25} L${center + 10} ${15} Z`}
-              fill={config.accent}
-              stroke="white"
-              strokeWidth={1}
-            />
+          {/* Gem Accents (Cardinal Points) */}
+          {config.hasGems && (
+            <G>
+              {/* Top */}
+              <Rect x={center - 3} y={0} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${center} 3)`} />
+              {/* Bottom */}
+              <Rect x={center - 3} y={size - 6} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${center} ${size - 3})`} />
+              {/* Left */}
+              <Rect x={0} y={center - 3} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 3 ${center})`} />
+              {/* Right */}
+              <Rect x={size - 6} y={center - 3} width={6} height={6} fill="url(#gemGrad)" transform={`rotate(45 ${size - 3} ${center})`} />
+            </G>
           )}
         </Svg>
       </View>
@@ -171,10 +206,10 @@ export function RankedAvatar({
       <View style={[
         styles.avatarContainer,
         {
-          width: size - strokeWidth * 2,
-          height: size - strokeWidth * 2,
-          borderRadius: (size - strokeWidth * 2) / 2,
-          margin: strokeWidth
+          width: size - (outerRingWidth + strokeWidth + 4) * 2,
+          height: size - (outerRingWidth + strokeWidth + 4) * 2,
+          borderRadius: (size - (outerRingWidth + strokeWidth + 4) * 2) / 2,
+          // Centered automatically by flex container
         }
       ]}>
         {avatarUrl ? (
@@ -184,7 +219,7 @@ export function RankedAvatar({
           />
         ) : (
           <View style={[styles.placeholder, { backgroundColor: theme.colors.background.elevated }]}>
-            <Text style={[styles.initial, { fontSize: size * 0.4, color: config.accent }]}>
+            <Text style={[styles.initial, { fontSize: size * 0.35, color: config.accent }]}>
               {initial}
             </Text>
           </View>

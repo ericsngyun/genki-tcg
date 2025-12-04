@@ -1,4 +1,4 @@
-// Reusable Ranked Avatar Component with tier-based metallic borders and effects
+// Reusable Ranked Avatar Component with premium tier-based metallic borders and effects
 import React from 'react';
 
 interface RankedAvatarProps {
@@ -29,68 +29,69 @@ const TIER_CONFIG: Record<PlayerTier, {
     accent: string;
     glow: string;
     hasWings?: boolean;
-    hasTopDetail?: boolean;
+    hasGems?: boolean;
     textColor: string;
 }> = {
     SPROUT: {
-        colors: ['#4A7023', '#86BC25', '#4A7023'],
+        colors: ['#33691E', '#7CB342', '#558B2F'],
         icon: '🌱',
-        accent: '#86BC25',
-        glow: 'rgba(134, 188, 37, 0.4)',
-        textColor: 'text-[#86BC25]',
+        accent: '#AED581',
+        glow: 'rgba(124, 179, 66, 0.3)',
+        textColor: 'text-[#7CB342]',
     },
     BRONZE: {
-        colors: ['#804A00', '#CD7F32', '#804A00'],
+        colors: ['#5D4037', '#CD7F32', '#8D6E63'],
         icon: '🛡️',
-        accent: '#CD7F32',
-        glow: 'rgba(205, 127, 50, 0.4)',
+        accent: '#A1887F',
+        glow: 'rgba(141, 110, 99, 0.3)',
         textColor: 'text-[#CD7F32]',
     },
     SILVER: {
-        colors: ['#707070', '#E0E0E0', '#707070'],
+        colors: ['#455A64', '#CFD8DC', '#90A4AE'],
         icon: '🛡️',
-        accent: '#C0C0C0',
-        glow: 'rgba(192, 192, 192, 0.4)',
-        textColor: 'text-[#C0C0C0]',
+        accent: '#B0BEC5',
+        glow: 'rgba(144, 164, 174, 0.4)',
+        textColor: 'text-[#90A4AE]',
     },
     GOLD: {
-        colors: ['#B8860B', '#FFD700', '#B8860B'],
+        colors: ['#8D6E63', '#FFD700', '#FFECB3'],
         icon: '🛡️',
-        accent: '#FFD700',
+        accent: '#FFE082',
         glow: 'rgba(255, 215, 0, 0.5)',
-        hasTopDetail: true,
+        hasGems: true,
         textColor: 'text-[#FFD700]',
     },
     PLATINUM: {
-        colors: ['#2E8B57', '#7FFFD4', '#2E8B57'],
+        colors: ['#004D40', '#64FFDA', '#1DE9B6'],
         icon: '💎',
-        accent: '#4FD1C5',
-        glow: 'rgba(79, 209, 197, 0.6)',
+        accent: '#A7FFEB',
+        glow: 'rgba(29, 233, 182, 0.6)',
         hasWings: true,
-        textColor: 'text-[#4FD1C5]',
+        hasGems: true,
+        textColor: 'text-[#1DE9B6]',
     },
     DIAMOND: {
-        colors: ['#1E3A8A', '#60A5FA', '#1E3A8A'],
+        colors: ['#1A237E', '#448AFF', '#82B1FF'],
         icon: '💎',
-        accent: '#3B82F6',
-        glow: 'rgba(59, 130, 246, 0.7)',
+        accent: '#82B1FF',
+        glow: 'rgba(68, 138, 255, 0.7)',
         hasWings: true,
-        hasTopDetail: true,
-        textColor: 'text-[#3B82F6]',
+        hasGems: true,
+        textColor: 'text-[#448AFF]',
     },
     GENKI: {
-        colors: ['#7F1D1D', '#EF4444', '#7F1D1D'],
+        colors: ['#3E2723', '#FF3D00', '#FF9E80'],
         icon: '🔥',
-        accent: '#EF4444',
-        glow: 'rgba(239, 68, 68, 0.8)',
+        accent: '#FF9E80',
+        glow: 'rgba(255, 61, 0, 0.8)',
         hasWings: true,
-        hasTopDetail: true,
-        textColor: 'text-[#EF4444]',
+        hasGems: true,
+        textColor: 'text-[#FF3D00]',
     },
     UNRANKED: {
-        colors: ['#374151', '#6B7280', '#374151'],
+        colors: ['#263238', '#546E7A', '#78909C'],
         icon: '',
-        accent: '#6B7280',
+        accent: '#90A4AE',
         glow: 'transparent',
         textColor: 'text-gray-500',
     },
@@ -116,17 +117,19 @@ export function RankedAvatar({
     const pxSize = SIZE_MAP[size];
 
     // Dimensions
-    const strokeWidth = Math.max(2, pxSize * 0.06);
+    const strokeWidth = pxSize * 0.06;
+    const outerRingWidth = pxSize * 0.02;
     const radius = pxSize / 2;
     const center = pxSize / 2;
     const badgeSize = pxSize * 0.3;
 
     // Wing path scaling
-    const wingWidth = pxSize * 0.4;
-    const wingHeight = pxSize * 0.6;
+    const wingWidth = pxSize * 0.5;
+    const wingHeight = pxSize * 0.7;
 
     // Unique ID for gradient to avoid conflicts
     const gradientId = `borderGrad-${tier}-${size}-${user.name.replace(/\s/g, '')}`;
+    const gemGradientId = `gemGrad-${tier}-${size}-${user.name.replace(/\s/g, '')}`;
 
     return (
         <div
@@ -136,7 +139,7 @@ export function RankedAvatar({
             {/* Glow Layer */}
             <div
                 className="absolute inset-0 rounded-full blur-md opacity-60 pointer-events-none"
-                style={{ backgroundColor: config.glow, transform: 'scale(1.15)' }}
+                style={{ backgroundColor: config.glow, transform: 'scale(1.25)' }}
             />
 
             {/* SVG Border Layer */}
@@ -152,42 +155,73 @@ export function RankedAvatar({
                         <stop offset="50%" stopColor={config.colors[1]} />
                         <stop offset="100%" stopColor={config.colors[2]} />
                     </linearGradient>
+                    <linearGradient id={gemGradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={config.accent} stopOpacity="0.9" />
+                        <stop offset="100%" stopColor="white" stopOpacity="0.6" />
+                    </linearGradient>
                 </defs>
 
                 {/* Wings */}
                 {config.hasWings && (
                     <g>
+                        {/* Left Wing */}
                         <path
-                            d={`M${center - radius} ${center} Q${center - radius - wingWidth / 2} ${center - wingHeight / 2} ${center - radius} ${center - wingHeight} L${center - radius + 5} ${center - wingHeight + 10} Z`}
+                            d={`
+                                M${center - radius + strokeWidth} ${center} 
+                                C${center - radius - wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center - radius - wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center - radius - wingWidth} ${center - wingHeight}
+                                L${center - radius - wingWidth * 0.8} ${center - wingHeight * 0.5}
+                                L${center - radius - wingWidth * 0.6} ${center - wingHeight * 0.8}
+                                L${center - radius - wingWidth * 0.4} ${center - wingHeight * 0.4}
+                                Z
+                            `}
                             fill={`url(#${gradientId})`}
                             opacity="0.9"
                         />
+                        {/* Right Wing */}
                         <path
-                            d={`M${center + radius} ${center} Q${center + radius + wingWidth / 2} ${center - wingHeight / 2} ${center + radius} ${center - wingHeight} L${center + radius - 5} ${center - wingHeight + 10} Z`}
+                            d={`
+                                M${center + radius - strokeWidth} ${center} 
+                                C${center + radius + wingWidth * 0.2} ${center - wingHeight * 0.3}, ${center + radius + wingWidth * 0.5} ${center - wingHeight * 0.6}, ${center + radius + wingWidth} ${center - wingHeight}
+                                L${center + radius + wingWidth * 0.8} ${center - wingHeight * 0.5}
+                                L${center + radius + wingWidth * 0.6} ${center - wingHeight * 0.8}
+                                L${center + radius + wingWidth * 0.4} ${center - wingHeight * 0.4}
+                                Z
+                            `}
                             fill={`url(#${gradientId})`}
                             opacity="0.9"
                         />
                     </g>
                 )}
 
+                {/* Outer Ring */}
+                <circle
+                    cx={center}
+                    cy={center}
+                    r={radius - outerRingWidth / 2}
+                    stroke={`url(#${gradientId})`}
+                    strokeWidth={outerRingWidth}
+                    strokeOpacity="0.6"
+                    fill="none"
+                />
+
                 {/* Main Ring */}
                 <circle
                     cx={center}
                     cy={center}
-                    r={radius - strokeWidth / 2}
+                    r={radius - outerRingWidth - strokeWidth / 2 - 2}
                     stroke={`url(#${gradientId})`}
                     strokeWidth={strokeWidth}
                     fill="none"
                 />
 
-                {/* Top Detail */}
-                {config.hasTopDetail && (
-                    <path
-                        d={`M${center} ${0} L${center - 10} ${15} L${center} ${25} L${center + 10} ${15} Z`}
-                        fill={config.accent}
-                        stroke="white"
-                        strokeWidth="1"
-                    />
+                {/* Gem Accents */}
+                {config.hasGems && (
+                    <g>
+                        <rect x={center - 3} y={0} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${center} 3)`} />
+                        <rect x={center - 3} y={pxSize - 6} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${center} ${pxSize - 3})`} />
+                        <rect x={0} y={center - 3} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 3 ${center})`} />
+                        <rect x={pxSize - 6} y={center - 3} width="6" height="6" fill={`url(#${gemGradientId})`} transform={`rotate(45 ${pxSize - 3} ${center})`} />
+                    </g>
                 )}
             </svg>
 
@@ -195,9 +229,9 @@ export function RankedAvatar({
             <div
                 className="relative overflow-hidden rounded-full bg-background flex items-center justify-center"
                 style={{
-                    width: pxSize - strokeWidth * 2,
-                    height: pxSize - strokeWidth * 2,
-                    margin: strokeWidth
+                    width: pxSize - (outerRingWidth + strokeWidth + 4) * 2,
+                    height: pxSize - (outerRingWidth + strokeWidth + 4) * 2,
+                    // Centered automatically
                 }}
             >
                 {user.avatarUrl ? (
@@ -212,7 +246,7 @@ export function RankedAvatar({
                             if (parent) {
                                 const fallback = document.createElement('div');
                                 fallback.className = `w-full h-full flex items-center justify-center font-bold ${config.textColor}`;
-                                fallback.style.fontSize = `${pxSize * 0.4}px`;
+                                fallback.style.fontSize = `${pxSize * 0.35}px`;
                                 fallback.innerText = initial;
                                 parent.appendChild(fallback);
                             }
@@ -222,7 +256,7 @@ export function RankedAvatar({
                     <div className="w-full h-full flex items-center justify-center bg-muted">
                         <span
                             className={`font-bold ${config.textColor}`}
-                            style={{ fontSize: pxSize * 0.4 }}
+                            style={{ fontSize: pxSize * 0.35 }}
                         >
                             {initial}
                         </span>
