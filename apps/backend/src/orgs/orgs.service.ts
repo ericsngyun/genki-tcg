@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class OrgsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async getOrg(orgId: string) {
     return this.prisma.organization.findUnique({
@@ -29,6 +29,13 @@ export class OrgsService {
       include: {
         memberships: {
           where: { orgId },
+        },
+        lifetimeRatings: {
+          where: { orgId },
+          select: {
+            rating: true,
+            category: true,
+          },
         },
       },
       take: 50,
