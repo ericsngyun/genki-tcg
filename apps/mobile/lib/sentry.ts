@@ -11,7 +11,7 @@ export function initSentry() {
   }
 
   if (ENVIRONMENT === 'development') {
-    logger.log('Sentry disabled in development environment');
+    logger.info('Sentry disabled in development environment');
     return;
   }
 
@@ -43,7 +43,7 @@ export function initSentry() {
       },
     });
 
-    logger.log(`Sentry initialized for ${ENVIRONMENT} environment`);
+    logger.info(`Sentry initialized for ${ENVIRONMENT} environment`);
   } catch (error) {
     logger.error('Failed to initialize Sentry:', error);
   }

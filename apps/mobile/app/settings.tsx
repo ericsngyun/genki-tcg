@@ -16,6 +16,19 @@ import { api } from '../lib/api';
 import { secureStorage } from '../lib/secure-storage';
 import { logger } from '../lib/logger';
 
+interface SettingsItem {
+  icon: string;
+  label: string;
+  value?: string;
+  onPress?: () => void | Promise<void>;
+  showArrow: boolean;
+}
+
+interface SettingsSection {
+  title: string;
+  items: SettingsItem[];
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -71,7 +84,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const settingsSections = [
+  const settingsSections: SettingsSection[] = [
     {
       title: 'Account',
       items: [
