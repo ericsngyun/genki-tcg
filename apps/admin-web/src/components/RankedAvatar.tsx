@@ -350,5 +350,6 @@ export function mapRatingToTier(rating: number): PlayerTier {
     if (rating >= 1600) return 'GOLD';
     if (rating >= 1450) return 'SILVER';
     if (rating >= 1300) return 'BRONZE';
+    if (rating > 0) return 'SPROUT';
     return 'UNRANKED';
 }

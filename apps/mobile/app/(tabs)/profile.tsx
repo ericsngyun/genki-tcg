@@ -18,6 +18,7 @@ import { shadows } from '../../lib/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
 import { AppHeader } from '../../components';
+import { RankedAvatar, mapRatingToTier } from '../../components/RankedAvatar';
 
 interface User {
   id: string;
@@ -154,6 +155,13 @@ export default function ProfileScreen() {
 
   const stats = calculateOverallStats();
 
+  // Calculate tier based on highest rating
+  const getHighestTier = () => {
+    if (ranks.length === 0) return 'UNRANKED';
+    const highestRating = Math.max(...ranks.map(r => r.rating));
+    return mapRatingToTier(highestRating);
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -181,15 +189,14 @@ export default function ProfileScreen() {
       >
         {/* Profile Header Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            {user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={48} color={theme.colors.text.secondary} />
-              </View>
-            )}
-          </View>
+          <RankedAvatar
+            avatarUrl={user?.avatarUrl}
+            name={user?.name || 'Unknown Player'}
+            tier={getHighestTier()}
+            size={100}
+            showTierBadge={true}
+            style={styles.avatarContainer}
+          />
 
           <Text style={styles.playerName}>{user?.name || 'Unknown Player'}</Text>
           <Text style={styles.playerEmail}>{user?.email || 'No email'}</Text>
@@ -484,32 +491,6 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: theme.colors.primary.main,
-    ...(Platform.OS === 'ios'
-      ? {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 4,
-        }
-      : {}),
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.background.elevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: theme.colors.border.main,
-    ...shadows.sm,
   },
   playerName: {
     fontSize: theme.typography.fontSize['2xl'],

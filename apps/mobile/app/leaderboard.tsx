@@ -162,7 +162,7 @@ export default function LeaderboardScreen() {
                     style={[styles.podiumPosition, { marginTop: 30 }]}
                   >
                     <RankedAvatar
-                      avatarUrl={null}
+                      avatarUrl={leaderboardData[1].avatarUrl}
                       name={leaderboardData[1].userName}
                       tier={mapRatingToTier(leaderboardData[1].lifetimeRating)}
                       size={64}
@@ -185,7 +185,7 @@ export default function LeaderboardScreen() {
                     </View>
                     <View style={{ transform: [{ scale: 1.1 }] }}>
                       <RankedAvatar
-                        avatarUrl={null}
+                        avatarUrl={leaderboardData[0].avatarUrl}
                         name={leaderboardData[0].userName}
                         tier={mapRatingToTier(leaderboardData[0].lifetimeRating)}
                         size={64}
@@ -209,7 +209,7 @@ export default function LeaderboardScreen() {
                     style={[styles.podiumPosition, { marginTop: 40 }]}
                   >
                     <RankedAvatar
-                      avatarUrl={null}
+                      avatarUrl={leaderboardData[2].avatarUrl}
                       name={leaderboardData[2].userName}
                       tier={mapRatingToTier(leaderboardData[2].lifetimeRating)}
                       size={64}

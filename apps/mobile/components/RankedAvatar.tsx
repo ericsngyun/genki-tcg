@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
 
 export type PlayerTier =
+  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -30,6 +31,12 @@ const TIER_CONFIG: Record<PlayerTier, {
   glow: string;
   hasWings?: boolean;
 }> = {
+  SPROUT: {
+    colors: ['#33691E', '#7CB342', '#558B2F'],
+    icon: 'leaf',
+    accent: '#AED581',
+    glow: 'rgba(124, 179, 66, 0.3)',
+  },
   BRONZE: {
     colors: ['#5D4037', '#CD7F32', '#8D6E63'],
     icon: 'shield',
@@ -342,5 +349,6 @@ export function mapRatingToTier(rating: number): PlayerTier {
   if (rating >= 1600) return 'GOLD';
   if (rating >= 1450) return 'SILVER';
   if (rating >= 1300) return 'BRONZE';
+  if (rating > 0) return 'SPROUT';
   return 'UNRANKED';
 }

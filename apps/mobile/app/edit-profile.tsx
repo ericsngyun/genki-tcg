@@ -15,6 +15,7 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
+import { RankedAvatar, mapRatingToTier } from '../components/RankedAvatar';
 
 interface User {
   id: string;
@@ -24,12 +25,19 @@ interface User {
   discordUsername?: string;
 }
 
+interface GameRank {
+  gameType: string;
+  rating: number;
+  deviation: number;
+}
+
 export default function EditProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [ranks, setRanks] = useState<GameRank[]>([]);
 
   useEffect(() => {
     loadProfile();
@@ -37,10 +45,16 @@ export default function EditProfileScreen() {
 
   const loadProfile = async () => {
     try {
-      const response = await api.getMe();
-      const userData = response.user || response;
+      const [userResponse, ranksResponse] = await Promise.all([
+        api.getMe(),
+        api.getMyRanks().catch(() => ({ ranks: [] })),
+      ]);
+      const userData = userResponse.user || userResponse;
       setUser(userData);
       setName(userData.name || '');
+      if (ranksResponse?.ranks) {
+        setRanks(ranksResponse.ranks);
+      }
     } catch (error) {
       logger.error('Failed to load profile:', error);
       Alert.alert('Error', 'Failed to load profile');
@@ -145,13 +159,17 @@ export default function EditProfileScreen() {
           )}
         </View>
 
-        {/* Avatar Section (Future Feature) */}
+        {/* Avatar Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Profile Picture</Text>
           <View style={styles.avatarSection}>
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={48} color={theme.colors.text.secondary} />
-            </View>
+            <RankedAvatar
+              avatarUrl={user?.avatarUrl}
+              name={user?.name || 'Unknown'}
+              tier={ranks.length > 0 ? mapRatingToTier(ranks[0].rating) : 'UNRANKED'}
+              size={80}
+              showTierBadge={true}
+            />
             <View style={styles.avatarInfo}>
               <Text style={styles.avatarTitle}>Discord Avatar</Text>
               <Text style={styles.avatarSubtext}>
@@ -278,17 +296,7 @@ const styles = StyleSheet.create({
   avatarSection: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.background.elevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.border.main,
-    marginRight: 16,
+    gap: 16,
   },
   avatarInfo: {
     flex: 1,
