@@ -155,8 +155,13 @@ class ApiClient {
 
   async logout() {
     try {
-      // Call backend to revoke refresh token
-      await this.client.post('/auth/logout');
+      // Get refresh token to revoke it on backend
+      const refreshToken = await secureStorage.getItem('refresh_token');
+
+      // Call backend to revoke refresh token if it exists
+      if (refreshToken) {
+        await this.client.post('/auth/logout', { refreshToken });
+      }
     } catch (error) {
       // Continue with local logout even if backend call fails
       logger.error('Logout error:', error);
