@@ -730,6 +730,85 @@ export class EventsService {
   }
 
   /**
+   * Get player's tournament history
+   * Returns completed events the player participated in with their results
+   */
+  async getMyTournamentHistory(userId: string, userOrgId: string, limit = 10, offset = 0) {
+    const entries = await this.prisma.entry.findMany({
+      where: {
+        userId,
+        event: {
+          orgId: userOrgId,
+          status: 'COMPLETED',
+        },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            gameType: true,
+            startTime: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          startTime: 'desc',
+        },
+      },
+      take: limit,
+      skip: offset,
+    });
+
+    // Get match statistics for each event
+    const tournaments = await Promise.all(
+      entries.map(async (entry) => {
+        // Get all matches for this player in this event
+        const matches = await this.prisma.match.findMany({
+          where: {
+            round: {
+              eventId: entry.eventId,
+            },
+            OR: [{ playerAId: userId }, { playerBId: userId }],
+            status: 'COMPLETED',
+          },
+        });
+
+        // Calculate wins, losses, draws
+        let wins = 0;
+        let losses = 0;
+        let draws = 0;
+
+        matches.forEach((match) => {
+          if (match.result === 'DRAW') {
+            draws++;
+          } else if (match.result === 'A_WIN' && match.playerAId === userId) {
+            wins++;
+          } else if (match.result === 'B_WIN' && match.playerBId === userId) {
+            wins++;
+          } else if (match.result === 'A_WIN' || match.result === 'B_WIN') {
+            losses++;
+          }
+        });
+
+        return {
+          id: entry.event.id,
+          name: entry.event.name,
+          gameType: entry.event.gameType,
+          date: entry.event.startTime,
+          placement: entry.placement || undefined,
+          totalPlayers: undefined, // Could calculate if needed
+          matchRecord: `${wins}-${losses}-${draws}`,
+        };
+      })
+    );
+
+    return { tournaments };
+  }
+
+  /**
    * Player drops themselves from the tournament
    * - For SCHEDULED events: Withdraws application (deletes entry)
    * - For IN_PROGRESS events: Drops from tournament (marks as dropped)

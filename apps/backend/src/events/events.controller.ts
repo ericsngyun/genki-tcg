@@ -100,6 +100,20 @@ export class EventsController {
     return this.eventsService.getMyActiveMatch(eventId, user.id, user.orgId);
   }
 
+  @Get('me/history')
+  async getMyTournamentHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.eventsService.getMyTournamentHistory(
+      user.id,
+      user.orgId,
+      limit ? parseInt(limit) : undefined,
+      offset ? parseInt(offset) : undefined,
+    );
+  }
+
   @Post(':id/drop')
   async playerDrop(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string, @Body() body?: { currentRound?: number }) {
     return this.eventsService.playerDrop(eventId, user.id, user.orgId, body?.currentRound);

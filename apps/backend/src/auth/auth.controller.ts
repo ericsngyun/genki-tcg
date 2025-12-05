@@ -284,46 +284,51 @@ export class AuthController {
           </div>
           <script>
             const authData = ${authData};
+            const deepLinkUrl = ${JSON.stringify(deepLink)};
 
-            // For web: try to post message to opener window
-            if (window.opener && !window.opener.closed) {
-              // Post message to parent window
+            // Detect if this is a mobile deep link (genki-tcg://)
+            const isMobile = deepLinkUrl.startsWith('genki-tcg://');
+
+            if (isMobile) {
+              // MOBILE: Open deep link and close browser
+              console.log('Mobile detected, opening deep link:', deepLinkUrl);
+
+              // Immediately try to open the deep link
+              window.location.href = deepLinkUrl;
+
+              // Fallback methods in case first attempt fails
+              setTimeout(() => {
+                window.location.href = deepLinkUrl;
+              }, 100);
+
+              setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = deepLinkUrl;
+                link.click();
+              }, 200);
+
+              // Auto-close after short delay
+              setTimeout(() => {
+                window.close();
+              }, 500);
+            } else if (window.opener && !window.opener.closed) {
+              // WEB: Post message to opener window
+              console.log('Web detected, posting message to opener');
               const message = { type: 'DISCORD_AUTH_CALLBACK', ...authData };
               window.opener.postMessage(message, '*');
 
-              // Try posting again after a short delay to ensure it's received
+              // Retry to ensure it's received
               setTimeout(() => {
                 window.opener.postMessage(message, '*');
               }, 100);
 
+              // Auto-close after message is sent
               setTimeout(() => {
                 window.close();
               }, 1000);
-            } else if (!window.opener) {
-              console.error('No window.opener available - popup may have been blocked or opened incorrectly');
-              document.querySelector('.note').innerHTML = 'Please close this window and try again. Make sure popups are not blocked.';
-            } else if (window.opener.closed) {
-              console.error('window.opener is closed');
-            }
-            // For mobile: try to open deep link
-            else {
-              window.location.href = ${JSON.stringify(deepLink)};
-
-              // Try multiple methods to ensure deep link opens
-              // Method 1: window.location
-              setTimeout(() => {
-                window.location.href = ${JSON.stringify(deepLink)};
-              }, 100);
-
-              // Method 2: Create and click a link
-              setTimeout(() => {
-                const link = document.createElement('a');
-                link.href = ${JSON.stringify(deepLink)};
-                link.click();
-              }, 200);
-
-              // Close the window after giving it time to open the deep link
-              setTimeout(() => window.close(), 1500);
+            } else {
+              // FALLBACK: Show manual link
+              console.error('No opener and not mobile - showing manual link');
             }
           </script>
         </body>
