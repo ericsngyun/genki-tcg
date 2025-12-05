@@ -6,19 +6,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
-  Platform,
   RefreshControl,
-  Alert
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../lib/theme';
-import { shadows } from '../../lib/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
-import { AppHeader } from '../../components';
 import { RankedAvatar, mapRatingToTier } from '../../components/RankedAvatar';
+
+const { width } = Dimensions.get('window');
 
 interface User {
   id: string;
@@ -52,15 +52,15 @@ interface TournamentRecord {
 }
 
 const GAME_TYPE_LABELS: Record<string, string> = {
-  ONE_PIECE_TCG: 'One Piece TCG',
-  AZUKI_TCG: 'Azuki TCG',
+  ONE_PIECE_TCG: 'One Piece',
+  AZUKI_TCG: 'Azuki',
   RIFTBOUND: 'Riftbound',
 };
 
-const GAME_TYPE_ICONS: Record<string, any> = {
-  ONE_PIECE_TCG: 'game-controller',
-  AZUKI_TCG: 'flower',
-  RIFTBOUND: 'sparkles',
+const GAME_TYPE_COLORS: Record<string, string[]> = {
+  ONE_PIECE_TCG: ['#DC2626', '#B91C1C'],
+  AZUKI_TCG: ['#8B5CF6', '#7C3AED'],
+  RIFTBOUND: ['#3B82F6', '#2563EB'],
 };
 
 export default function ProfileScreen() {
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'ratings' | 'history'>('ratings');
 
   useEffect(() => {
     loadProfileData();
@@ -97,14 +97,12 @@ export default function ProfileScreen() {
         setRanks(ranksResponse.ranks);
       }
 
-      // Load tournament history if available
       try {
         const historyResponse = await api.getMyTournamentHistory({ limit: 10 });
         if (historyResponse?.tournaments) {
           setTournaments(historyResponse.tournaments);
         }
       } catch (error) {
-        // Tournament history endpoint might not exist yet, that's okay
         logger.debug('Tournament history not available:', error);
       }
     } catch (error) {
@@ -121,33 +119,18 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, []);
 
-  const handleEditProfile = () => {
-    router.push('/edit-profile');
-  };
-
   const calculateOverallStats = () => {
     if (ranks.length === 0) {
-      return {
-        totalMatches: 0,
-        totalWins: 0,
-        totalLosses: 0,
-        totalDraws: 0,
-        winRate: 0,
-        eventsPlayed: 0,
-      };
+      return { totalMatches: 0, totalWins: 0, winRate: 0, eventsPlayed: 0 };
     }
 
     const totalMatches = ranks.reduce((sum, r) => sum + r.matchesPlayed, 0);
     const totalWins = ranks.reduce((sum, r) => sum + r.wins, 0);
-    const totalLosses = ranks.reduce((sum, r) => sum + r.losses, 0);
-    const totalDraws = ranks.reduce((sum, r) => sum + r.draws, 0);
     const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
 
     return {
       totalMatches,
       totalWins,
-      totalLosses,
-      totalDraws,
       winRate,
       eventsPlayed: tournaments.length,
     };
@@ -155,7 +138,6 @@ export default function ProfileScreen() {
 
   const stats = calculateOverallStats();
 
-  // Calculate tier based on highest rating
   const getHighestTier = () => {
     if (ranks.length === 0) return 'UNRANKED';
     const highestRating = Math.max(...ranks.map(r => r.rating));
@@ -172,9 +154,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <AppHeader title="Profile" subtitle="Your player profile" showLogo={false} />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -186,186 +165,201 @@ export default function ProfileScreen() {
             colors={[theme.colors.primary.main]}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
-        <View style={styles.profileCard}>
-          <RankedAvatar
-            avatarUrl={user?.avatarUrl}
-            name={user?.name || 'Unknown Player'}
-            tier={getHighestTier()}
-            size={100}
-            showTierBadge={true}
-            style={styles.avatarContainer}
-          />
+        {/* Hero Section with Gradient Background */}
+        <LinearGradient
+          colors={['rgba(220, 38, 38, 0.15)', 'rgba(220, 38, 38, 0.05)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.heroGradient}
+        >
+          <View style={styles.heroContent}>
+            {/* Avatar */}
+            <RankedAvatar
+              avatarUrl={user?.avatarUrl}
+              name={user?.name || 'Unknown Player'}
+              tier={getHighestTier()}
+              size={80}
+              showTierBadge={true}
+            />
 
-          <Text style={styles.playerName}>{user?.name || 'Unknown Player'}</Text>
-          <Text style={styles.playerEmail}>{user?.email || 'No email'}</Text>
-
-          {user?.discordUsername && (
-            <View style={styles.discordBadge}>
-              <Ionicons name="logo-discord" size={16} color="#5865F2" />
-              <Text style={styles.discordUsername}>{user.discordUsername}</Text>
+            {/* User Info */}
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{user?.name || 'Unknown Player'}</Text>
+              {user?.discordUsername && (
+                <View style={styles.discordTag}>
+                  <Ionicons name="logo-discord" size={14} color="#5865F2" />
+                  <Text style={styles.discordUsername}>{user.discordUsername}</Text>
+                </View>
+              )}
             </View>
-          )}
 
-          <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-            <Ionicons name="create-outline" size={18} color={theme.colors.primary.foreground} />
-            <Text style={styles.editProfileText}>Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Edit Button */}
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => router.push('/edit-profile')}
+            >
+              <Ionicons name="create-outline" size={20} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Quick Stats Grid */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Ionicons name="trophy" size={24} color={theme.colors.primary.main} style={styles.statIcon} />
-            <Text style={styles.statValue}>{stats.totalWins}</Text>
-            <Text style={styles.statLabel}>Wins</Text>
+          {/* Inline Stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{stats.totalWins}</Text>
+              <Text style={styles.statLabel}>Wins</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{stats.winRate.toFixed(0)}%</Text>
+              <Text style={styles.statLabel}>Win Rate</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{tournaments.length}</Text>
+              <Text style={styles.statLabel}>Events</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{stats.totalMatches}</Text>
+              <Text style={styles.statLabel}>Matches</Text>
+            </View>
           </View>
-          <View style={styles.statCard}>
-            <Ionicons name="trending-up" size={24} color={theme.colors.success.main} style={styles.statIcon} />
-            <Text style={styles.statValue}>{stats.winRate.toFixed(1)}%</Text>
-            <Text style={styles.statLabel}>Win Rate</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="calendar" size={24} color={theme.colors.info.main} style={styles.statIcon} />
-            <Text style={styles.statValue}>{tournaments.length}</Text>
-            <Text style={styles.statLabel}>Events</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="game-controller" size={24} color={theme.colors.warning.main} style={styles.statIcon} />
-            <Text style={styles.statValue}>{stats.totalMatches}</Text>
-            <Text style={styles.statLabel}>Matches</Text>
-          </View>
-        </View>
+        </LinearGradient>
 
-        {/* Tab Selector */}
-        <View style={styles.tabContainer}>
+        {/* Tab Bar */}
+        <View style={styles.tabBar}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
-            onPress={() => setActiveTab('overview')}
+            style={[styles.tabItem, activeTab === 'ratings' && styles.tabItemActive]}
+            onPress={() => setActiveTab('ratings')}
           >
-            <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
+            <Text style={[styles.tabText, activeTab === 'ratings' && styles.tabTextActive]}>
               Ratings
             </Text>
+            {activeTab === 'ratings' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+            style={[styles.tabItem, activeTab === 'history' && styles.tabItemActive]}
             onPress={() => setActiveTab('history')}
           >
             <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
               History
             </Text>
+            {activeTab === 'history' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         </View>
 
-        {/* Content Based on Active Tab */}
-        {activeTab === 'overview' ? (
-          <>
-            {/* Game-Specific Ratings */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Game Ratings</Text>
+        {/* Content */}
+        <View style={styles.content}>
+          {activeTab === 'ratings' ? (
+            <>
+              {/* Game Ratings List */}
               {ranks.length > 0 ? (
                 ranks.map((rank, index) => (
-                  <View key={index} style={styles.rankCard}>
-                    <View style={styles.rankHeader}>
-                      <View style={styles.rankGameInfo}>
-                        <Ionicons
-                          name={GAME_TYPE_ICONS[rank.gameType] || 'game-controller'}
-                          size={24}
-                          color={theme.colors.primary.main}
-                        />
+                  <View key={index} style={styles.rankItem}>
+                    <LinearGradient
+                      colors={GAME_TYPE_COLORS[rank.gameType] || ['#DC2626', '#B91C1C']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.rankAccent}
+                    />
+                    <View style={styles.rankContent}>
+                      <View style={styles.rankHeader}>
                         <Text style={styles.rankGameName}>
                           {GAME_TYPE_LABELS[rank.gameType] || rank.gameType}
                         </Text>
-                      </View>
-                      {rank.rank && rank.totalPlayers && (
-                        <View style={styles.rankBadge}>
-                          <Text style={styles.rankBadgeText}>
-                            #{rank.rank} of {rank.totalPlayers}
+                        {rank.rank && rank.totalPlayers && (
+                          <Text style={styles.rankPosition}>
+                            #{rank.rank} · {rank.totalPlayers} players
                           </Text>
+                        )}
+                      </View>
+
+                      <View style={styles.rankStats}>
+                        <View style={styles.rankStatGroup}>
+                          <Text style={styles.rankRating}>{Math.round(rank.rating)}</Text>
+                          <Text style={styles.rankStatText}>Rating</Text>
+                        </View>
+                        <View style={styles.rankStatGroup}>
+                          <Text style={styles.rankRecord}>
+                            {rank.wins}-{rank.losses}-{rank.draws}
+                          </Text>
+                          <Text style={styles.rankStatText}>W-L-D</Text>
+                        </View>
+                        <View style={styles.rankStatGroup}>
+                          <Text style={styles.rankMatches}>{rank.matchesPlayed}</Text>
+                          <Text style={styles.rankStatText}>Matches</Text>
+                        </View>
+                      </View>
+
+                      {/* Win Rate Bar */}
+                      {rank.matchesPlayed > 0 && (
+                        <View style={styles.winRateBar}>
+                          <LinearGradient
+                            colors={['#10B981', '#059669']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={[
+                              styles.winRateFill,
+                              { width: `${(rank.wins / rank.matchesPlayed) * 100}%` },
+                            ]}
+                          />
                         </View>
                       )}
                     </View>
-
-                    <View style={styles.rankStats}>
-                      <View style={styles.rankStatItem}>
-                        <Text style={styles.rankStatLabel}>Rating</Text>
-                        <Text style={styles.rankStatValue}>{Math.round(rank.rating)}</Text>
-                      </View>
-                      <View style={styles.rankStatDivider} />
-                      <View style={styles.rankStatItem}>
-                        <Text style={styles.rankStatLabel}>Record</Text>
-                        <Text style={styles.rankStatValue}>
-                          {rank.wins}-{rank.losses}-{rank.draws}
-                        </Text>
-                      </View>
-                      <View style={styles.rankStatDivider} />
-                      <View style={styles.rankStatItem}>
-                        <Text style={styles.rankStatLabel}>Matches</Text>
-                        <Text style={styles.rankStatValue}>{rank.matchesPlayed}</Text>
-                      </View>
-                    </View>
-
-                    {rank.matchesPlayed > 0 && (
-                      <View style={styles.winRateBar}>
-                        <View
-                          style={[
-                            styles.winRateFill,
-                            { width: `${(rank.wins / rank.matchesPlayed) * 100}%` },
-                          ]}
-                        />
-                      </View>
-                    )}
                   </View>
                 ))
               ) : (
                 <View style={styles.emptyState}>
-                  <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
-                  <Text style={styles.emptyStateText}>No ratings yet</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Play in tournaments to earn your rating!
+                  <View style={styles.emptyIconContainer}>
+                    <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
+                  </View>
+                  <Text style={styles.emptyText}>No ratings yet</Text>
+                  <Text style={styles.emptySubtext}>
+                    Play in tournaments to earn your rating
                   </Text>
                 </View>
               )}
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Tournament History */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Tournaments</Text>
+            </>
+          ) : (
+            <>
+              {/* Tournament History List */}
               {tournaments.length > 0 ? (
                 tournaments.map((tournament, index) => (
                   <TouchableOpacity
                     key={index}
-                    style={styles.historyCard}
+                    style={styles.tournamentItem}
                     onPress={() => router.push(`/event/${tournament.id}`)}
+                    activeOpacity={0.7}
                   >
-                    <View style={styles.historyHeader}>
-                      <View style={styles.historyGameBadge}>
-                        <Ionicons
-                          name={GAME_TYPE_ICONS[tournament.gameType] || 'game-controller'}
-                          size={16}
-                          color={theme.colors.primary.main}
-                        />
-                        <Text style={styles.historyGameType}>
-                          {GAME_TYPE_LABELS[tournament.gameType] || tournament.gameType}
-                        </Text>
+                    <View style={styles.tournamentHeader}>
+                      <View style={styles.tournamentBadge}>
+                        <LinearGradient
+                          colors={GAME_TYPE_COLORS[tournament.gameType] || ['#DC2626', '#B91C1C']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.tournamentBadgeGradient}
+                        >
+                          <Text style={styles.tournamentBadgeText}>
+                            {GAME_TYPE_LABELS[tournament.gameType] || tournament.gameType}
+                          </Text>
+                        </LinearGradient>
                       </View>
                       {tournament.placement && (
                         <View style={styles.placementBadge}>
-                          <Ionicons name="medal" size={14} color={theme.colors.warning.main} />
+                          <Ionicons name="medal" size={14} color="#F59E0B" />
                           <Text style={styles.placementText}>#{tournament.placement}</Text>
                         </View>
                       )}
                     </View>
 
-                    <Text style={styles.historyTournamentName} numberOfLines={1}>
+                    <Text style={styles.tournamentName} numberOfLines={1}>
                       {tournament.name}
                     </Text>
 
-                    <View style={styles.historyFooter}>
-                      <Text style={styles.historyDate}>
+                    <View style={styles.tournamentFooter}>
+                      <Text style={styles.tournamentDate}>
                         {new Date(tournament.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -373,91 +367,72 @@ export default function ProfileScreen() {
                         })}
                       </Text>
                       {tournament.matchRecord && (
-                        <Text style={styles.historyRecord}>{tournament.matchRecord}</Text>
+                        <Text style={styles.tournamentRecord}>{tournament.matchRecord}</Text>
                       )}
                     </View>
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={theme.colors.text.tertiary}
+                      style={styles.tournamentChevron}
+                    />
                   </TouchableOpacity>
                 ))
               ) : (
                 <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={48} color={theme.colors.text.tertiary} />
-                  <Text style={styles.emptyStateText}>No tournament history</Text>
-                  <Text style={styles.emptyStateSubtext}>
+                  <View style={styles.emptyIconContainer}>
+                    <Ionicons name="calendar-outline" size={48} color={theme.colors.text.tertiary} />
+                  </View>
+                  <Text style={styles.emptyText}>No tournament history</Text>
+                  <Text style={styles.emptySubtext}>
                     Your completed tournaments will appear here
                   </Text>
                 </View>
               )}
-            </View>
-          </>
-        )}
-
-        {/* Overall Match Record */}
-        {stats.totalMatches > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Career Statistics</Text>
-            <View style={styles.careerCard}>
-              <View style={styles.careerStatRow}>
-                <Text style={styles.careerStatLabel}>Total Matches</Text>
-                <Text style={styles.careerStatValue}>{stats.totalMatches}</Text>
-              </View>
-              <View style={styles.careerStatRow}>
-                <Text style={styles.careerStatLabel}>Wins</Text>
-                <Text style={[styles.careerStatValue, { color: theme.colors.success.main }]}>
-                  {stats.totalWins}
-                </Text>
-              </View>
-              <View style={styles.careerStatRow}>
-                <Text style={styles.careerStatLabel}>Losses</Text>
-                <Text style={[styles.careerStatValue, { color: theme.colors.error.main }]}>
-                  {stats.totalLosses}
-                </Text>
-              </View>
-              <View style={styles.careerStatRow}>
-                <Text style={styles.careerStatLabel}>Draws</Text>
-                <Text style={[styles.careerStatValue, { color: theme.colors.text.secondary }]}>
-                  {stats.totalDraws}
-                </Text>
-              </View>
-              <View style={[styles.careerStatRow, styles.careerStatRowLast]}>
-                <Text style={styles.careerStatLabel}>Win Rate</Text>
-                <Text style={[styles.careerStatValue, { color: theme.colors.primary.main }]}>
-                  {stats.winRate.toFixed(1)}%
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+            </>
+          )}
+        </View>
 
         {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActions}>
+          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={styles.actionItem}
             onPress={() => router.push('/(tabs)/events')}
+            activeOpacity={0.7}
           >
-            <Ionicons name="calendar" size={20} color={theme.colors.primary.main} />
-            <Text style={styles.actionButtonText}>Find Tournaments</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+            <View style={styles.actionIcon}>
+              <Ionicons name="calendar" size={20} color={theme.colors.primary.main} />
+            </View>
+            <Text style={styles.actionText}>Find Tournaments</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={styles.actionItem}
             onPress={() => router.push('/leaderboard')}
+            activeOpacity={0.7}
           >
-            <Ionicons name="podium" size={20} color={theme.colors.primary.main} />
-            <Text style={styles.actionButtonText}>View Leaderboard</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+            <View style={styles.actionIcon}>
+              <Ionicons name="podium" size={20} color={theme.colors.primary.main} />
+            </View>
+            <Text style={styles.actionText}>View Leaderboard</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={styles.actionItem}
             onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
           >
-            <Ionicons name="settings" size={20} color={theme.colors.primary.main} />
-            <Text style={styles.actionButtonText}>Settings</Text>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+            <View style={styles.actionIcon}>
+              <Ionicons name="settings" size={20} color={theme.colors.primary.main} />
+            </View>
+            <Text style={styles.actionText}>Settings</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -478,136 +453,131 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  profileCard: {
-    backgroundColor: theme.colors.background.card,
-    margin: 16,
-    marginTop: 8,
-    borderRadius: theme.borderRadius.lg,
-    padding: 24,
+
+  // Hero Section
+  heroGradient: {
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  heroContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.md,
+    marginBottom: 24,
   },
-  avatarContainer: {
-    marginBottom: 16,
+  userInfo: {
+    flex: 1,
+    marginLeft: 16,
   },
-  playerName: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
     color: theme.colors.text.primary,
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
-  playerEmail: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: 8,
-  },
-  discordBadge: {
+  discordTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(88, 101, 242, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.full,
-    marginBottom: 16,
+    gap: 6,
   },
   discordUsername: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: 14,
     color: '#5865F2',
-    marginLeft: 6,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontWeight: '500',
   },
-  editProfileButton: {
-    flexDirection: 'row',
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary.main,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: theme.borderRadius.full,
-    gap: 6,
-    ...shadows.primary,
-  },
-  editProfileText: {
-    color: theme.colors.primary.foreground,
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.md,
-    padding: 12,
-    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.base,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  statIcon: {
-    marginBottom: 8,
+
+  // Inline Stats
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
   },
   statValue: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.text.primary,
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: theme.typography.fontSize.xs,
+    fontSize: 12,
     color: theme.colors.text.secondary,
-    textAlign: 'center',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  tabContainer: {
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+
+  // Tab Bar
+  tabBar: {
     flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.lg,
-    padding: 4,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  tab: {
+  tabItem: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 16,
     alignItems: 'center',
-    borderRadius: theme.borderRadius.md,
+    position: 'relative',
   },
-  tabActive: {
-    backgroundColor: theme.colors.background.card,
-    ...shadows.sm,
-  },
+  tabItemActive: {},
   tabText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontSize: 15,
+    fontWeight: '600',
     color: theme.colors.text.secondary,
+    letterSpacing: 0.3,
   },
   tabTextActive: {
     color: theme.colors.primary.main,
-    fontWeight: theme.typography.fontWeight.semibold,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
+  tabIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: theme.colors.primary.main,
   },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
+
+  // Content
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+
+  // Rank Items
+  rankItem: {
     marginBottom: 12,
-  },
-  rankCard: {
     backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 12,
+    overflow: 'hidden',
+    flexDirection: 'row',
+  },
+  rankAccent: {
+    width: 4,
+  },
+  rankContent: {
+    flex: 1,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.sm,
   },
   rankHeader: {
     flexDirection: 'row',
@@ -615,183 +585,191 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  rankGameInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   rankGameName: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.primary,
   },
-  rankBadge: {
-    backgroundColor: theme.colors.primary.main + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-  },
-  rankBadgeText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.primary.main,
+  rankPosition: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
   },
   rankStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 12,
   },
-  rankStatItem: {
+  rankStatGroup: {
     alignItems: 'center',
   },
-  rankStatLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
+  rankRating: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.primary.main,
+    marginBottom: 2,
   },
-  rankStatValue: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
+  rankRecord: {
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.primary,
+    marginBottom: 2,
   },
-  rankStatDivider: {
-    width: 1,
-    backgroundColor: theme.colors.border.light,
+  rankMatches: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+  },
+  rankStatText: {
+    fontSize: 11,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   winRateBar: {
-    height: 4,
-    backgroundColor: theme.colors.background.elevated,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 2,
     overflow: 'hidden',
   },
   winRateFill: {
     height: '100%',
-    backgroundColor: theme.colors.success.main,
   },
-  historyCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
+
+  // Tournament Items
+  tournamentItem: {
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.sm,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: 12,
+    padding: 16,
+    position: 'relative',
   },
-  historyHeader: {
+  tournamentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  historyGameBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  tournamentBadge: {
+    borderRadius: 6,
+    overflow: 'hidden',
   },
-  historyGameType: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
-    color: theme.colors.primary.main,
+  tournamentBadgeGradient: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  tournamentBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   placementBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: theme.colors.warning.main + '20',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
+    borderRadius: 6,
   },
   placementText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.warning.main,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F59E0B',
   },
-  historyTournamentName: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
+  tournamentName: {
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.primary,
     marginBottom: 8,
   },
-  historyFooter: {
+  tournamentFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  historyDate: {
-    fontSize: theme.typography.fontSize.xs,
+  tournamentDate: {
+    fontSize: 13,
     color: theme.colors.text.secondary,
+    fontWeight: '500',
   },
-  historyRecord: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
+  tournamentRecord: {
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.text.primary,
   },
-  careerCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.sm,
+  tournamentChevron: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    marginTop: -9,
   },
-  careerStatRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-  },
-  careerStatRowLast: {
-    borderBottomWidth: 0,
-  },
-  careerStatLabel: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.text.secondary,
-  },
-  careerStatValue: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.sm,
-  },
-  actionButtonText: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
-    color: theme.colors.text.primary,
-    marginLeft: 12,
-  },
+
+  // Empty States
   emptyState: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.lg,
-    padding: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...shadows.sm,
+    paddingVertical: 48,
   },
-  emptyStateText: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.primary,
-    marginTop: 12,
     marginBottom: 4,
   },
-  emptyStateSubtext: {
-    fontSize: theme.typography.fontSize.sm,
+  emptySubtext: {
+    fontSize: 14,
     color: theme.colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // Quick Actions
+  quickActions: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  quickActionsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  actionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
   },
 });
