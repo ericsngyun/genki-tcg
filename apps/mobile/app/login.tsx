@@ -47,6 +47,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginMethod, setLoginMethod] = useState<'discord' | 'email'>('discord');
 
   // Animated values for background effects
   const blob1Anim = useRef(new Animated.Value(0)).current;
@@ -285,6 +286,10 @@ export default function LoginScreen() {
             setLoading(false);
             setError('Authentication window closed. Please try again.');
           }, 2000);
+        } else if (result.type === 'success' && result.url) {
+          // WebBrowser successfully captured the deep link callback
+          logger.debug('Processing deep link callback from WebBrowser...');
+          await handleAuthCallback(result.url);
         }
         // On success, the deep link handler will take over
       }
@@ -566,81 +571,88 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          {/* Email/Password Login - Temporary Testing */}
-          <View style={styles.emailLoginContainer}>
-            <Text style={styles.emailLoginLabel}>Email/Password Login (Testing)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={theme.colors.text.tertiary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!loading}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={theme.colors.text.tertiary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!loading}
-            />
+          {/* Discord Login */}
+          {loginMethod === 'discord' ? (
             <TouchableOpacity
-              style={styles.emailLoginButton}
-              onPress={handleEmailLogin}
+              style={styles.loginButton}
+              onPress={handleDiscordLogin}
               disabled={loading}
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={['#DC2626', '#B91C1C']}
+                colors={['#5865F2', '#4752C4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.emailLoginButtonGradient}
+                style={styles.loginButtonGradient}
               >
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <View style={styles.emailLoginButtonContent}>
-                    <Ionicons name="mail" size={20} color="#FFFFFF" />
-                    <Text style={styles.emailLoginButtonText}>Login with Email</Text>
+                  <View style={styles.loginButtonContent}>
+                    <Ionicons name="logo-discord" size={22} color="#FFFFFF" />
+                    <Text style={styles.loginButtonText}>Continue with Discord</Text>
                   </View>
                 )}
               </LinearGradient>
             </TouchableOpacity>
-          </View>
+          ) : (
+            /* Email/Password Login */
+            <View style={styles.emailLoginContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={theme.colors.text.tertiary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor={theme.colors.text.tertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleEmailLogin}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#DC2626', '#B91C1C']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.loginButtonGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <View style={styles.loginButtonContent}>
+                      <Ionicons name="mail" size={20} color="#FFFFFF" />
+                      <Text style={styles.loginButtonText}>Login with Email</Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
+          {/* Swap Login Method Button */}
           <TouchableOpacity
-            style={styles.discordButton}
-            onPress={handleDiscordLogin}
+            style={styles.swapButton}
+            onPress={() => setLoginMethod(loginMethod === 'discord' ? 'email' : 'discord')}
             disabled={loading}
-            activeOpacity={0.85}
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={['#5865F2', '#4752C4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.discordButtonGradient}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <View style={styles.discordButtonContent}>
-                  <Ionicons name="logo-discord" size={22} color="#FFFFFF" />
-                  <Text style={styles.discordButtonText}>Continue with Discord</Text>
-                </View>
-              )}
-            </LinearGradient>
+            <Text style={styles.swapButtonText}>
+              {loginMethod === 'discord' ? 'Use email instead' : 'Use Discord instead'}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.footerMeta}>
@@ -804,14 +816,6 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: theme.spacing.md,
   },
-  emailLoginLabel: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
   input: {
     width: '100%',
     height: 50,
@@ -824,67 +828,38 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.medium,
   },
-  emailLoginButton: {
-    width: '100%',
-    height: 50,
-    borderRadius: theme.borderRadius.md,
-    overflow: 'hidden',
-    ...theme.shadows.md,
-  },
-  emailLoginButtonGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emailLoginButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  emailLoginButtonText: {
-    color: '#FFFFFF',
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    letterSpacing: 0.3,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  dividerText: {
-    color: theme.colors.text.tertiary,
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
-    letterSpacing: 0.5,
-  },
-  discordButton: {
+  loginButton: {
     width: '100%',
     height: 56,
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     ...theme.shadows.lg,
   },
-  discordButtonGradient: {
+  loginButtonGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  discordButtonContent: {
+  loginButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  discordButtonText: {
+  loginButtonText: {
     color: '#FFFFFF',
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
+    letterSpacing: 0.3,
+  },
+  swapButton: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  swapButtonText: {
+    color: theme.colors.text.tertiary,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
     letterSpacing: 0.3,
   },
   footerMeta: {
