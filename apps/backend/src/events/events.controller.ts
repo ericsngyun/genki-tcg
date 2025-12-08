@@ -125,4 +125,11 @@ export class EventsController {
   async cancelEvent(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string, @Body() body?: { reason?: string }) {
     return this.eventsService.cancelEvent(eventId, user.orgId, user.id, body?.reason);
   }
+
+  @Post(':id/finalize-placements')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async finalizePlacements(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string) {
+    return this.eventsService.finalizePlacements(eventId, user.id, user.orgId);
+  }
 }

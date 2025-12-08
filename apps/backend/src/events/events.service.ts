@@ -1041,4 +1041,196 @@ export class EventsService {
       events: cancelledEvents,
     };
   }
+
+  /**
+   * Finalize tournament placements after tournament completion
+   * Calculates final standings and updates Entry.placement for all players
+   *
+   * @param eventId - The event ID
+   * @param userId - Staff user performing the finalization
+   * @param userOrgId - Organization ID for authorization
+   * @returns Final standings with placements
+   *
+   * @throws NotFoundException if event doesn't exist
+   * @throws ForbiddenException if user doesn't have permission
+   * @throws BadRequestException if tournament is not completed or placements already finalized
+   */
+  async finalizePlacements(eventId: string, userId: string, userOrgId: string) {
+    // Validate event exists and belongs to org
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        entries: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        rounds: {
+          include: {
+            matches: {
+              include: {
+                playerA: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                playerB: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            roundNumber: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Not authorized to finalize placements for this event');
+    }
+
+    // Validate tournament is completed
+    if (event.status !== 'COMPLETED') {
+      throw new BadRequestException('Tournament must be COMPLETED before finalizing placements');
+    }
+
+    // Check if placements already finalized
+    const existingPlacements = event.entries.filter(e => e.placement !== null);
+    if (existingPlacements.length > 0) {
+      this.logger.warn(`Event ${eventId} already has ${existingPlacements.length} placements set`);
+      // Allow re-finalization to fix errors
+    }
+
+    // Collect all matches from all rounds
+    const allMatches = event.rounds.flatMap(round => round.matches);
+
+    // Build player names map
+    const playerNames = new Map<string, string>();
+    const playerIds: string[] = [];
+    const droppedPlayers = new Set<string>();
+
+    for (const entry of event.entries) {
+      playerIds.push(entry.userId);
+      playerNames.set(entry.userId, entry.user.name);
+
+      if (entry.droppedAt) {
+        droppedPlayers.add(entry.userId);
+      }
+    }
+
+    // Validate we have matches
+    if (allMatches.length === 0) {
+      throw new BadRequestException('Cannot finalize placements: No matches found in tournament');
+    }
+
+    // Validate all matches are reported
+    const unreportedMatches = allMatches.filter(m => m.result === null);
+    if (unreportedMatches.length > 0) {
+      throw new BadRequestException(
+        `Cannot finalize placements: ${unreportedMatches.length} match(es) not reported`
+      );
+    }
+
+    // Calculate standings using tournament-logic package
+    const { calculateStandings } = await import('@genki-tcg/tournament-logic');
+
+    const standings = calculateStandings({
+      playerIds,
+      playerNames,
+      matches: allMatches.map(m => ({
+        playerAId: m.playerAId,
+        playerBId: m.playerBId,
+        result: m.result,
+        gamesWonA: m.gamesWonA || 0,
+        gamesWonB: m.gamesWonB || 0,
+      })),
+      droppedPlayers,
+    });
+
+    // Edge case: Handle tied placements
+    // Players with same points/tiebreakers get same placement
+    // Next placement skips accordingly (e.g., two 1st place = next is 3rd)
+    let currentPlacement = 1;
+    let lastPoints = -1;
+    let lastOMW = -1;
+    let lastGW = -1;
+    let playersAtCurrentPlacement = 0;
+
+    const placementsToUpdate: Array<{ userId: string; placement: number }> = [];
+
+    for (let i = 0; i < standings.length; i++) {
+      const standing = standings[i];
+
+      // Check if this player has same score as previous
+      const isTied =
+        standing.points === lastPoints &&
+        Math.abs(standing.omwPercent - lastOMW) < 0.0001 &&
+        Math.abs(standing.gwPercent - lastGW) < 0.0001;
+
+      if (isTied) {
+        // Same placement as previous
+        playersAtCurrentPlacement++;
+      } else {
+        // New placement tier
+        currentPlacement += playersAtCurrentPlacement;
+        playersAtCurrentPlacement = 1;
+      }
+
+      placementsToUpdate.push({
+        userId: standing.userId,
+        placement: currentPlacement,
+      });
+
+      lastPoints = standing.points;
+      lastOMW = standing.omwPercent;
+      lastGW = standing.gwPercent;
+    }
+
+    // Update placements in database (transaction for atomicity)
+    await this.prisma.$transaction(
+      placementsToUpdate.map(({ userId, placement }) =>
+        this.prisma.entry.update({
+          where: {
+            eventId_userId: {
+              eventId,
+              userId,
+            },
+          },
+          data: {
+            placement,
+          },
+        })
+      )
+    );
+
+    this.logger.log(`Finalized placements for event ${eventId}: ${placementsToUpdate.length} players`);
+
+    // Return standings with finalized placements
+    return {
+      eventId,
+      eventName: event.name,
+      totalPlayers: standings.length,
+      standings: standings.map((s, i) => ({
+        ...s,
+        placement: placementsToUpdate[i].placement,
+      })),
+      finalizedAt: new Date(),
+      finalizedBy: userId,
+    };
+  }
 }
