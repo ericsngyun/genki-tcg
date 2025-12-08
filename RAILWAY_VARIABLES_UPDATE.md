@@ -44,16 +44,18 @@ DISCORD_ALLOWED_REDIRECTS=https://genki-tcg-production.up.railway.app/auth/disco
 
 ## 🟡 IMPORTANT - Set These Up
 
-### 4. Sentry Error Tracking (New)
+### 4. Sentry Error Tracking (Ready to Use!)
 ```
-SENTRY_DSN=https://YOUR_KEY@YOUR_ORG.ingest.sentry.io/YOUR_PROJECT_ID
+SENTRY_DSN=https://928a4cffc626ac01b6ac90615388a5aa@o4506979860611072.ingest.us.sentry.io/4510501584699392
 ```
 
-**How to get this**:
-1. Go to https://sentry.io
-2. Create new project → Select "NestJS"
-3. Copy the DSN from Settings → Client Keys (DSN)
-4. Paste into Railway
+**Status**: ✅ Sentry project already created and configured!
+
+**What it does**:
+- Captures all unhandled exceptions in production
+- Sends structured logs to Sentry dashboard
+- Tracks performance and errors
+- Includes IP addresses and user context
 
 **Why**: Enables production error tracking and monitoring.
 
