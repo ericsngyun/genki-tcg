@@ -54,4 +54,11 @@ export class HealthController {
     // Liveness check - simple ping, no dependencies
     return { alive: true, timestamp: new Date().toISOString() };
   }
+
+  @Get('debug-sentry')
+  async debugSentry() {
+    // Test endpoint to verify Sentry error capture
+    // Only works in production (when SENTRY_DSN is set)
+    throw new Error('This is a test error from debug-sentry endpoint - Sentry integration working!');
+  }
 }

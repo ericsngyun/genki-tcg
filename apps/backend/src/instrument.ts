@@ -23,10 +23,20 @@ if (SENTRY_DSN && ENVIRONMENT !== 'development') {
     dsn: SENTRY_DSN,
     environment: ENVIRONMENT,
     integrations,
+
+    // Send structured logs to Sentry
+    enableLogs: true,
+
+    // Send default PII data (IP addresses, user data)
+    // Set to false if you don't want to collect IP addresses
+    sendDefaultPii: true,
+
     // Performance Monitoring
     tracesSampleRate: ENVIRONMENT === 'production' ? 0.1 : 1.0,
+
     // Profiling
     profilesSampleRate: ENVIRONMENT === 'production' ? 0.1 : 1.0,
+
     // Error filtering
     beforeSend(event, hint) {
       // Don't send validation errors (400) to Sentry
