@@ -15,8 +15,7 @@ if (SENTRY_DSN && ENVIRONMENT !== 'development') {
     const { nodeProfilingIntegration } = require('@sentry/profiling-node');
     integrations.push(nodeProfilingIntegration());
   } catch (error) {
-    // Profiling package not installed - continue without it
-    console.log('Sentry profiling not available (optional)');
+    // Profiling package not installed - continue without it (optional feature)
   }
 
   Sentry.init({

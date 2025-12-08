@@ -291,8 +291,6 @@ export class AuthController {
 
             if (isMobile) {
               // MOBILE: Open deep link and close browser
-              console.log('Mobile detected, opening deep link:', deepLinkUrl);
-
               // Immediately try to open the deep link
               window.location.href = deepLinkUrl;
 
@@ -313,7 +311,6 @@ export class AuthController {
               }, 500);
             } else if (window.opener && !window.opener.closed) {
               // WEB: Post message to opener window
-              console.log('Web detected, posting message to opener');
               const message = { type: 'DISCORD_AUTH_CALLBACK', ...authData };
               window.opener.postMessage(message, '*');
 
@@ -327,8 +324,7 @@ export class AuthController {
                 window.close();
               }, 1000);
             } else {
-              // FALLBACK: Show manual link
-              console.error('No opener and not mobile - showing manual link');
+              // FALLBACK: Show manual link (no opener and not mobile)
             }
           </script>
         </body>
