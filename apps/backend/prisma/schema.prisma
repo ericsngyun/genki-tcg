@@ -329,6 +329,9 @@ model Entry {
   paidAmount Int? // Amount paid in cents
   paidBy     String? // Staff user ID who confirmed payment
 
+  // Final standings
+  placement Int? // Final placement (1 = 1st place, 2 = 2nd, etc.)
+
   decklistId String?
 
   // Relations

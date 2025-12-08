@@ -747,15 +747,15 @@ export class EventsService {
           select: {
             id: true,
             name: true,
-            gameType: true,
-            startTime: true,
+            game: true,
+            startAt: true,
             status: true,
           },
         },
       },
       orderBy: {
         event: {
-          startTime: 'desc',
+          startAt: 'desc',
         },
       },
       take: limit,
@@ -772,7 +772,7 @@ export class EventsService {
               eventId: entry.eventId,
             },
             OR: [{ playerAId: userId }, { playerBId: userId }],
-            status: 'COMPLETED',
+            result: { not: null }, // Only completed matches have a result
           },
         });
 
@@ -782,24 +782,30 @@ export class EventsService {
         let draws = 0;
 
         matches.forEach((match) => {
-          if (match.result === 'DRAW') {
+          if (match.result === 'DRAW' || match.result === 'INTENTIONAL_DRAW') {
             draws++;
-          } else if (match.result === 'A_WIN' && match.playerAId === userId) {
+          } else if (match.result === 'PLAYER_A_WIN' && match.playerAId === userId) {
             wins++;
-          } else if (match.result === 'B_WIN' && match.playerBId === userId) {
+          } else if (match.result === 'PLAYER_B_WIN' && match.playerBId === userId) {
             wins++;
-          } else if (match.result === 'A_WIN' || match.result === 'B_WIN') {
+          } else if (match.result === 'PLAYER_A_WIN' || match.result === 'PLAYER_B_WIN') {
             losses++;
           }
+          // PLAYER_A_DQ, PLAYER_B_DQ, DOUBLE_LOSS don't count as wins/losses for records
+        });
+
+        // Get total number of players in the event
+        const totalPlayers = await this.prisma.entry.count({
+          where: { eventId: entry.eventId },
         });
 
         return {
           id: entry.event.id,
           name: entry.event.name,
-          gameType: entry.event.gameType,
-          date: entry.event.startTime,
+          gameType: entry.event.game,
+          date: entry.event.startAt,
           placement: entry.placement || undefined,
-          totalPlayers: undefined, // Could calculate if needed
+          totalPlayers,
           matchRecord: `${wins}-${losses}-${draws}`,
         };
       })
