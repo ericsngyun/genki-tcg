@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,13 +17,28 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  Layout,
-  SlideInRight,
-} from 'react-native-reanimated';
 import { RankedAvatar, mapRatingToTier } from '../components/RankedAvatar';
+
+// Conditionally import and use reanimated only on native platforms
+let Animated: any;
+let FadeInDown: any;
+let FadeInUp: any;
+let Layout: any;
+let SlideInRight: any;
+
+if (Platform.OS !== 'web') {
+  const ReanimatedModule = require('react-native-reanimated');
+  Animated = ReanimatedModule.default;
+  FadeInDown = ReanimatedModule.FadeInDown;
+  FadeInUp = ReanimatedModule.FadeInUp;
+  Layout = ReanimatedModule.Layout;
+  SlideInRight = ReanimatedModule.SlideInRight;
+}
+
+// Platform-aware animated component wrapper
+const AnimatedView = Platform.OS === 'web'
+  ? View
+  : Animated?.View || View;
 
 const { width } = Dimensions.get('window');
 
@@ -157,8 +173,8 @@ export default function LeaderboardScreen() {
               {leaderboardData.length >= 3 && (
                 <View style={styles.podiumContainer}>
                   {/* 2nd Place */}
-                  <Animated.View
-                    entering={FadeInDown.delay(200).springify()}
+                  <AnimatedView
+                    {...(Platform.OS !== 'web' && FadeInDown ? { entering: FadeInDown.delay(200).springify() } : {})}
                     style={[styles.podiumPosition, { marginTop: 30 }]}
                   >
                     <RankedAvatar
@@ -173,11 +189,11 @@ export default function LeaderboardScreen() {
                     </View>
                     <Text style={styles.podiumName} numberOfLines={1}>{leaderboardData[1].userName}</Text>
                     <Text style={styles.podiumRating}>{Math.round(leaderboardData[1].lifetimeRating)}</Text>
-                  </Animated.View>
+                  </AnimatedView>
 
                   {/* 1st Place */}
-                  <Animated.View
-                    entering={FadeInDown.delay(100).springify()}
+                  <AnimatedView
+                    {...(Platform.OS !== 'web' && FadeInDown ? { entering: FadeInDown.delay(100).springify() } : {})}
                     style={[styles.podiumPosition, { zIndex: 1 }]}
                   >
                     <View style={styles.crownContainer}>
@@ -201,11 +217,11 @@ export default function LeaderboardScreen() {
                     <Text style={[styles.podiumRating, styles.podiumRatingFirst]}>
                       {Math.round(leaderboardData[0].lifetimeRating)}
                     </Text>
-                  </Animated.View>
+                  </AnimatedView>
 
                   {/* 3rd Place */}
-                  <Animated.View
-                    entering={FadeInDown.delay(300).springify()}
+                  <AnimatedView
+                    {...(Platform.OS !== 'web' && FadeInDown ? { entering: FadeInDown.delay(300).springify() } : {})}
                     style={[styles.podiumPosition, { marginTop: 40 }]}
                   >
                     <RankedAvatar
@@ -220,7 +236,7 @@ export default function LeaderboardScreen() {
                     </View>
                     <Text style={styles.podiumName} numberOfLines={1}>{leaderboardData[2].userName}</Text>
                     <Text style={styles.podiumRating}>{Math.round(leaderboardData[2].lifetimeRating)}</Text>
-                  </Animated.View>
+                  </AnimatedView>
                 </View>
               )}
 
@@ -231,10 +247,12 @@ export default function LeaderboardScreen() {
                   const tier = getTierBadge(entry.lifetimeRating);
 
                   return (
-                    <Animated.View
+                    <AnimatedView
                       key={entry.userId}
-                      entering={FadeInDown.delay(400 + (index * 50)).springify()}
-                      layout={Layout.springify()}
+                      {...(Platform.OS !== 'web' && FadeInDown && Layout ? {
+                        entering: FadeInDown.delay(400 + (index * 50)).springify(),
+                        layout: Layout.springify()
+                      } : {})}
                       style={styles.rankItem}
                     >
                       <View style={styles.rankNumberContainer}>
@@ -256,7 +274,7 @@ export default function LeaderboardScreen() {
                           </Text>
                         </View>
                       </View>
-                    </Animated.View>
+                    </AnimatedView>
                   );
                 })}
               </View>
