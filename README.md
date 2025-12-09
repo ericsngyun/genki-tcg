@@ -1,5 +1,10 @@
 # Genki TCG
 
+![CI Status](https://github.com/anthropics/genki-tcg/workflows/CI%2FCD%20Pipeline/badge.svg)
+![Tests](https://img.shields.io/badge/tests-86%20passed-success)
+![Coverage](https://img.shields.io/badge/coverage-22.79%25-yellow)
+![Build](https://img.shields.io/badge/build-passing-success)
+
 A store-branded TCG tournament and credits platform for One Piece TCG, inspired by Bandai TCG+.
 
 ## Architecture
@@ -104,22 +109,35 @@ npm run dev:backend
 ## Tech Quality
 
 - TypeScript strict mode
-- Comprehensive tests for pairing and standings logic
+- Comprehensive test suite (86 tests, 100% pass rate)
+- Automated CI/CD with GitHub Actions
+- 22.79% test coverage (target: 70%)
 - Prisma migrations for safe schema evolution
 - Structured logging and Sentry integration
 - Rate limiting and input validation
 - Org-scoped RBAC (Owner, Staff, Player)
+- IDOR protection across all services
 
 ## Scripts
 
 ```bash
+# Development
 npm run dev:backend      # Start backend in watch mode
 npm run dev:admin        # Start admin web in dev mode
 npm run dev:mobile       # Start Expo dev server
 npm run build            # Build all apps
+
+# Testing
 npm run test             # Run all tests
+npm run test:cov         # Run tests with coverage report
+npm run test:watch       # Run tests in watch mode
+npm run test:e2e         # Run end-to-end tests
+
+# Code Quality
 npm run lint             # Lint all workspaces
 npm run format           # Format code with Prettier
+
+# Database
 npm run db:migrate       # Run Prisma migrations
 npm run db:studio        # Open Prisma Studio
 npm run db:seed          # Seed database with initial data
@@ -145,10 +163,11 @@ npm run db:seed          # Seed database with initial data
 - **[Discord OAuth Setup](./DISCORD_OAUTH_SETUP.md)** - Configure Discord OAuth
 - **[Production Ready Checklist](./PRODUCTION_READY_CHECKLIST.md)** - Pre-launch checklist
 
-### Security & Operations  
+### Security & Operations
 - **[Security Audit](./SECURITY_AUDIT.md)** - Security review and best practices
 - **[Security Rotation Guide](./SECURITY_ROTATION_GUIDE.md)** - Credential rotation procedures
 - **[Testing Guide](./TESTING_GUIDE.md)** - Testing strategy and running tests
+- **[CI/CD Pipeline](./.github/workflows/README.md)** - Automated testing and deployment workflows
 
 ### Project Management
 - **[Sprint Progress](./SPRINT_PROGRESS.md)** - Current sprint status and daily progress
