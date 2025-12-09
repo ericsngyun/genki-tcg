@@ -581,7 +581,6 @@ export default function ProfileScreen() {
                       </ImageBackground>
                     </View>
                   );
-                  );
                 })
               ) : (
               <View style={styles.emptyState}>
