@@ -1,4 +1,6 @@
+import { RankedAvatar } from './RankedAvatar';
 import { TierBadge } from './TierBadge';
+import { TIER_COLORS } from './TierEmblem';
 
 type PlayerTier =
   | 'SPROUT'
@@ -28,36 +30,43 @@ interface LeaderboardPodiumProps {
 
 const PODIUM_STYLES = {
   1: {
-    bg: 'bg-gradient-to-b from-yellow-500/20 to-yellow-600/5',
-    border: 'border-yellow-500/40',
-    glow: 'shadow-[0_0_40px_-10px_rgba(234,179,8,0.3)]',
-    textGlow: 'text-yellow-500',
+    bg: 'bg-gradient-to-b from-yellow-500/20 via-yellow-600/10 to-transparent',
+    border: 'border-yellow-500/50',
+    glow: 'shadow-[0_0_60px_-15px_rgba(234,179,8,0.5)]',
+    textGlow: 'text-yellow-400',
+    ringColor: 'ring-yellow-500/30',
     icon: '👑',
-    height: 'h-48',
+    height: 'h-56',
     delay: 'delay-200',
+    avatarSize: '2xl' as const,
   },
   2: {
-    bg: 'bg-gradient-to-b from-slate-300/20 to-slate-400/5',
-    border: 'border-slate-400/40',
-    glow: 'shadow-[0_0_40px_-10px_rgba(148,163,184,0.3)]',
-    textGlow: 'text-slate-400',
+    bg: 'bg-gradient-to-b from-slate-300/20 via-slate-400/10 to-transparent',
+    border: 'border-slate-400/50',
+    glow: 'shadow-[0_0_50px_-15px_rgba(148,163,184,0.4)]',
+    textGlow: 'text-slate-300',
+    ringColor: 'ring-slate-400/30',
     icon: '🥈',
-    height: 'h-36',
+    height: 'h-40',
     delay: 'delay-300',
+    avatarSize: 'xl' as const,
   },
   3: {
-    bg: 'bg-gradient-to-b from-orange-700/20 to-orange-800/5',
-    border: 'border-orange-700/40',
-    glow: 'shadow-[0_0_40px_-10px_rgba(194,65,12,0.3)]',
-    textGlow: 'text-orange-700',
+    bg: 'bg-gradient-to-b from-orange-700/20 via-orange-800/10 to-transparent',
+    border: 'border-orange-700/50',
+    glow: 'shadow-[0_0_50px_-15px_rgba(194,65,12,0.4)]',
+    textGlow: 'text-orange-400',
+    ringColor: 'ring-orange-600/30',
     icon: '🥉',
-    height: 'h-32',
+    height: 'h-36',
     delay: 'delay-500',
+    avatarSize: 'xl' as const,
   },
 };
 
 function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 2 | 3; onClick?: () => void }) {
   const style = PODIUM_STYLES[rank];
+  const tierColor = TIER_COLORS[player.tier];
 
   return (
     <div className={`relative flex flex-col justify-end ${rank === 2 ? 'order-first md:order-none' : ''}`}>
@@ -67,23 +76,29 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
           ${style.delay}
         `}
       >
+        {/* Glow effect behind card */}
+        <div
+          className="absolute inset-0 blur-2xl opacity-30 rounded-3xl"
+          style={{ backgroundColor: tierColor?.glow || 'transparent' }}
+        />
+
         <div
           onClick={onClick}
           className={`
-            relative rounded-2xl border backdrop-blur-sm p-6 transition-all duration-300
-            hover:-translate-y-2 hover:scale-[1.02] group
+            relative rounded-2xl border-2 backdrop-blur-sm p-6 transition-all duration-300
+            hover:-translate-y-3 hover:scale-[1.03] group
             ${style.bg} ${style.border} ${style.glow}
             ${onClick ? 'cursor-pointer' : ''}
-            mb-4
+            mb-4 ring-2 ${style.ringColor}
           `}
         >
           {/* Rank Badge */}
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2">
             <div
               className={`
-                w-12 h-12 rounded-full border-2 flex items-center justify-center text-2xl
-                bg-background shadow-lg
-                ${style.border}
+                w-14 h-14 rounded-full border-3 flex items-center justify-center text-3xl
+                bg-background shadow-xl ring-2 ${style.ringColor}
+                ${style.border} transition-transform group-hover:scale-110 group-hover:rotate-6
               `}
             >
               {style.icon}
@@ -91,28 +106,38 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
           </div>
 
           {/* Player Info */}
-          <div className="mt-6 text-center space-y-3">
+          <div className="mt-8 text-center space-y-4">
+            {/* Avatar with Emblem */}
+            <div className="flex justify-center">
+              <RankedAvatar
+                user={{ name: player.userName, avatarUrl: player.userAvatar }}
+                tier={player.tier}
+                size={style.avatarSize}
+                showTierBadge={true}
+              />
+            </div>
+
             {/* Name */}
             <div>
-              <h3 className={`text-lg font-bold ${style.textGlow} tracking-tight truncate px-2`}>
+              <h3 className={`text-lg font-bold ${style.textGlow} tracking-tight truncate px-2 drop-shadow-sm`}>
                 {player.userName}
               </h3>
               <p className="text-xs text-muted-foreground font-medium">Rank #{player.rank}</p>
             </div>
 
             {/* Tier */}
-            <div className="flex justify-center scale-90">
+            <div className="flex justify-center">
               <TierBadge tier={player.tier} size="lg" provisional={player.provisional} />
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
               <div className="text-center">
-                <div className="text-xl font-bold text-foreground">{player.winRate}%</div>
+                <div className="text-2xl font-bold text-foreground">{player.winRate}%</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Win Rate</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-foreground">{player.matchesPlayed}</div>
+                <div className="text-2xl font-bold text-foreground">{player.matchesPlayed}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Matches</div>
               </div>
             </div>
@@ -122,12 +147,12 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
         {/* Podium Base */}
         <div
           className={`
-            rounded-t-lg border-x border-t flex items-end justify-center
-            bg-gradient-to-b from-background/80 to-background/20 backdrop-blur-sm
-            ${style.border} ${style.height}
+            rounded-t-xl border-x-2 border-t-2 flex items-end justify-center
+            bg-gradient-to-b from-background/90 to-background/30 backdrop-blur-sm
+            ${style.border} ${style.height} transition-all duration-300 group-hover:opacity-80
           `}
         >
-          <div className={`text-8xl font-black opacity-10 mb-4 ${style.textGlow}`}>
+          <div className={`text-9xl font-black opacity-10 mb-4 ${style.textGlow}`}>
             {rank}
           </div>
         </div>
@@ -140,7 +165,7 @@ export function LeaderboardPodium({ topThree, seasonName, onPlayerClick }: Leade
   if (topThree.length === 0) {
     return (
       <div className="bg-card/50 border border-border rounded-2xl p-12 text-center animate-in fade-in zoom-in duration-500">
-        <div className="text-4xl mb-4">🏆</div>
+        <div className="text-5xl mb-4">🏆</div>
         <h3 className="text-xl font-bold text-foreground mb-2">No Rankings Yet</h3>
         <p className="text-muted-foreground">
           Complete tournaments to see the top players appear on the podium.
@@ -150,19 +175,19 @@ export function LeaderboardPodium({ topThree, seasonName, onPlayerClick }: Leade
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
       {seasonName && (
         <div className="text-center animate-in fade-in slide-in-from-top-4 duration-700">
-          <h2 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+          <h2 className="text-4xl font-bold text-foreground tracking-tight mb-2">
             Top Players
           </h2>
-          <p className="text-muted-foreground font-medium">{seasonName}</p>
+          <p className="text-muted-foreground font-medium text-lg">{seasonName}</p>
         </div>
       )}
 
       {/* Podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end max-w-4xl mx-auto px-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end max-w-5xl mx-auto px-4">
         {/* 2nd Place (Left on desktop) */}
         {topThree[1] && (
           <PodiumCard
