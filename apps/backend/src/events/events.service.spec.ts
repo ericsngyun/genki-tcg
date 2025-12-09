@@ -296,6 +296,22 @@ describe('EventsService', () => {
       });
     });
 
+    it('should throw BadRequestException if amount is negative', async () => {
+      const entry = {
+        id: 'entry-1',
+        event: {
+          orgId: 'org-1',
+          entryFeeCents: 1000,
+        },
+      };
+
+      mockPrismaService.entry.findUnique.mockResolvedValue(entry);
+
+      await expect(
+        service.markAsPaid('entry-1', 'staff-1', 'org-1', -500),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw BadRequestException if amount less than required', async () => {
       const entry = {
         id: 'entry-1',
@@ -422,6 +438,52 @@ describe('EventsService', () => {
 
       const distributions = [
         { userId: 'user-2', amount: 5000, placement: 1 },
+      ];
+
+      mockPrismaService.event.findUnique.mockResolvedValue(event);
+
+      await expect(
+        service.distributePrizes('event-1', distributions, 'staff-1', 'org-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if duplicate placements', async () => {
+      const event = {
+        id: 'event-1',
+        orgId: 'org-1',
+        prizesDistributed: false,
+        totalPrizeCredits: 10000,
+        entries: [
+          { userId: 'user-1' },
+          { userId: 'user-2' },
+        ],
+      };
+
+      const distributions = [
+        { userId: 'user-1', amount: 5000, placement: 1 },
+        { userId: 'user-2', amount: 5000, placement: 1 }, // Duplicate placement
+      ];
+
+      mockPrismaService.event.findUnique.mockResolvedValue(event);
+
+      await expect(
+        service.distributePrizes('event-1', distributions, 'staff-1', 'org-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if negative prize amount', async () => {
+      const event = {
+        id: 'event-1',
+        orgId: 'org-1',
+        prizesDistributed: false,
+        totalPrizeCredits: 10000,
+        entries: [
+          { userId: 'user-1' },
+        ],
+      };
+
+      const distributions = [
+        { userId: 'user-1', amount: -1000, placement: 1 },
       ];
 
       mockPrismaService.event.findUnique.mockResolvedValue(event);
