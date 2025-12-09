@@ -46,6 +46,11 @@ export class RatingsController {
     return this.ratingsService.getPlayerRanks(user.id, user.orgId);
   }
 
+  @Get('me/lifetime')
+  async getMyLifetimeRatings(@CurrentUser() user: AuthenticatedUser) {
+    return this.ratingsService.getPlayerLifetimeRatings(user.id, user.orgId);
+  }
+
   // ===========================================================================
   // Leaderboards
   // ===========================================================================

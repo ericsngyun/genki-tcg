@@ -149,7 +149,7 @@ class ApiClient {
   }
 
   async getMe() {
-    const { data} = await this.client.get('/auth/me');
+    const { data } = await this.client.get('/auth/me');
     return data;
   }
 
@@ -352,6 +352,11 @@ class ApiClient {
   // Player Stats & Profile
   async getMyRanks() {
     const { data } = await this.client.get('/ratings/me/ranks');
+    return data;
+  }
+
+  async getMyLifetimeRatings() {
+    const { data } = await this.client.get('/ratings/me/lifetime');
     return data;
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../../lib/logger';
 import {
   View,
@@ -10,13 +10,18 @@ import {
   RefreshControl,
   Alert,
   Dimensions,
+  ImageBackground,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../lib/api';
-import { RankedAvatar, mapRatingToTier } from '../../components/RankedAvatar';
+import { api } from '../../lib/api'
+import { TIER_COLORS } from '../../components/TierEmblem';
+import { RankedAvatar, mapRatingToTier, PlayerTier } from '../../components/RankedAvatar';
+import { getGameImagePath } from '../../lib/formatters';
+import { BORDER_PREFERENCE_KEY } from '../edit-profile';
 
 const { width } = Dimensions.get('window');
 
@@ -51,34 +56,82 @@ interface TournamentRecord {
   matchRecord: string;
 }
 
+interface Transaction {
+  id: string;
+  amount: number;
+  reasonCode: string;
+  memo?: string;
+  createdAt: string;
+}
+
 const GAME_TYPE_LABELS: Record<string, string> = {
-  ONE_PIECE_TCG: 'One Piece',
-  AZUKI_TCG: 'Azuki',
+  ONE_PIECE_TCG: 'One Piece TCG',
+  AZUKI_TCG: 'Azuki TCG',
   RIFTBOUND: 'Riftbound',
 };
 
-const GAME_TYPE_COLORS: Record<string, string[]> = {
-  ONE_PIECE_TCG: ['#DC2626', '#B91C1C'],
-  AZUKI_TCG: ['#8B5CF6', '#7C3AED'],
-  RIFTBOUND: ['#3B82F6', '#2563EB'],
+const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string]; icon: string }> = {
+  ONE_PIECE_TCG: { gradient: ['#DC2626', '#B91C1C'] as const, icon: '🏴‍☠️' },
+  AZUKI_TCG: { gradient: ['#8B5CF6', '#7C3AED'] as const, icon: '🎴' },
+  RIFTBOUND: { gradient: ['#3B82F6', '#2563EB'] as const, icon: '⚔️' },
+};
+
+// Tier configuration for display
+const TIER_DISPLAY: Record<PlayerTier, { label: string; icon: string }> = {
+  GENKI: { label: 'GENKI', icon: '🔥' },
+  DIAMOND: { label: 'Diamond', icon: '💎' },
+  PLATINUM: { label: 'Platinum', icon: '💎' },
+  GOLD: { label: 'Gold', icon: '👑' },
+  SILVER: { label: 'Silver', icon: '🛡️' },
+  BRONZE: { label: 'Bronze', icon: '🛡️' },
+  SPROUT: { label: 'Sprout', icon: '🌱' },
+  UNRANKED: { label: 'Unranked', icon: '' },
 };
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [ranks, setRanks] = useState<GameRank[]>([]);
+  const [lifetimeRanks, setLifetimeRanks] = useState<GameRank[]>([]);
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'ratings' | 'history'>('ratings');
+  const [ratingView, setRatingView] = useState<'seasonal' | 'lifetime'>('seasonal');
+
+  // Wallet state
+  const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [borderPreference, setBorderPreference] = useState('HIGHEST');
 
   useEffect(() => {
     loadProfileData();
   }, []);
 
+  // Reload border preference when screen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadBorderPreference();
+    }, [])
+  );
+
+  const loadBorderPreference = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(BORDER_PREFERENCE_KEY);
+      if (saved) {
+        setBorderPreference(saved);
+      }
+    } catch (error) {
+      logger.debug('Failed to load border preference:', error);
+    }
+  };
+
   const loadProfileData = async () => {
     try {
-      const [userResponse, ranksResponse] = await Promise.all([
+      console.log('🔄 Loading profile data...');
+
+      const [userResponse, ranksResponse, lifetimeResponse, walletResponse] = await Promise.all([
         api.getMe().catch(err => {
           logger.error('Failed to load user profile:', err);
           return null;
@@ -87,14 +140,54 @@ export default function ProfileScreen() {
           logger.error('Failed to load ranks:', err);
           return { ranks: [] };
         }),
+        api.getMyLifetimeRatings().catch(err => {
+          logger.error('Failed to load lifetime ranks:', err);
+          return { categories: [] };
+        }),
+        api.getMyBalance().catch(err => {
+          logger.debug('Failed to load balance:', err);
+          return { balance: null, recentTransactions: [] };
+        }),
       ]);
+
+      console.log('👤 User Response:', JSON.stringify(userResponse, null, 2));
+      console.log('🏆 Ranks Response:', JSON.stringify(ranksResponse, null, 2));
+      console.log('🌟 Lifetime Response:', JSON.stringify(lifetimeResponse, null, 2));
 
       if (userResponse) {
         setUser(userResponse.user || userResponse);
       }
 
-      if (ranksResponse?.ranks) {
+      if (ranksResponse?.categories) {
+        const mappedRanks = ranksResponse.categories.map((r: any) => ({
+          ...r,
+          gameType: r.category,
+          wins: r.matchWins,
+          losses: r.matchLosses,
+          draws: r.matchDraws,
+        })) || [];
+        console.log('✅ Mapped Seasonal Ranks:', mappedRanks.length);
+        setRanks(mappedRanks);
+      } else if (ranksResponse?.ranks) {
+        // Fallback if I'm wrong and it is ranks
         setRanks(ranksResponse.ranks);
+      }
+
+      if (lifetimeResponse?.categories) {
+        const mappedLifetime = lifetimeResponse.categories.map((r: any) => ({
+          ...r,
+          gameType: r.category,
+          wins: r.matchWins,
+          losses: r.matchLosses,
+          draws: r.matchDraws,
+        })) || [];
+        console.log('✅ Mapped Lifetime Ranks:', mappedLifetime.length);
+        setLifetimeRanks(mappedLifetime);
+      }
+
+      if (walletResponse) {
+        setBalance(walletResponse.balance);
+        setTransactions(walletResponse.recentTransactions || []);
       }
 
       try {
@@ -119,30 +212,37 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, []);
 
-  const calculateOverallStats = () => {
+  const stats = useMemo(() => {
     if (ranks.length === 0) {
       return { totalMatches: 0, totalWins: 0, winRate: 0, eventsPlayed: 0 };
     }
-
     const totalMatches = ranks.reduce((sum, r) => sum + r.matchesPlayed, 0);
     const totalWins = ranks.reduce((sum, r) => sum + r.wins, 0);
     const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+    return { totalMatches, totalWins, winRate, eventsPlayed: tournaments.length };
+  }, [ranks, tournaments]);
 
-    return {
-      totalMatches,
-      totalWins,
-      winRate,
-      eventsPlayed: tournaments.length,
-    };
-  };
+  // Calculate display tier based on preference
+  const displayTier = useMemo((): PlayerTier => {
+    if (borderPreference === 'HIGHEST' || ranks.length === 0) {
+      if (ranks.length === 0) return 'UNRANKED';
+      const highestRating = Math.max(...ranks.map(r => r.rating));
+      return mapRatingToTier(highestRating);
+    }
+    const gameRank = ranks.find(r => r.gameType === borderPreference);
+    if (!gameRank) return 'UNRANKED';
+    return mapRatingToTier(gameRank.rating);
+  }, [ranks, borderPreference]);
 
-  const stats = calculateOverallStats();
+  const tierColors = TIER_COLORS[displayTier];
+  const tierDisplay = TIER_DISPLAY[displayTier];
 
-  const getHighestTier = () => {
-    if (ranks.length === 0) return 'UNRANKED';
-    const highestRating = Math.max(...ranks.map(r => r.rating));
-    return mapRatingToTier(highestRating);
-  };
+  // Calculate credits stats
+  const creditsStats = useMemo(() => {
+    const earned = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const spent = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+    return { earned, spent };
+  }, [transactions]);
 
   if (loading) {
     return (
@@ -151,6 +251,8 @@ export default function ProfileScreen() {
       </View>
     );
   }
+
+  const initial = user?.name?.charAt(0).toUpperCase() || '?';
 
   return (
     <View style={styles.container}>
@@ -162,34 +264,44 @@ export default function ProfileScreen() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={theme.colors.primary.main}
-            colors={[theme.colors.primary.main]}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section with Gradient Background */}
+        {/* Compact Header Section */}
         <LinearGradient
-          colors={['rgba(220, 38, 38, 0.15)', 'rgba(220, 38, 38, 0.05)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.heroGradient}
+          colors={['rgba(220, 38, 38, 0.08)', 'transparent']}
+          style={styles.headerGradient}
         >
-          <View style={styles.heroContent}>
-            {/* Avatar */}
+          <View style={styles.headerContent}>
+            {/* Left: Avatar */}
             <RankedAvatar
               avatarUrl={user?.avatarUrl}
               name={user?.name || 'Unknown Player'}
-              tier={getHighestTier()}
-              size={80}
-              showTierBadge={true}
+              tier={displayTier}
+              size={84}
+              showTierBadge={false}
+              showEmblem={true}
             />
 
-            {/* User Info */}
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.name || 'Unknown Player'}</Text>
+            {/* Right: User Info */}
+            <View style={styles.headerInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user?.name || 'Unknown Player'}
+              </Text>
+
+              {displayTier !== 'UNRANKED' && (
+                <View style={[styles.tierBadge, { backgroundColor: `${tierColors.primary}15` }]}>
+                  <Text style={styles.tierIcon}>{tierDisplay.icon}</Text>
+                  <Text style={[styles.tierLabel, { color: tierColors.primary }]}>
+                    {tierDisplay.label}
+                  </Text>
+                </View>
+              )}
+
               {user?.discordUsername && (
                 <View style={styles.discordTag}>
-                  <Ionicons name="logo-discord" size={14} color="#5865F2" />
+                  <Ionicons name="logo-discord" size={12} color="#5865F2" />
                   <Text style={styles.discordUsername}>{user.discordUsername}</Text>
                 </View>
               )}
@@ -199,34 +311,140 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.editButton}
               onPress={() => router.push('/edit-profile')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="create-outline" size={20} color={theme.colors.text.primary} />
+              <Ionicons name="settings-outline" size={20} color={theme.colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Inline Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
               <Text style={styles.statValue}>{stats.totalWins}</Text>
               <Text style={styles.statLabel}>Wins</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.winRate.toFixed(0)}%</Text>
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color: theme.colors.success.main }]}>
+                {stats.winRate.toFixed(0)}%
+              </Text>
               <Text style={styles.statLabel}>Win Rate</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <View style={styles.statCard}>
               <Text style={styles.statValue}>{tournaments.length}</Text>
               <Text style={styles.statLabel}>Events</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <View style={styles.statCard}>
               <Text style={styles.statValue}>{stats.totalMatches}</Text>
               <Text style={styles.statLabel}>Matches</Text>
             </View>
           </View>
         </LinearGradient>
+
+        {/* Credits Section */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.creditsCard}
+            onPress={() => setShowTransactions(!showTransactions)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['rgba(255, 215, 0, 0.12)', 'rgba(255, 200, 0, 0.05)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.creditsGradient}
+            >
+              {/* Decorative glow */}
+              <View style={styles.creditsGlow} />
+
+              <View style={styles.creditsMain}>
+                <View style={styles.creditsIconWrapper}>
+                  <Ionicons name="diamond" size={28} color="#FFD700" />
+                </View>
+                <View style={styles.creditsInfo}>
+                  <Text style={styles.creditsLabel}>Credits Balance</Text>
+                  <Text style={styles.creditsBalance}>
+                    {balance !== null ? balance.toLocaleString() : '—'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.creditsArrow}>
+                <Text style={styles.creditsArrowText}>{showTransactions ? 'Hide' : 'View'}</Text>
+                <Ionicons
+                  name={showTransactions ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={theme.colors.text.tertiary}
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Expanded Transactions */}
+          {showTransactions && (
+            <View style={styles.transactionsPanel}>
+              {/* Stats Row */}
+              <View style={styles.creditsStatsRow}>
+                <View style={styles.creditsStat}>
+                  <Ionicons name="trending-up" size={14} color={theme.colors.success.main} />
+                  <Text style={styles.creditsStatLabel}>Earned</Text>
+                  <Text style={[styles.creditsStatValue, { color: theme.colors.success.main }]}>
+                    +{creditsStats.earned.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.creditsStatDivider} />
+                <View style={styles.creditsStat}>
+                  <Ionicons name="trending-down" size={14} color={theme.colors.error.main} />
+                  <Text style={styles.creditsStatLabel}>Spent</Text>
+                  <Text style={[styles.creditsStatValue, { color: theme.colors.error.main }]}>
+                    {creditsStats.spent.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Transaction List */}
+              {transactions.length === 0 ? (
+                <Text style={styles.noTransactionsText}>No recent transactions</Text>
+              ) : (
+                transactions.slice(0, 5).map((tx, index) => (
+                  <View
+                    key={tx.id}
+                    style={[
+                      styles.transactionItem,
+                      index === Math.min(4, transactions.length - 1) && { borderBottomWidth: 0 }
+                    ]}
+                  >
+                    <View style={styles.transactionLeft}>
+                      <View style={[
+                        styles.transactionIcon,
+                        { backgroundColor: tx.amount > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
+                      ]}>
+                        <Ionicons
+                          name={tx.amount > 0 ? 'add' : 'remove'}
+                          size={14}
+                          color={tx.amount > 0 ? theme.colors.success.main : theme.colors.error.main}
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.transactionReason}>
+                          {tx.reasonCode.replace(/_/g, ' ')}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                          {new Date(tx.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[
+                      styles.transactionAmount,
+                      { color: tx.amount > 0 ? theme.colors.success.main : theme.colors.error.main }
+                    ]}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
 
         {/* Tab Bar */}
         <View style={styles.tabBar}>
@@ -234,19 +452,27 @@ export default function ProfileScreen() {
             style={[styles.tabItem, activeTab === 'ratings' && styles.tabItemActive]}
             onPress={() => setActiveTab('ratings')}
           >
+            <Ionicons
+              name="trophy-outline"
+              size={18}
+              color={activeTab === 'ratings' ? theme.colors.primary.main : theme.colors.text.tertiary}
+            />
             <Text style={[styles.tabText, activeTab === 'ratings' && styles.tabTextActive]}>
               Ratings
             </Text>
-            {activeTab === 'ratings' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabItem, activeTab === 'history' && styles.tabItemActive]}
             onPress={() => setActiveTab('history')}
           >
+            <Ionicons
+              name="time-outline"
+              size={18}
+              color={activeTab === 'history' ? theme.colors.primary.main : theme.colors.text.tertiary}
+            />
             <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
               History
             </Text>
-            {activeTab === 'history' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         </View>
 
@@ -254,185 +480,185 @@ export default function ProfileScreen() {
         <View style={styles.content}>
           {activeTab === 'ratings' ? (
             <>
-              {/* Game Ratings List */}
-              {ranks.length > 0 ? (
-                ranks.map((rank, index) => (
-                  <View key={index} style={styles.rankItem}>
-                    <LinearGradient
-                      colors={GAME_TYPE_COLORS[rank.gameType] || ['#DC2626', '#B91C1C']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.rankAccent}
-                    />
-                    <View style={styles.rankContent}>
-                      <View style={styles.rankHeader}>
-                        <Text style={styles.rankGameName}>
-                          {GAME_TYPE_LABELS[rank.gameType] || rank.gameType}
-                        </Text>
-                        {rank.rank && rank.totalPlayers && (
-                          <Text style={styles.rankPosition}>
-                            #{rank.rank} · {rank.totalPlayers} players
-                          </Text>
-                        )}
-                      </View>
-
-                      <View style={styles.rankStats}>
-                        <View style={styles.rankStatGroup}>
-                          <Text style={styles.rankRating}>{Math.round(rank.rating)}</Text>
-                          <Text style={styles.rankStatText}>Rating</Text>
-                        </View>
-                        <View style={styles.rankStatGroup}>
-                          <Text style={styles.rankRecord}>
-                            {rank.wins}-{rank.losses}-{rank.draws}
-                          </Text>
-                          <Text style={styles.rankStatText}>W-L-D</Text>
-                        </View>
-                        <View style={styles.rankStatGroup}>
-                          <Text style={styles.rankMatches}>{rank.matchesPlayed}</Text>
-                          <Text style={styles.rankStatText}>Matches</Text>
-                        </View>
-                      </View>
-
-                      {/* Win Rate Bar */}
-                      {rank.matchesPlayed > 0 && (
-                        <View style={styles.winRateBar}>
-                          <LinearGradient
-                            colors={['#10B981', '#059669']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={[
-                              styles.winRateFill,
-                              { width: `${(rank.wins / rank.matchesPlayed) * 100}%` },
-                            ]}
-                          />
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <View style={styles.emptyIconContainer}>
-                    <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
-                  </View>
-                  <Text style={styles.emptyText}>No ratings yet</Text>
-                  <Text style={styles.emptySubtext}>
-                    Play in tournaments to earn your rating
-                  </Text>
+              {/* View Toggle */}
+              <View style={styles.viewToggleContainer}>
+                <View style={styles.viewToggle}>
+                  <TouchableOpacity
+                    style={[styles.toggleOption, ratingView === 'seasonal' && styles.toggleOptionActive]}
+                    onPress={() => setRatingView('seasonal')}
+                  >
+                    <Text style={[styles.toggleText, ratingView === 'seasonal' && styles.toggleTextActive]}>
+                      Current Season
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toggleOption, ratingView === 'lifetime' && styles.toggleOptionActive]}
+                    onPress={() => setRatingView('lifetime')}
+                  >
+                    <Text style={[styles.toggleText, ratingView === 'lifetime' && styles.toggleTextActive]}>
+                      Lifetime
+                    </Text>
+                  </TouchableOpacity>
                 </View>
+              </View>
+
+              {(ratingView === 'seasonal' ? ranks : lifetimeRanks).length > 0 ? (
+                (ratingView === 'seasonal' ? ranks : lifetimeRanks).map((rank, index) => {
+                  const tier = mapRatingToTier(rank.rating);
+                  const tierColor = TIER_COLORS[tier];
+                  const gameConfig = GAME_TYPE_COLORS[rank.gameType] || { gradient: ['#6B7280', '#4B5563'] as const, icon: '🎮' };
+                  const winRate = rank.matchesPlayed > 0 ? (rank.wins / rank.matchesPlayed) * 100 : 0;
+                  const gameImage = getGameImagePath(rank.gameType);
+
+                  return (
+                    <View key={index} style={styles.gameCardContainer}>
+                      <ImageBackground
+                        source={gameImage}
+                        style={styles.gameCardImage}
+                        imageStyle={styles.gameCardImageStyle}
+                      >
+                        <LinearGradient
+                          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
+                          style={styles.gameCardGradient}
+                        >
+                          {/* Game Header */}
+                          <View style={styles.gameHeader}>
+                            <View style={styles.gameInfo}>
+                              <Text style={styles.gameNameLight}>
+                                {GAME_TYPE_LABELS[rank.gameType] || rank.gameType}
+                              </Text>
+                              {rank.rank && rank.totalPlayers && (
+                                <Text style={styles.gameRankLight}>
+                                  Rank #{rank.rank} of {rank.totalPlayers}
+                                </Text>
+                              )}
+                            </View>
+                            <View style={[styles.tierBadgeSmall, { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                              <Text style={[styles.tierBadgeText, { color: tierColor.primary, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 }]}>
+                                {TIER_DISPLAY[tier].icon} {tier}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Rating Display */}
+                          <View style={styles.ratingRowTransparent}>
+                            <View style={styles.ratingMain}>
+                              <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
+                                {Math.round(rank.rating)}
+                              </Text>
+                              <Text style={styles.ratingLabelLight}>Rating</Text>
+                            </View>
+                            <View style={styles.ratingDividerLight} />
+                            <View style={styles.ratingStat}>
+                              <Text style={styles.ratingStatValueLight}>{rank.wins}</Text>
+                              <Text style={styles.ratingStatLabelLight}>Wins</Text>
+                            </View>
+                            <View style={styles.ratingStat}>
+                              <Text style={styles.ratingStatValueLight}>{rank.losses}</Text>
+                              <Text style={styles.ratingStatLabelLight}>Losses</Text>
+                            </View>
+                            <View style={styles.ratingStat}>
+                              <Text style={styles.ratingStatValueLight}>{rank.matchesPlayed}</Text>
+                              <Text style={styles.ratingStatLabelLight}>Played</Text>
+                            </View>
+                          </View>
+
+                          {/* Win Rate Bar */}
+                          {rank.matchesPlayed > 0 && (
+                            <View style={styles.winRateContainer}>
+                              <View style={styles.winRateHeader}>
+                                <Text style={styles.winRateLabelLight}>Win Rate</Text>
+                                <Text style={[styles.winRateValue, { color: theme.colors.success.main }]}>
+                                  {winRate.toFixed(0)}%
+                                </Text>
+                              </View>
+                              <View style={styles.winRateBarLight}>
+                                <View style={[styles.winRateFill, { width: `${winRate}%` }]} />
+                              </View>
+                            </View>
+                          )}
+                        </LinearGradient>
+                      </ImageBackground>
+                    </View>
+                  );
+                  );
+                })
+              ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
+                <Text style={styles.emptyText}>No ratings yet</Text>
+                <Text style={styles.emptySubtext}>Play in tournaments to earn your ranking!</Text>
+              </View>
               )}
             </>
           ) : (
             <>
-              {/* Tournament History List */}
               {tournaments.length > 0 ? (
-                tournaments.map((tournament, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.tournamentItem}
-                    onPress={() => router.push(`/event/${tournament.id}`)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.tournamentHeader}>
-                      <View style={styles.tournamentBadge}>
+                tournaments.map((tournament, index) => {
+                  const gameConfig = GAME_TYPE_COLORS[tournament.gameType] || { gradient: ['#6B7280', '#4B5563'] as const, icon: '🎮' };
+                  const isTop3 = tournament.placement && tournament.placement <= 3;
+
+                  return (
+                    <View key={tournament.id} style={styles.tournamentCard}>
+                      <View style={styles.tournamentHeader}>
                         <LinearGradient
-                          colors={GAME_TYPE_COLORS[tournament.gameType] || ['#DC2626', '#B91C1C']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.tournamentBadgeGradient}
+                          colors={gameConfig.gradient}
+                          style={styles.tournamentIconBg}
                         >
-                          <Text style={styles.tournamentBadgeText}>
-                            {GAME_TYPE_LABELS[tournament.gameType] || tournament.gameType}
-                          </Text>
+                          <Text style={styles.tournamentIcon}>{gameConfig.icon}</Text>
                         </LinearGradient>
-                      </View>
-                      {tournament.placement && (
-                        <View style={styles.placementBadge}>
-                          <Ionicons name="medal" size={14} color="#F59E0B" />
-                          <Text style={styles.placementText}>#{tournament.placement}</Text>
+                        <View style={styles.tournamentInfo}>
+                          <Text style={styles.tournamentName} numberOfLines={1}>
+                            {tournament.name}
+                          </Text>
+                          <Text style={styles.tournamentDate}>
+                            {new Date(tournament.date).toLocaleDateString()}
+                          </Text>
                         </View>
-                      )}
+                        {tournament.placement && (
+                          <View style={[
+                            styles.placementBadge,
+                            isTop3 ? { backgroundColor: 'rgba(255, 215, 0, 0.15)' } : undefined
+                          ]}>
+                            {isTop3 && (
+                              <Text style={styles.placementMedal}>
+                                {tournament.placement === 1 ? '🥇' : tournament.placement === 2 ? '🥈' : '🥉'}
+                              </Text>
+                            )}
+                            <Text style={[
+                              styles.placementText,
+                              isTop3 ? { color: '#FFD700' } : undefined
+                            ]}>
+                              #{tournament.placement}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.tournamentFooter}>
+                        <Text style={styles.tournamentRecord}>
+                          Record: {tournament.matchRecord}
+                        </Text>
+                        {tournament.totalPlayers && (
+                          <Text style={styles.tournamentPlayers}>
+                            {tournament.totalPlayers} players
+                          </Text>
+                        )}
+                      </View>
                     </View>
-
-                    <Text style={styles.tournamentName} numberOfLines={1}>
-                      {tournament.name}
-                    </Text>
-
-                    <View style={styles.tournamentFooter}>
-                      <Text style={styles.tournamentDate}>
-                        {new Date(tournament.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                      {tournament.matchRecord && (
-                        <Text style={styles.tournamentRecord}>{tournament.matchRecord}</Text>
-                      )}
-                    </View>
-
-                    <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={theme.colors.text.tertiary}
-                      style={styles.tournamentChevron}
-                    />
-                  </TouchableOpacity>
-                ))
+                  );
+                })
               ) : (
                 <View style={styles.emptyState}>
-                  <View style={styles.emptyIconContainer}>
-                    <Ionicons name="calendar-outline" size={48} color={theme.colors.text.tertiary} />
-                  </View>
+                  <Ionicons name="calendar-outline" size={48} color={theme.colors.text.tertiary} />
                   <Text style={styles.emptyText}>No tournament history</Text>
-                  <Text style={styles.emptySubtext}>
-                    Your completed tournaments will appear here
-                  </Text>
+                  <Text style={styles.emptySubtext}>Join events to start your competitive journey!</Text>
                 </View>
               )}
             </>
           )}
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(tabs)/events')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons name="calendar" size={20} color={theme.colors.primary.main} />
-            </View>
-            <Text style={styles.actionText}>Find Tournaments</Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/leaderboard')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons name="podium" size={20} color={theme.colors.primary.main} />
-            </View>
-            <Text style={styles.actionText}>View Leaderboard</Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons name="settings" size={20} color={theme.colors.primary.main} />
-            </View>
-            <Text style={styles.actionText}>Settings</Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 100 }} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
@@ -451,40 +677,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
   },
 
-  // Hero Section
-  heroGradient: {
+  // Header
+  headerGradient: {
     paddingTop: 60,
-    paddingBottom: 24,
+    paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  heroContent: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    gap: 20,
   },
-  userInfo: {
+  headerInfo: {
     flex: 1,
-    marginLeft: 16,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  discordTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  discordUsername: {
-    fontSize: 14,
-    color: '#5865F2',
-    fontWeight: '500',
+    justifyContent: 'center',
   },
   editButton: {
     width: 40,
@@ -494,68 +703,286 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-
-  // Inline Stats
-  statsRow: {
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  tierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+    marginBottom: 6,
   },
-  statItem: {
+  tierIcon: {
+    fontSize: 12,
+  },
+  tierLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  discordTag: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  discordUsername: {
+    fontSize: 13,
+    color: '#5865F2',
+    fontWeight: '500',
+  },
+
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   statValue: {
     fontSize: 20,
     fontWeight: '700',
     color: theme.colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.text.secondary,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statDivider: {
+
+  // Section
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+
+  // Credits Card
+  creditsCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  creditsGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.15)',
+    position: 'relative',
+  },
+  creditsGlow: {
+    position: 'absolute',
+    top: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+  },
+  creditsMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  creditsIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creditsInfo: {},
+  creditsLabel: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  creditsBalance: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
+  creditsArrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  creditsArrowText: {
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+    fontWeight: '500',
+  },
+
+  // View Toggle
+  viewToggleContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.background.elevated,
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+  },
+  toggleOption: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  toggleOptionActive: {
+    backgroundColor: theme.colors.background.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.text.secondary,
+  },
+  toggleTextActive: {
+    color: theme.colors.text.primary,
+    fontWeight: '600',
+  },
+
+  // Transactions Panel
+  transactionsPanel: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  creditsStatsRow: {
+    flexDirection: 'row',
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    paddingBottom: 14,
+  },
+  creditsStat: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  creditsStatDivider: {
     width: 1,
-    height: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginHorizontal: 14,
+  },
+  creditsStatLabel: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+  },
+  creditsStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 'auto',
+  },
+  noTransactionsText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: theme.colors.text.tertiary,
+    paddingVertical: 16,
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  transactionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  transactionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionReason: {
+    fontSize: 13,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  transactionDate: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    marginTop: 1,
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Tab Bar
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginTop: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    marginHorizontal: 20,
+    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 12,
+    padding: 4,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+    borderRadius: 8,
   },
-  tabItemActive: {},
+  tabItemActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
   tabText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.text.secondary,
-    letterSpacing: 0.3,
+    color: theme.colors.text.tertiary,
   },
   tabTextActive: {
     color: theme.colors.primary.main,
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: theme.colors.primary.main,
   },
 
   // Content
@@ -564,212 +991,232 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
 
-  // Rank Items
-  rankItem: {
+  // Game Cards
+  gameCardContainer: {
+    borderRadius: 16,
     marginBottom: 12,
-    backgroundColor: theme.colors.background.card,
-    borderRadius: 12,
     overflow: 'hidden',
-    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: theme.colors.background.card,
   },
-  rankAccent: {
-    width: 4,
+  gameCardImage: {
+    width: '100%',
   },
-  rankContent: {
-    flex: 1,
+  gameCardImageStyle: {
+    borderRadius: 16,
+  },
+  gameCardGradient: {
     padding: 16,
   },
-  rankHeader: {
+  gameHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  rankGameName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
+  gameInfo: {
+    flex: 1,
   },
-  rankPosition: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    fontWeight: '500',
-  },
-  rankStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  rankStatGroup: {
-    alignItems: 'center',
-  },
-  rankRating: {
+  gameNameLight: {
     fontSize: 18,
     fontWeight: '700',
-    color: theme.colors.primary.main,
-    marginBottom: 2,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  rankRecord: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  rankMatches: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  rankStatText: {
-    fontSize: 11,
-    color: theme.colors.text.secondary,
+  gameRankLight: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
     fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  winRateBar: {
-    height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 2,
+  tierBadgeSmall: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  tierBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+
+  // Rating Row
+  ratingRowTransparent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  ratingMain: {
+    alignItems: 'center',
+    paddingRight: 16,
+  },
+  ratingValue: {
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  ratingLabelLight: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  ratingDividerLight: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginRight: 16,
+  },
+  ratingStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  ratingStatValueLight: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  ratingStatLabelLight: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  // Win Rate
+  winRateContainer: {},
+  winRateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  winRateLabelLight: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  winRateValue: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  winRateBarLight: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
     overflow: 'hidden',
   },
   winRateFill: {
     height: '100%',
+    backgroundColor: theme.colors.success.main,
+    borderRadius: 3,
   },
 
-  // Tournament Items
-  tournamentItem: {
-    marginBottom: 12,
+  // Tournament Cards
+  tournamentCard: {
     backgroundColor: theme.colors.background.card,
-    borderRadius: 12,
-    padding: 16,
-    position: 'relative',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   tournamentHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  tournamentBadge: {
-    borderRadius: 6,
-    overflow: 'hidden',
+  tournamentIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tournamentBadgeGradient: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  tournamentIcon: {
+    fontSize: 18,
   },
-  tournamentBadgeText: {
-    fontSize: 11,
+  tournamentInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  tournamentName: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: theme.colors.text.primary,
+  },
+  tournamentDate: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
   },
   placementBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     gap: 4,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  },
+  placementMedal: {
+    fontSize: 14,
   },
   placementText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-  tournamentName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: theme.colors.text.primary,
-    marginBottom: 8,
   },
   tournamentFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
-  tournamentDate: {
-    fontSize: 13,
+  tournamentRecord: {
+    fontSize: 12,
     color: theme.colors.text.secondary,
     fontWeight: '500',
   },
-  tournamentRecord: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-  },
-  tournamentChevron: {
-    position: 'absolute',
-    right: 16,
-    top: '50%',
-    marginTop: -9,
+  tournamentPlayers: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
   },
 
-  // Empty States
+  // Empty State
   emptyState: {
     alignItems: 'center',
     paddingVertical: 48,
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 32,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: theme.colors.text.primary,
-    marginBottom: 4,
+    marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 20,
+    marginTop: 6,
   },
 
-  // Quick Actions
-  quickActions: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  quickActionsTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  actionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  actionText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
+  bottomSpacer: {
+    height: 40,
   },
 });
