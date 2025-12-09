@@ -516,6 +516,7 @@ export default function ProfileScreen() {
                         source={gameImage}
                         style={styles.gameCardImage}
                         imageStyle={styles.gameCardImageStyle}
+                        resizeMode="cover"
                       >
                         <LinearGradient
                           colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
@@ -1001,9 +1002,11 @@ const styles = StyleSheet.create({
   },
   gameCardImage: {
     width: '100%',
+    minHeight: 200,
   },
   gameCardImageStyle: {
     borderRadius: 16,
+    resizeMode: 'cover',
   },
   gameCardGradient: {
     padding: 16,
