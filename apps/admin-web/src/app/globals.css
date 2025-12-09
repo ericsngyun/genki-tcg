@@ -65,6 +65,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
@@ -89,6 +90,7 @@
     from {
       transform: rotate(0deg);
     }
+
     to {
       transform: rotate(360deg);
     }
@@ -154,5 +156,24 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: hsl(0 84% 60% / 0.8);
+  }
+
+  /* GENKI tier pulse animation */
+  @keyframes pulse-slow {
+
+    0%,
+    100% {
+      opacity: 1;
+      filter: brightness(1);
+    }
+
+    50% {
+      opacity: 0.85;
+      filter: brightness(1.15);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
   }
 }

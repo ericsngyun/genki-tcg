@@ -1,5 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('health')
 export class HealthController {
@@ -53,5 +56,14 @@ export class HealthController {
   async live() {
     // Liveness check - simple ping, no dependencies
     return { alive: true, timestamp: new Date().toISOString() };
+  }
+
+  @Get('debug-sentry')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async debugSentry() {
+    // Test endpoint to verify Sentry error capture
+    // Protected: Only accessible by OWNER/STAFF roles
+    throw new Error('This is a test error from debug-sentry endpoint - Sentry integration working!');
   }
 }

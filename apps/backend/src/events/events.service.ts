@@ -217,7 +217,12 @@ export class EventsService {
     const requiredAmount = entry.event.entryFeeCents;
     const paidAmount = amount ?? requiredAmount ?? 0;
 
-    // Validate payment amount
+    // Validate payment amount is not negative
+    if (paidAmount < 0) {
+      throw new BadRequestException('Payment amount cannot be negative');
+    }
+
+    // Validate payment amount meets minimum requirement
     if (requiredAmount && paidAmount < requiredAmount) {
       throw new BadRequestException(
         `Payment amount ($${(paidAmount / 100).toFixed(2)}) is less than required entry fee ($${(requiredAmount / 100).toFixed(2)})`
@@ -286,6 +291,13 @@ export class EventsService {
     const invalidAmounts = distributions.filter(d => d.amount <= 0);
     if (invalidAmounts.length > 0) {
       throw new BadRequestException('Prize amounts must be positive');
+    }
+
+    // Validate no duplicate placements
+    const placements = distributions.map(d => d.placement);
+    const uniquePlacements = new Set(placements);
+    if (placements.length !== uniquePlacements.size) {
+      throw new BadRequestException('Duplicate placements are not allowed');
     }
 
     // Validate total distribution doesn't exceed totalPrizeCredits

@@ -54,20 +54,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="wallet"
-        options={{
-          title: 'Wallet',
-          headerShown: false,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "wallet" : "wallet-outline"}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -93,6 +79,13 @@ export default function TabLayout() {
               color={color}
             />
           ),
+        }}
+      />
+      {/* Hide wallet tab - functionality merged into profile */}
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          href: null, // This hides the tab from navigation
         }}
       />
     </Tabs>

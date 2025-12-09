@@ -845,11 +845,19 @@ export class RatingsService {
       const update = updateMap.get(r.category);
       return {
         category: r.category,
+        rating: Math.round(r.rating),
         tier: mapRatingToTier(r.rating),
         provisional: isProvisionalRating({
           ratingDeviation: r.ratingDeviation,
           totalRatedMatchesInSeasonAndCategory: r.totalRatedMatches,
         }),
+        matchesPlayed: r.totalRatedMatches,
+        matchWins: r.matchWins,
+        matchLosses: r.matchLosses,
+        matchDraws: r.matchDraws,
+        winRate: r.totalRatedMatches > 0
+          ? Number(((r.matchWins / r.totalRatedMatches) * 100).toFixed(1))
+          : 0,
         seasonId: activeSeason.id,
         recentChange: update ? {
           lastTournamentId: update.tournamentId,
@@ -857,6 +865,43 @@ export class RatingsService {
         } : null,
       };
     });
+
+    return {
+      playerId: userId,
+      categories,
+    };
+  }
+
+  /**
+   * Get player lifetime ratings for all categories
+   * Returns all-time stats per game matching leaderboard format
+   */
+  async getPlayerLifetimeRatings(userId: string, orgId: string) {
+    const ratings = await this.prisma.playerCategoryLifetimeRating.findMany({
+      where: {
+        userId,
+        orgId,
+      },
+    });
+
+    const categories = ratings.map(r => ({
+      category: r.category,
+      rating: Math.round(r.rating),
+      tier: mapRatingToTier(r.rating),
+      lifetimeRating: Math.round(r.rating),
+      provisional: isProvisionalRating({
+        ratingDeviation: r.ratingDeviation,
+        totalRatedMatchesInSeasonAndCategory: r.totalRatedMatches,
+      }),
+      matchesPlayed: r.totalRatedMatches,
+      matchWins: r.matchWins,
+      matchLosses: r.matchLosses,
+      matchDraws: r.matchDraws,
+      winRate: r.totalRatedMatches > 0
+        ? Number(((r.matchWins / r.totalRatedMatches) * 100).toFixed(1))
+        : 0,
+      lastMatchAt: r.lastMatchAt,
+    }));
 
     return {
       playerId: userId,

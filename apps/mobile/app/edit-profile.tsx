@@ -9,13 +9,18 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
-import { RankedAvatar, mapRatingToTier } from '../components/RankedAvatar';
+import { RankedAvatar, mapRatingToTier, PlayerTier } from '../components/RankedAvatar';
+import { TIER_COLORS } from '../components/TierEmblem';
+
+// Storage key for border preference
+export const BORDER_PREFERENCE_KEY = 'profile_border_game';
 
 interface User {
   id: string;
@@ -31,6 +36,14 @@ interface GameRank {
   deviation: number;
 }
 
+// Game options for border selection
+const GAME_OPTIONS = [
+  { value: 'HIGHEST', label: 'Highest Tier', icon: '🏆' },
+  { value: 'ONE_PIECE_TCG', label: 'One Piece TCG', icon: '🏴‍☠️' },
+  { value: 'AZUKI_TCG', label: 'Azuki TCG', icon: '🎴' },
+  { value: 'RIFTBOUND', label: 'Riftbound', icon: '⚔️' },
+];
+
 export default function EditProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -38,9 +51,11 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ranks, setRanks] = useState<GameRank[]>([]);
+  const [selectedBorderGame, setSelectedBorderGame] = useState('HIGHEST');
 
   useEffect(() => {
     loadProfile();
+    loadBorderPreference();
   }, []);
 
   const loadProfile = async () => {
@@ -60,6 +75,26 @@ export default function EditProfileScreen() {
       Alert.alert('Error', 'Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBorderPreference = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(BORDER_PREFERENCE_KEY);
+      if (saved) {
+        setSelectedBorderGame(saved);
+      }
+    } catch (error) {
+      logger.debug('Failed to load border preference:', error);
+    }
+  };
+
+  const saveBorderPreference = async (game: string) => {
+    try {
+      await AsyncStorage.setItem(BORDER_PREFERENCE_KEY, game);
+      setSelectedBorderGame(game);
+    } catch (error) {
+      logger.error('Failed to save border preference:', error);
     }
   };
 
@@ -94,6 +129,21 @@ export default function EditProfileScreen() {
     }
   };
 
+  // Get tier based on selection
+  const getDisplayTier = (): PlayerTier => {
+    if (selectedBorderGame === 'HIGHEST') {
+      if (ranks.length === 0) return 'UNRANKED';
+      const highestRating = Math.max(...ranks.map(r => r.rating));
+      return mapRatingToTier(highestRating);
+    }
+    const gameRank = ranks.find(r => r.gameType === selectedBorderGame);
+    if (!gameRank) return 'UNRANKED';
+    return mapRatingToTier(gameRank.rating);
+  };
+
+  const displayTier = getDisplayTier();
+  const tierColors = TIER_COLORS[displayTier];
+
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -118,6 +168,78 @@ export default function EditProfileScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Avatar Preview */}
+        <View style={styles.avatarPreviewCard}>
+          <Text style={styles.sectionTitle}>Profile Preview</Text>
+          <View style={styles.avatarPreviewContainer}>
+            <RankedAvatar
+              avatarUrl={user?.avatarUrl}
+              name={user?.name || 'Unknown'}
+              tier={displayTier}
+              size={120}
+              showTierBadge={true}
+              showEmblem={true}
+            />
+            <View style={styles.previewInfo}>
+              <Text style={styles.previewName}>{name || user?.name}</Text>
+              {displayTier !== 'UNRANKED' && (
+                <View style={[styles.previewTierBadge, { backgroundColor: `${tierColors.primary}20` }]}>
+                  <Text style={[styles.previewTierText, { color: tierColors.primary }]}>
+                    {displayTier}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Border Selection */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Display Border</Text>
+          <Text style={styles.sectionSubtext}>
+            Choose which game's tier to display on your profile
+          </Text>
+          <View style={styles.borderOptions}>
+            {GAME_OPTIONS.map((option) => {
+              const isSelected = selectedBorderGame === option.value;
+              const gameRank = option.value === 'HIGHEST'
+                ? null
+                : ranks.find(r => r.gameType === option.value);
+              const optionTier = option.value === 'HIGHEST'
+                ? (ranks.length > 0 ? mapRatingToTier(Math.max(...ranks.map(r => r.rating))) : 'UNRANKED')
+                : (gameRank ? mapRatingToTier(gameRank.rating) : 'UNRANKED');
+
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.borderOption,
+                    isSelected && styles.borderOptionSelected,
+                    isSelected && { borderColor: tierColors.primary }
+                  ]}
+                  onPress={() => saveBorderPreference(option.value)}
+                >
+                  <Text style={styles.borderOptionIcon}>{option.icon}</Text>
+                  <View style={styles.borderOptionInfo}>
+                    <Text style={[
+                      styles.borderOptionLabel,
+                      isSelected && { color: theme.colors.text.primary }
+                    ]}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.borderOptionTier}>
+                      {optionTier}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={22} color={tierColors.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Profile Info Card */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Profile Information</Text>
@@ -157,28 +279,6 @@ export default function EditProfileScreen() {
               <Text style={styles.helperText}>Manage Discord in Settings</Text>
             </View>
           )}
-        </View>
-
-        {/* Avatar Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Profile Picture</Text>
-          <View style={styles.avatarSection}>
-            <RankedAvatar
-              avatarUrl={user?.avatarUrl}
-              name={user?.name || 'Unknown'}
-              tier={ranks.length > 0 ? mapRatingToTier(ranks[0].rating) : 'UNRANKED'}
-              size={80}
-              showTierBadge={true}
-            />
-            <View style={styles.avatarInfo}>
-              <Text style={styles.avatarTitle}>Discord Avatar</Text>
-              <Text style={styles.avatarSubtext}>
-                {user?.discordUsername
-                  ? 'Your Discord avatar will be used'
-                  : 'Link Discord account to use avatar'}
-              </Text>
-            </View>
-          </View>
         </View>
 
         {/* Save Button */}
@@ -246,6 +346,43 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
   },
+
+  // Avatar Preview
+  avatarPreviewCard: {
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.lg,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    ...shadows.sm,
+  },
+  avatarPreviewContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  previewInfo: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  previewName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+  },
+  previewTierBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  previewTierText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+
+  // Cards
   card: {
     backgroundColor: theme.colors.background.card,
     borderRadius: theme.borderRadius.lg,
@@ -259,8 +396,51 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
+    marginBottom: 4,
+  },
+  sectionSubtext: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
     marginBottom: 16,
   },
+
+  // Border Options
+  borderOptions: {
+    gap: 10,
+  },
+  borderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.elevated,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  borderOptionSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  borderOptionIcon: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  borderOptionInfo: {
+    flex: 1,
+  },
+  borderOptionLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text.secondary,
+  },
+  borderOptionTier: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Input styles
   inputGroup: {
     marginBottom: 20,
   },
@@ -293,25 +473,8 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
     marginTop: 4,
   },
-  avatarSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  avatarInfo: {
-    flex: 1,
-  },
-  avatarTitle: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  avatarSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-  },
+
+  // Save button
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,6 +494,8 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.primary.foreground,
   },
+
+  // Danger zone
   dangerCard: {
     backgroundColor: theme.colors.error.main + '10',
     borderRadius: theme.borderRadius.lg,

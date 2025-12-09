@@ -22,7 +22,9 @@
       "Bash(find:*)",
       "Bash(npx tsc:*)",
       "Bash(taskkill:*)",
-      "Bash(railway status:*)"
+      "Bash(railway status:*)",
+      "Bash(railway variables:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

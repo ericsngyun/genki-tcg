@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -69,6 +70,11 @@ import { SentryModule as SentryNestModule } from '@sentry/nestjs/setup';
     SentryModule,
   ],
   providers: [
+    // SENTRY: Capture all unhandled exceptions
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
+    },
     // SECURITY: Enable global rate limiting
     {
       provide: APP_GUARD,
