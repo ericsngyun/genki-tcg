@@ -62,7 +62,7 @@ export default function EditProfileScreen() {
     try {
       const [userResponse, ranksResponse] = await Promise.all([
         api.getMe(),
-        api.getMyRanks().catch(() => ({ ranks: [] })),
+        api.getMyLifetimeRatings().catch(() => ({ ranks: [] })),
       ]);
       const userData = userResponse.user || userResponse;
       setUser(userData);
