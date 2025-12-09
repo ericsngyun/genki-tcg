@@ -60,15 +60,26 @@ export default function EditProfileScreen() {
 
   const loadProfile = async () => {
     try {
-      const [userResponse, ranksResponse] = await Promise.all([
+      const [userResponse, ratingsResponse] = await Promise.all([
         api.getMe(),
-        api.getMyLifetimeRatings().catch(() => ({ ranks: [] })),
+        api.getMyLifetimeRatings().catch(() => ({ categories: [] })),
       ]);
       const userData = userResponse.user || userResponse;
       setUser(userData);
       setName(userData.name || '');
-      if (ranksResponse?.ranks) {
-        setRanks(ranksResponse.ranks);
+
+      // Map categories to ranks format (category -> gameType)
+      if (ratingsResponse?.categories) {
+        const mappedRanks = ratingsResponse.categories.map((cat: any) => ({
+          gameType: cat.category,
+          rating: cat.rating,
+          deviation: cat.ratingDeviation || 350,
+          matchesPlayed: cat.matchesPlayed || 0,
+          wins: cat.matchWins || 0,
+          losses: cat.matchLosses || 0,
+          draws: cat.matchDraws || 0,
+        }));
+        setRanks(mappedRanks);
       }
     } catch (error) {
       logger.error('Failed to load profile:', error);
