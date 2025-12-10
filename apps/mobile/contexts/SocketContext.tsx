@@ -41,17 +41,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       return; // Already connecting
     }
 
-    setIsConnecting(true);
-    setError(null);
-
     try {
       // Check if user is logged in
       const token = await secureStorage.getItem('access_token');
       if (!token) {
-        setError('Not authenticated');
-        setIsConnecting(false);
+        // User not logged in yet - silently skip connection
+        // This is normal on app startup before login
         return;
       }
+
+      setIsConnecting(true);
+      setError(null);
 
       // Create new socket connection
       const newSocket = await createSocket();
