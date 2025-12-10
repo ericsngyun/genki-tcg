@@ -24,7 +24,9 @@
       "Bash(taskkill:*)",
       "Bash(railway status:*)",
       "Bash(railway variables:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(wc:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
