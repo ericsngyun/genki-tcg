@@ -5,6 +5,8 @@
  * and shadows to ensure consistency across the application.
  */
 
+import { Platform } from 'react-native';
+
 // Color Palette
 export const colors = {
   // Primary Brand Colors (Genki Red)
@@ -156,41 +158,56 @@ export const borderRadius = {
 
 // Shadows
 export const shadows = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  base: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 5,
-  },
-  xl: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.2,
-    shadowRadius: 25,
-    elevation: 8,
-  },
+  sm: Platform.select({
+    web: { boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+  }),
+  base: Platform.select({
+    web: { boxShadow: '0px 2px 3px rgba(0, 0, 0, 0.1)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+  }),
+  md: Platform.select({
+    web: { boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+  }),
+  lg: Platform.select({
+    web: { boxShadow: '0px 10px 15px rgba(0, 0, 0, 0.15)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.15,
+      shadowRadius: 15,
+      elevation: 5,
+    },
+  }),
+  xl: Platform.select({
+    web: { boxShadow: '0px 20px 25px rgba(0, 0, 0, 0.2)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 20 },
+      shadowOpacity: 0.2,
+      shadowRadius: 25,
+      elevation: 8,
+    },
+  }),
 };
 
 // Icon Sizes

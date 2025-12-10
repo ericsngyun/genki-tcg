@@ -11,6 +11,7 @@ import {
   Alert,
   Dimensions,
   ImageBackground,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -517,10 +518,13 @@ export default function ProfileScreen() {
                         style={styles.gameCardImage}
                         imageStyle={styles.gameCardImageStyle}
                         resizeMode="cover"
+                        blurRadius={0}
                       >
                         <LinearGradient
-                          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
+                          colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.92)']}
                           style={styles.gameCardGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 0, y: 1 }}
                         >
                           {/* Game Header */}
                           <View style={styles.gameHeader}>
@@ -994,19 +998,31 @@ const styles = StyleSheet.create({
   // Game Cards
   gameCardContainer: {
     borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     backgroundColor: theme.colors.background.card,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   gameCardImage: {
     width: '100%',
-    minHeight: 200,
+    minHeight: 220,
+    overflow: 'hidden',
   },
   gameCardImageStyle: {
     borderRadius: 16,
-    resizeMode: 'cover',
+    opacity: 1,
   },
   gameCardGradient: {
     padding: 16,
