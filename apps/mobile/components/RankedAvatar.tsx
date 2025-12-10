@@ -25,16 +25,7 @@ interface RankedAvatarProps {
 }
 
 // Tier icon configuration
-const TIER_ICONS: Record<PlayerTier, string> = {
-  SPROUT: 'leaf',
-  BRONZE: 'shield',
-  SILVER: 'shield',
-  GOLD: 'shield',
-  PLATINUM: 'diamond',
-  DIAMOND: 'diamond',
-  GENKI: 'flame',
-  UNRANKED: 'ellipse-outline',
-};
+
 
 export function RankedAvatar({
   avatarUrl,
@@ -47,12 +38,9 @@ export function RankedAvatar({
 }: RankedAvatarProps) {
   const initial = name?.charAt(0).toUpperCase() || '?';
   const tierColors = TIER_COLORS[tier];
-  const icon = TIER_ICONS[tier];
-
   // Calculate dimensions - avatar is 78% of size for slimmer border appearance
   const emblemSize = size;
   const avatarSize = size * 0.78;
-  const badgeSize = size * 0.28;
 
   return (
     <View style={[styles.container, { width: emblemSize, height: emblemSize }, style]}>
@@ -88,24 +76,7 @@ export function RankedAvatar({
         )}
       </View>
 
-      {/* Tier Badge */}
-      {showTierBadge && tier !== 'UNRANKED' && icon && (
-        <View
-          style={[
-            styles.badge,
-            {
-              width: badgeSize,
-              height: badgeSize,
-              borderRadius: badgeSize / 2,
-              backgroundColor: tierColors.primary,
-              borderColor: theme.colors.background.primary,
-              borderWidth: 2,
-            },
-          ]}
-        >
-          <Ionicons name={icon as any} size={badgeSize * 0.55} color="white" />
-        </View>
-      )}
+
     </View>
   );
 }
@@ -145,19 +116,7 @@ const styles = StyleSheet.create({
   initial: {
     fontWeight: 'bold',
   },
-  badge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 6,
-    zIndex: 20,
-  },
+
 });
 
 // Helper to map rating to tier

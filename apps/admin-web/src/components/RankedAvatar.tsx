@@ -24,16 +24,7 @@ export type PlayerTier =
     | 'UNRANKED';
 
 // Tier icons for badges
-const TIER_ICONS: Record<PlayerTier, string> = {
-    SPROUT: '🌱',
-    BRONZE: '🛡️',
-    SILVER: '🛡️',
-    GOLD: '👑',
-    PLATINUM: '💎',
-    DIAMOND: '💎',
-    GENKI: '🔥',
-    UNRANKED: '',
-};
+
 
 const SIZE_MAP = {
     sm: 40,
@@ -53,11 +44,7 @@ export function RankedAvatar({
     const initial = user.name?.charAt(0).toUpperCase() || '?';
     const colors = TIER_COLORS[tier];
     const pxSize = SIZE_MAP[size];
-    const icon = TIER_ICONS[tier];
-
-    // Dimensions
     const borderWidth = pxSize * 0.08;
-    const badgeSize = pxSize * 0.32;
 
     return (
         <div
@@ -106,24 +93,7 @@ export function RankedAvatar({
                 )}
             </div>
 
-            {/* Tier Badge */}
-            {showTierBadge && tier !== 'UNRANKED' && icon && (
-                <div
-                    className="absolute rounded-full flex items-center justify-center border-2 border-background shadow-lg z-20 transition-transform hover:scale-110"
-                    style={{
-                        width: badgeSize,
-                        height: badgeSize,
-                        backgroundColor: colors.primary,
-                        bottom: -2,
-                        right: -2,
-                    }}
-                    title={tier}
-                >
-                    <span style={{ fontSize: badgeSize * 0.55, lineHeight: 1 }}>
-                        {icon}
-                    </span>
-                </div>
-            )}
+
         </div>
     );
 }
