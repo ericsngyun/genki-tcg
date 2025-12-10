@@ -45,6 +45,7 @@ export function RankedAvatar({
     const colors = TIER_COLORS[tier];
     const pxSize = SIZE_MAP[size];
     const borderWidth = pxSize * 0.08;
+    const avatarSize = pxSize * 0.78;
 
     return (
         <div
@@ -58,8 +59,8 @@ export function RankedAvatar({
             <div
                 className="relative overflow-hidden rounded-full bg-background flex items-center justify-center z-10"
                 style={{
-                    width: pxSize - borderWidth * 2,
-                    height: pxSize - borderWidth * 2,
+                    width: avatarSize,
+                    height: avatarSize,
                 }}
             >
                 {user.avatarUrl ? (

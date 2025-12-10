@@ -161,9 +161,11 @@ function BronzeEmblem({ size, colors }: { size: number; colors: typeof TIER_COLO
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="30%" stopColor={colors.primary} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
                     <Stop offset="50%" stopColor={colors.accent} />
-                    <Stop offset="70%" stopColor={colors.primary} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
                 <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.5">
@@ -219,7 +221,9 @@ function SilverEmblem({ size, colors }: { size: number; colors: typeof TIER_COLO
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
                     <Stop offset="25%" stopColor={colors.primary} />
-                    <Stop offset="50%" stopColor={colors.shine} />
+                    <Stop offset="45%" stopColor={colors.shine} />
+                    <Stop offset="50%" stopColor={colors.accent} />
+                    <Stop offset="55%" stopColor={colors.shine} />
                     <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
@@ -262,10 +266,11 @@ function GoldEmblem({ size, colors }: { size: number; colors: typeof TIER_COLORS
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="20%" stopColor={colors.primary} />
-                    <Stop offset="40%" stopColor={colors.shine} />
-                    <Stop offset="60%" stopColor={colors.primary} />
-                    <Stop offset="80%" stopColor={colors.shine} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
+                    <Stop offset="50%" stopColor={colors.accent} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
                 <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.5">
@@ -337,11 +342,11 @@ function PlatinumEmblem({ size, colors }: { size: number; colors: typeof TIER_CO
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="15%" stopColor={colors.primary} />
-                    <Stop offset="35%" stopColor={colors.shine} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
                     <Stop offset="50%" stopColor={colors.accent} />
-                    <Stop offset="65%" stopColor={colors.shine} />
-                    <Stop offset="85%" stopColor={colors.primary} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
                 <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.6">
@@ -410,11 +415,11 @@ function DiamondEmblem({ size, colors }: { size: number; colors: typeof TIER_COL
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="20%" stopColor={colors.primary} />
-                    <Stop offset="35%" stopColor={colors.shine} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
                     <Stop offset="50%" stopColor={colors.accent} />
-                    <Stop offset="65%" stopColor={colors.shine} />
-                    <Stop offset="80%" stopColor={colors.primary} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
                 <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.6">
@@ -485,10 +490,11 @@ function GenkiEmblem({ size, colors }: { size: number; colors: typeof TIER_COLOR
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="1" x2="1" y2="0">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="20%" stopColor={colors.primary} />
-                    <Stop offset="40%" stopColor={colors.accent} />
-                    <Stop offset="60%" stopColor={colors.primary} />
-                    <Stop offset="80%" stopColor={colors.accent} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
+                    <Stop offset="50%" stopColor={colors.accent} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
                 <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.7">
@@ -590,7 +596,11 @@ function UnrankedEmblem({ size, colors }: { size: number; colors: typeof TIER_CO
             <Defs>
                 <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="50%" stopColor={colors.primary} />
+                    <Stop offset="25%" stopColor={colors.primary} />
+                    <Stop offset="45%" stopColor={colors.shine} />
+                    <Stop offset="50%" stopColor={colors.accent} />
+                    <Stop offset="55%" stopColor={colors.shine} />
+                    <Stop offset="75%" stopColor={colors.primary} />
                     <Stop offset="100%" stopColor={colors.secondary} />
                 </LinearGradient>
             </Defs>
