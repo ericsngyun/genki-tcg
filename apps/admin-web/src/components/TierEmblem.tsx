@@ -92,7 +92,7 @@ function SproutEmblem({ size, colors }: { size: number; colors: typeof TIER_COLO
     const id = `sprout-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -142,7 +142,7 @@ function BronzeEmblem({ size, colors }: { size: number; colors: typeof TIER_COLO
     const id = `bronze-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -198,7 +198,7 @@ function SilverEmblem({ size, colors }: { size: number; colors: typeof TIER_COLO
     const id = `silver-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -241,7 +241,7 @@ function GoldEmblem({ size, colors }: { size: number; colors: typeof TIER_COLORS
     const id = `gold-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -315,7 +315,7 @@ function PlatinumEmblem({ size, colors }: { size: number; colors: typeof TIER_CO
     const id = `platinum-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -387,7 +387,7 @@ function DiamondEmblem({ size, colors }: { size: number; colors: typeof TIER_COL
     const id = `diamond-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -461,7 +461,7 @@ function GenkiEmblem({ size, colors }: { size: number; colors: typeof TIER_COLOR
     const id = `genki-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="animate-pulse-slow">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="animate-pulse-slow" style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="1" x2="1" y2="0">
                     <stop offset="0%" stopColor={colors.secondary} />
@@ -585,7 +585,7 @@ function UnrankedEmblem({ size, colors }: { size: number; colors: typeof TIER_CO
     const id = `unranked-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
             <defs>
                 <linearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor={colors.secondary} />

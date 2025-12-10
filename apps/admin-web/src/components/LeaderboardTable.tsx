@@ -90,7 +90,7 @@ export function LeaderboardTable({
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto max-h-[800px] overflow-y-auto custom-scrollbar">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm shadow-sm">
+            <thead className="sticky top-0 z-30 bg-card/95 backdrop-blur-sm shadow-sm">
               <tr className="border-b border-border">
                 <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-24">
                   Rank

@@ -69,7 +69,7 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
   const tierColor = TIER_COLORS[player.tier];
 
   return (
-    <div className={`relative flex flex-col justify-end ${rank === 2 ? 'order-first md:order-none' : ''}`}>
+    <div className={`relative flex flex-col justify-end ${rank === 2 ? 'order-2 md:order-none' : rank === 1 ? 'order-1 md:order-none' : 'order-3 md:order-none'}`}>
       <div
         className={`
           animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both
@@ -150,6 +150,7 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
             rounded-t-xl border-x-2 border-t-2 flex items-end justify-center
             bg-gradient-to-b from-background/90 to-background/30 backdrop-blur-sm
             ${style.border} ${style.height} transition-all duration-300 group-hover:opacity-80
+            hidden md:flex
           `}
         >
           <div className={`text-9xl font-black opacity-10 mb-4 ${style.textGlow}`}>
