@@ -16,8 +16,24 @@ out/
 # Misc
 .DS_Store
 *.pem
+
+# Environment files - NEVER commit these
 .env
+.env.local
+.env.development
+.env.production
 .env*.local
+apps/backend/.env
+apps/backend/.env.local
+apps/backend/.env.development
+apps/backend/.env.production
+apps/admin-web/.env.local
+apps/admin-web/.env.development
+apps/admin-web/.env.production
+apps/mobile/.env
+apps/mobile/.env.local
+apps/mobile/.env.development
+apps/mobile/.env.production
 
 # Debug
 npm-debug.log*

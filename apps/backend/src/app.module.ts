@@ -29,13 +29,10 @@ import { SentryModule as SentryNestModule } from '@sentry/nestjs/setup';
     SentryNestModule.forRoot(),
 
     // Configuration
+    // Loads .env from apps/backend directory
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        '../../.env',      // From apps/backend when running with npm run dev
-        '../../../.env',   // From apps/backend/src if needed
-        '.env',            // Current directory fallback
-      ],
+      envFilePath: '.env',
     }),
 
     // Rate limiting - configurable via environment
