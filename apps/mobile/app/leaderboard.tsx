@@ -245,10 +245,15 @@ export default function LeaderboardScreen() {
           </Text>
         </View>
 
-        {/* Avatar */}
-        <View style={[styles.rankAvatarContainer, { borderColor: tierConfig.color }]}>
-          <PlayerAvatar avatarUrl={player.avatarUrl} name={player.userName} size={40} />
-        </View>
+        {/* Avatar with ranked border */}
+        <RankedAvatar
+          avatarUrl={player.avatarUrl}
+          name={player.userName}
+          tier={tier}
+          size={40}
+          showTierBadge={false}
+          showEmblem={true}
+        />
 
         {/* Player info */}
         <View style={styles.rankInfo}>
@@ -694,14 +699,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.text.tertiary,
   },
-  rankAvatarContainer: {
-    borderRadius: 100,
-    borderWidth: 2,
-    marginLeft: 8,
-    marginRight: 12,
-  },
   rankInfo: {
     flex: 1,
+    marginLeft: 12,
     marginRight: 8,
   },
   rankName: {
