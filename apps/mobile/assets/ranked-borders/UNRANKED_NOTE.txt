@@ -1,0 +1,9 @@
+# UNRANKED Border Note
+
+The unranked.png file is intentionally not included.
+The component will show no border for UNRANKED tier (as requested).
+
+If you want to add an unranked border later, create a simple transparent PNG:
+- Size: 512x512px
+- Name: unranked.png
+- Design: Minimal or blank
