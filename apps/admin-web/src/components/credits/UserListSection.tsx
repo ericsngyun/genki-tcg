@@ -1,5 +1,4 @@
 import { Search } from 'lucide-react';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../RankedAvatar';
 
 interface User {
     id: string;
@@ -33,12 +32,6 @@ export function UserListSection({
     onUserSelect,
     loading,
 }: UserListSectionProps) {
-    // Helper to get highest tier
-    const getHighestTier = (user: User): PlayerTier => {
-        if (!user.lifetimeRatings || user.lifetimeRatings.length === 0) return 'UNRANKED';
-        const highestRating = Math.max(...user.lifetimeRatings.map(r => r.rating));
-        return mapRatingToTier(highestRating);
-    };
 
     return (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500">
@@ -87,16 +80,15 @@ export function UserListSection({
                         >
                             <div className="flex items-center gap-3">
                                 {/* Avatar */}
-                                <RankedAvatar
-                                    user={{ name: user.name, avatarUrl: user.avatarUrl }}
-                                    tier={getHighestTier(user)}
-                                    size="md"
-                                    showTierBadge={true}
-                                    className={`transition-all ${selectedUser?.id === user.id
-                                        ? 'scale-110'
-                                        : ''
-                                        }`}
-                                />
+                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                    {user.avatarUrl ? (
+                                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-xs font-semibold text-muted-foreground">
+                                            {user.name.charAt(0).toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
 
                                 {/* User Info */}
                                 <div className="flex-1 min-w-0">

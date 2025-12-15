@@ -26,7 +26,8 @@
       "Bash(railway variables:*)",
       "Bash(npm test:*)",
       "Bash(wc:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git -C \"C:\\Users\\rayno\\eric\\genki-tcg\" log --oneline)"
     ],
     "deny": [],
     "ask": []

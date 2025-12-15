@@ -18,7 +18,6 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../components/RankedAvatar';
 
 // Conditionally import reanimated for native platforms only
 let Animated: any;
@@ -45,6 +44,29 @@ const GAME_TYPES = [
   { value: 'AZUKI_TCG', label: 'Azuki' },
   { value: 'RIFTBOUND', label: 'Riftbound' },
 ];
+
+// Player Tier type
+type PlayerTier =
+  | 'SPROUT'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED';
+
+// Map rating to tier (simplified from removed RankedAvatar component)
+function mapRatingToTier(rating: number): PlayerTier {
+  if (rating >= 2200) return 'GENKI';
+  if (rating >= 2000) return 'DIAMOND';
+  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 1600) return 'GOLD';
+  if (rating >= 1400) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
+  if (rating >= 800) return 'SPROUT';
+  return 'UNRANKED';
+}
 
 // Tier configuration with colors
 const TIER_CONFIG: Record<PlayerTier, { color: string; bg: string; icon: string }> = {
@@ -180,14 +202,11 @@ export default function LeaderboardScreen() {
           <Text style={styles.crownIcon}>{config.icon}</Text>
         )}
 
-        {/* Avatar with tier emblem */}
-        <RankedAvatar
+        {/* Avatar */}
+        <PlayerAvatar
           avatarUrl={player.avatarUrl}
           name={player.userName}
-          tier={tier}
-          size={avatarSize + 16}
-          showTierBadge={false}
-          showEmblem={true}
+          size={avatarSize}
         />
 
         {/* Player Info */}
@@ -245,14 +264,11 @@ export default function LeaderboardScreen() {
           </Text>
         </View>
 
-        {/* Avatar with ranked border */}
-        <RankedAvatar
+        {/* Avatar */}
+        <PlayerAvatar
           avatarUrl={player.avatarUrl}
           name={player.userName}
-          tier={tier}
           size={40}
-          showTierBadge={false}
-          showEmblem={true}
         />
 
         {/* Player info */}

@@ -11,6 +11,7 @@ import {
   Alert,
   Dimensions,
   ImageBackground,
+  Image,
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +21,6 @@ import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api'
 import { TIER_COLORS } from '../../components/TierEmblem';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../../components/RankedAvatar';
 import { getGameImagePath } from '../../lib/formatters';
 import { BORDER_PREFERENCE_KEY } from '../edit-profile';
 
@@ -76,6 +76,29 @@ const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string]; ic
   AZUKI_TCG: { gradient: ['#8B5CF6', '#7C3AED'] as const, icon: '🎴' },
   RIFTBOUND: { gradient: ['#3B82F6', '#2563EB'] as const, icon: '⚔️' },
 };
+
+// Player Tier type
+type PlayerTier =
+  | 'SPROUT'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED';
+
+// Map rating to tier
+function mapRatingToTier(rating: number): PlayerTier {
+  if (rating >= 2200) return 'GENKI';
+  if (rating >= 2000) return 'DIAMOND';
+  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 1600) return 'GOLD';
+  if (rating >= 1400) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
+  if (rating >= 800) return 'SPROUT';
+  return 'UNRANKED';
+}
 
 // Tier configuration for display
 const TIER_DISPLAY: Record<PlayerTier, { label: string; icon: string }> = {
@@ -276,14 +299,13 @@ export default function ProfileScreen() {
         >
           <View style={styles.headerContent}>
             {/* Left: Avatar */}
-            <RankedAvatar
-              avatarUrl={user?.avatarUrl}
-              name={user?.name || 'Unknown Player'}
-              tier={displayTier}
-              size={84}
-              showTierBadge={false}
-              showEmblem={true}
-            />
+            <View style={styles.profileAvatar}>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.profileAvatarImage} />
+              ) : (
+                <Text style={styles.profileAvatarInitial}>{initial}</Text>
+              )}
+            </View>
 
             {/* Right: User Info */}
             <View style={styles.headerInfo}>
@@ -588,11 +610,11 @@ export default function ProfileScreen() {
                   );
                 })
               ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
-                <Text style={styles.emptyText}>No ratings yet</Text>
-                <Text style={styles.emptySubtext}>Play in tournaments to earn your ranking!</Text>
-              </View>
+                <View style={styles.emptyState}>
+                  <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
+                  <Text style={styles.emptyText}>No ratings yet</Text>
+                  <Text style={styles.emptySubtext}>Play in tournaments to earn your ranking!</Text>
+                </View>
               )}
             </>
           ) : (
@@ -1235,6 +1257,28 @@ const styles = StyleSheet.create({
   },
 
   bottomSpacer: {
-    height: 40,
+    height: 100,
+  },
+
+  // Profile Avatar
+  profileAvatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: theme.colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileAvatarInitial: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: theme.colors.text.secondary,
   },
 });
