@@ -767,7 +767,7 @@ const EventCard: React.FC<EventCardProps> = ({
           >
             <LinearGradient
               colors={gradientColors}
-              locations={[0, 0.5, 0.7, 1]}
+              locations={[0, 0.3, 0.6, 1]}  // Adjusted to fade later, showing more image
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.cardImageGradient}
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    width: '40%',
+    width: '60%',  // Increased from 40% to show more of the image
     zIndex: 0,
   },
   cardImage: {

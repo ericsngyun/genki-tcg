@@ -543,7 +543,7 @@ export default function ProfileScreen() {
                         blurRadius={0}
                       >
                         <LinearGradient
-                          colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.92)']}
+                          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
                           style={styles.gameCardGradient}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 0, y: 1 }}
