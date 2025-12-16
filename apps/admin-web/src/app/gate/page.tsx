@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 
-export default function GatePage() {
+function GateContent() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -132,5 +132,25 @@ export default function GatePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+function GateLoadingFallback() {
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a2e_0%,#000000_100%)] z-0" />
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <p className="mt-4 text-muted-foreground text-sm">Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+export default function GatePage() {
+    return (
+        <Suspense fallback={<GateLoadingFallback />}>
+            <GateContent />
+        </Suspense>
     );
 }
