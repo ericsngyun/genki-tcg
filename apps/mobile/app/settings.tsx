@@ -110,13 +110,13 @@ export default function SettingsScreen() {
         {
           icon: 'shield-checkmark-outline',
           label: 'Privacy Policy',
-          onPress: () => openURL('https://your-domain.com/privacy'),
+          onPress: () => openURL('https://genkitcg.com/privacy'),
           showArrow: true,
         },
         {
           icon: 'document-text-outline',
           label: 'Terms of Service',
-          onPress: () => openURL('https://your-domain.com/terms'),
+          onPress: () => openURL('https://genkitcg.com/terms'),
           showArrow: true,
         },
       ],

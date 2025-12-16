@@ -44,7 +44,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "your-org-slug",
+          "organization": "genki-tcg",
           "project": "genki-tcg-mobile"
         }
       ]
@@ -55,7 +55,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "27dbcc84-6f7b-4cbf-bfff-c320c0de0938"
       }
     }
   }
