@@ -2,11 +2,21 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
+// Find the project and workspace directories
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, '../..');
+
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const config = getDefaultConfig(projectRoot);
+
+// Set explicit project root
+config.projectRoot = projectRoot;
 
 // Enable CSS support for web
 config.resolver.sourceExts.push('css');
+
+// Watch all files in the monorepo
+config.watchFolders = [monorepoRoot];
 
 // Block watching of non-mobile directories to prevent Metro errors
 config.resolver.blockList = [
@@ -18,37 +28,19 @@ config.resolver.blockList = [
   // Ignore backend directories
   /apps\/backend\/dist\/.*/,
   /apps\/backend\/node_modules\/.*/,
-
-  // Ignore root level directories that shouldn't be watched
-  /node_modules\/.*\/node_modules\/.*/,
 ];
 
-// CRITICAL: Force single React instance by resolving to exact paths
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  const reactPath = path.resolve(__dirname, 'node_modules/react');
-  const reactDomPath = path.resolve(__dirname, 'node_modules/react-dom');
+// Prioritize mobile's node_modules over monorepo root to avoid React version conflicts
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'), // First priority: local React 19
+  path.resolve(monorepoRoot, 'node_modules'), // Fallback: root node_modules
+];
 
-  // Force all React imports to use the same instance
-  if (moduleName === 'react') {
-    return context.resolveRequest(context, reactPath, platform);
-  }
-
-  if (moduleName.startsWith('react/')) {
-    const subpath = moduleName.slice('react/'.length);
-    return context.resolveRequest(context, path.join(reactPath, subpath), platform);
-  }
-
-  if (moduleName === 'react-dom') {
-    return context.resolveRequest(context, reactDomPath, platform);
-  }
-
-  if (moduleName.startsWith('react-dom/')) {
-    const subpath = moduleName.slice('react-dom/'.length);
-    return context.resolveRequest(context, path.join(reactDomPath, subpath), platform);
-  }
-
-  // Default resolver for everything else
-  return context.resolveRequest(context, moduleName, platform);
+// Force React and React-DOM to resolve from mobile's node_modules only
+config.resolver.extraNodeModules = {
+  'react': path.resolve(projectRoot, 'node_modules/react'),
+  'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
+  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
 };
 
 // SVG transformer support
