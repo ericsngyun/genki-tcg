@@ -49,7 +49,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Verify Prisma binary was generated correctly
 RUN echo "Verifying Prisma client generation..." && \
-    ls -la ../../../node_modules/.prisma/client/ && \
+    ls -la /app/node_modules/.prisma/client/ && \
     echo "Prisma client generated successfully"
 
 # Build the application
