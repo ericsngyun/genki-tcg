@@ -1,6 +1,7 @@
 # Terms of Service for Genki TCG
 
-**Last Updated:** December 2, 2025
+**Last Updated:** December 16, 2024
+**Effective Date:** December 16, 2024
 
 ## 1. Acceptance of Terms
 
@@ -112,13 +113,16 @@ We may update these Terms periodically. Significant changes will be communicated
 ## 12. Dispute Resolution
 
 ### 12.1 Governing Law
-These Terms are governed by the laws of [JURISDICTION], without regard to conflict of law principles.
+These Terms are governed by the laws of the jurisdiction where Genki TCG operates, without regard to conflict of law principles.
 
-### 12.2 Arbitration
-Any disputes arising from these Terms or the Service shall be resolved through binding arbitration in accordance with [ARBITRATION_RULES], except where prohibited by law.
+### 12.2 Informal Dispute Resolution
+Before filing a claim, you agree to contact us at legal@genkitcg.com to attempt to resolve the dispute informally.
 
-### 12.3 Class Action Waiver
-You agree to resolve disputes individually and waive the right to participate in class action lawsuits.
+### 12.3 Arbitration
+If informal resolution fails, any disputes arising from these Terms or the Service may be resolved through binding arbitration, except where prohibited by law. You retain the right to bring claims in small claims court.
+
+### 12.4 Class Action Waiver
+To the extent permitted by law, you agree to resolve disputes individually and waive the right to participate in class action lawsuits.
 
 ## 13. Termination
 
@@ -145,8 +149,9 @@ These Terms, along with the Privacy Policy, constitute the entire agreement betw
 
 For questions about these Terms:
 
-**Email:** [CONTACT_EMAIL]
-**Address:** [BUSINESS_ADDRESS]
+**Email:** legal@genkitcg.com
+**Support:** support@genkitcg.com
+**Website:** https://genkitcg.com
 
 ## 17. Acknowledgment
 
@@ -154,10 +159,19 @@ BY USING THE SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE 
 
 ---
 
-**Note to App Owner:** Before publishing, replace placeholder values:
-- [JURISDICTION] - Your business jurisdiction (e.g., "the State of California, USA")
-- [ARBITRATION_RULES] - Arbitration rules you'll follow (e.g., "AAA Commercial Arbitration Rules")
-- [CONTACT_EMAIL] - Your support email
-- [BUSINESS_ADDRESS] - Your business address
+## 18. Additional Platform-Specific Terms
 
-**Legal Disclaimer:** This document is a template and may not be suitable for all jurisdictions or use cases. Consult with a qualified attorney to ensure compliance with applicable laws.
+### 18.1 Apple App Store
+If you access the Service via an iOS device:
+- These Terms are between you and Genki TCG only, not Apple Inc.
+- Apple has no obligation to provide maintenance or support services
+- Apple is not responsible for product liability claims
+- Apple is not responsible for addressing any claims relating to intellectual property infringement
+- Apple is a third-party beneficiary of these Terms and may enforce them
+
+### 18.2 Google Play Store
+If you access the Service via Android device, you agree to comply with Google Play's Terms of Service and Google Play's Business and Program Policies.
+
+---
+
+**Legal Disclaimer:** This document is provided as general guidance and may not be suitable for all jurisdictions or use cases. Consult with a qualified attorney to ensure compliance with applicable laws in your jurisdiction.

@@ -1,6 +1,7 @@
 # Privacy Policy for Genki TCG
 
-**Last Updated:** December 2, 2025
+**Last Updated:** December 16, 2024
+**Effective Date:** December 16, 2024
 
 ## Introduction
 
@@ -9,18 +10,52 @@ Welcome to Genki TCG. We respect your privacy and are committed to protecting yo
 ## Information We Collect
 
 ### Information You Provide
-- **Account Information:** Email address, name, and password when you create an account
-- **Profile Data:** Optional Discord account linkage for social features
-- **Tournament Data:** Match results, standings, and tournament participation history
-- **Credits Information:** Transaction history and wallet balance
+
+**Account Information:**
+- Discord account information (Discord ID, username, email address, avatar)
+- Display name and profile information you set in-app
+- Tournament registration details
+
+**Tournament Data:**
+- Event registrations and check-ins via QR code
+- Match results and tournament performance
+- Deck lists submitted for tournaments
+- Tournament standings and rankings
+
+**Transaction Information:**
+- Credit balance and transaction history
+- Payment tracking for tournament entries
+- Prize distribution records
 
 ### Information Collected Automatically
-- **Device Information:** Device type, operating system, and app version
-- **Usage Data:** App features used, tournament participation, and interaction patterns
-- **Log Data:** Timestamps, errors, and performance metrics for service improvement
+
+**Device Information:**
+- Device type and model
+- Operating system version
+- Unique device identifiers
+- Mobile network information
+- App version
+
+**Usage Information:**
+- App features accessed
+- Tournament events viewed and joined
+- Time and duration of app usage
+- Push notification interactions
+- Screen views and navigation patterns
+
+**Performance Data:**
+- App crashes and errors (via Sentry)
+- Performance metrics
+- Diagnostic information
+- API response times
 
 ### Information from Third Parties
-- **Discord:** When you link your Discord account, we receive your Discord username and user ID
+
+**Discord OAuth:**
+- Discord user ID
+- Discord username and discriminator
+- Email address associated with Discord account
+- Avatar image URL
 
 ## How We Use Your Information
 
@@ -66,7 +101,7 @@ You have the right to:
 - Export your data in a portable format
 - Withdraw consent at any time
 
-To exercise these rights, contact us at [CONTACT_EMAIL].
+To exercise these rights, contact us at privacy@genkitcg.com or through the app's support feature.
 
 ## Children's Privacy
 
@@ -78,7 +113,7 @@ We may update this privacy policy periodically. We will notify you of significan
 
 ## International Users
 
-Genki TCG is operated in [COUNTRY]. By using our service, you consent to the transfer of your data to [COUNTRY] for processing and storage.
+Genki TCG services are hosted on Railway infrastructure which may store data in various locations. By using our service, you consent to the transfer and processing of your data in accordance with this privacy policy and applicable data protection laws.
 
 ## Cookies and Tracking
 
@@ -88,17 +123,35 @@ Our web admin dashboard uses essential cookies for authentication and session ma
 
 If you have questions about this privacy policy or our data practices:
 
-**Email:** [CONTACT_EMAIL]
-**Address:** [BUSINESS_ADDRESS]
+**Email:** privacy@genkitcg.com
+**Support:** https://genkitcg.com/support
+**App:** Use the "Contact Support" feature in app settings
 
 ## Third-Party Services
 
-We use the following third-party services:
-- **Railway:** Hosting and infrastructure
-- **Discord OAuth:** Optional account linking
-- **Sentry:** Error tracking and monitoring (anonymized)
+We use the following third-party services that may collect and process your data:
 
-Each service has its own privacy policy governing their data practices.
+### Discord OAuth
+- **Purpose:** User authentication and login
+- **Data Shared:** Discord ID, username, email, avatar
+- **Privacy Policy:** https://discord.com/privacy
+
+### Expo Push Notifications
+- **Purpose:** Send tournament updates, pairings, and match notifications
+- **Data Shared:** Device push tokens, notification preferences
+- **Privacy Policy:** https://expo.dev/privacy
+
+### Railway (Hosting)
+- **Purpose:** Application hosting and database infrastructure
+- **Data Shared:** All application data stored on our servers
+- **Privacy Policy:** https://railway.app/legal/privacy
+
+### Sentry (Error Tracking)
+- **Purpose:** Monitor app crashes and errors for service improvement
+- **Data Shared:** Error logs, device information, app state (no personally identifiable information)
+- **Privacy Policy:** https://sentry.io/privacy/
+
+Each third-party service operates under its own privacy policy. We carefully select partners who maintain strong privacy and security standards.
 
 ---
 
