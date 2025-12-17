@@ -78,7 +78,8 @@ export class EventsService {
                 id: true,
                 name: true,
                 email: true,
-                // Never expose passwordHash, avatarUrl, or other sensitive fields
+                avatarUrl: true,
+                // Never expose passwordHash or other sensitive fields
               },
             },
           },

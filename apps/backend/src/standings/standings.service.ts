@@ -16,6 +16,7 @@ export class StandingsService {
               select: {
                 id: true,
                 name: true,
+                avatarUrl: true,
               },
             },
           },
@@ -40,6 +41,9 @@ export class StandingsService {
     const playerIds = event.entries.map((e: { userId: string }) => e.userId);
     const playerNames = new Map<string, string>(
       event.entries.map((e: { userId: string; user: { name: string } }) => [e.userId, e.user.name])
+    );
+    const playerAvatars = new Map<string, string | null>(
+      event.entries.map((e: { userId: string; user: { avatarUrl: string | null } }) => [e.userId, e.user.avatarUrl])
     );
 
     // Define match type with result matching MatchRecord
@@ -91,11 +95,17 @@ export class StandingsService {
         .map((e: { userId: string }) => e.userId)
     );
 
-    return calculateStandings({
+    const standings = calculateStandings({
       playerIds,
       playerNames,
       matches,
       droppedPlayers,
     });
+
+    // Enrich standings with avatar URLs
+    return standings.map((standing) => ({
+      ...standing,
+      avatarUrl: playerAvatars.get(standing.userId) || null,
+    }));
   }
 }

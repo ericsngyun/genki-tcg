@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useEventSocket } from '@/hooks/useEventSocket';
 import { MatchResultModal } from '@/components/MatchResultModal';
 import { PrizeDistributionModal } from '@/components/PrizeDistributionModal';
+import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { formatGameName, formatEventFormat } from '@/lib/formatters';
 
 interface Event {
@@ -32,6 +33,7 @@ interface Event {
       id: string;
       name: string;
       email: string;
+      avatarUrl?: string | null;
     };
   }>;
   rounds: Array<{
@@ -49,10 +51,12 @@ interface Pairing {
   playerA: {
     id: string;
     name: string;
+    avatarUrl?: string | null;
   };
   playerB?: {
     id: string;
     name: string;
+    avatarUrl?: string | null;
   };
   result?: string;
   gamesWonA?: number;
@@ -62,6 +66,7 @@ interface Pairing {
 interface Standing {
   userId: string;
   userName: string;
+  avatarUrl?: string | null;
   rank: number;
   points: number;
   matchWins: number;
@@ -540,7 +545,7 @@ export default function EventDetailPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border text-left">
-                          <th className="pb-3 font-medium text-muted-foreground">Name</th>
+                          <th className="pb-3 font-medium text-muted-foreground">Player</th>
                           <th className="pb-3 font-medium text-muted-foreground">Email</th>
                           <th className="pb-3 font-medium text-muted-foreground">Registered</th>
                           <th className="pb-3 font-medium text-muted-foreground">Payment</th>
@@ -552,11 +557,14 @@ export default function EventDetailPage() {
                         {event.entries.map((entry) => {
                           const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
                           return (
-                          <tr key={entry.id} className="border-b border-border/50">
-                            <td className="py-3 font-medium text-foreground">
-                              {entry.user.name}
+                          <tr key={entry.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                            <td className="py-4">
+                              <div className="flex items-center gap-3">
+                                <PlayerAvatar name={entry.user.name} avatarUrl={entry.user.avatarUrl} size="sm" />
+                                <span className="font-medium text-foreground">{entry.user.name}</span>
+                              </div>
                             </td>
-                            <td className="py-3 text-muted-foreground">
+                            <td className="py-4 text-muted-foreground text-sm">
                               {entry.user.email}
                             </td>
                             <td className="py-3 text-muted-foreground text-sm">
@@ -715,8 +723,9 @@ export default function EventDetailPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-border text-left">
-                            <th className="pb-3 font-medium text-muted-foreground">Table</th>
+                            <th className="pb-3 pl-4 font-medium text-muted-foreground w-20">Table</th>
                             <th className="pb-3 font-medium text-muted-foreground">Player A</th>
+                            <th className="pb-3 font-medium text-muted-foreground text-center w-16">VS</th>
                             <th className="pb-3 font-medium text-muted-foreground">Player B</th>
                             <th className="pb-3 font-medium text-muted-foreground">Result</th>
                             <th className="pb-3 font-medium text-muted-foreground">Actions</th>
@@ -724,15 +733,33 @@ export default function EventDetailPage() {
                         </thead>
                         <tbody>
                           {pairings.map((pairing) => (
-                            <tr key={pairing.id} className="border-b border-border/50">
-                              <td className="py-3 font-bold text-foreground">
-                                {pairing.tableNumber}
+                            <tr key={pairing.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${pairing.result ? 'bg-green-500/5' : ''}`}>
+                              <td className="py-4 pl-4">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 border border-primary/20">
+                                  <span className="font-bold text-primary">{pairing.tableNumber}</span>
+                                </div>
                               </td>
-                              <td className="py-3 text-foreground">
-                                {pairing.playerA.name}
+                              <td className="py-4">
+                                <div className="flex items-center gap-3">
+                                  <PlayerAvatar name={pairing.playerA.name} avatarUrl={pairing.playerA.avatarUrl} size="sm" />
+                                  <span className="font-medium text-foreground">{pairing.playerA.name}</span>
+                                </div>
                               </td>
-                              <td className="py-3 text-foreground">
-                                {pairing.playerB ? pairing.playerB.name : '— BYE —'}
+                              <td className="py-4 text-center">
+                                <span className="text-muted-foreground font-medium text-xs">VS</span>
+                              </td>
+                              <td className="py-4">
+                                {pairing.playerB ? (
+                                  <div className="flex items-center gap-3">
+                                    <PlayerAvatar name={pairing.playerB.name} avatarUrl={pairing.playerB.avatarUrl} size="sm" />
+                                    <span className="font-medium text-foreground">{pairing.playerB.name}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-fit">
+                                    <span className="text-xs">⭐</span>
+                                    <span className="font-medium text-amber-400">BYE</span>
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3">
                                 {pairing.result ? (
@@ -807,7 +834,7 @@ export default function EventDetailPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border text-left">
-                        <th className="pb-3 font-medium text-muted-foreground">Rank</th>
+                        <th className="pb-3 pl-4 font-medium text-muted-foreground w-16">Rank</th>
                         <th className="pb-3 font-medium text-muted-foreground">Player</th>
                         <th className="pb-3 font-medium text-muted-foreground text-right">Points</th>
                         <th className="pb-3 font-medium text-muted-foreground text-right">Record</th>
@@ -817,13 +844,34 @@ export default function EventDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {standings.map((standing) => (
-                        <tr key={standing.userId} className="border-b border-border/50">
-                          <td className="py-3 font-bold text-foreground">
-                            {standing.rank}
+                      {standings.map((standing, index) => {
+                        const isTopThree = standing.rank <= 3;
+                        const rankColors = {
+                          1: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                          2: 'bg-slate-400/10 border-slate-400/30 text-slate-300',
+                          3: 'bg-amber-600/10 border-amber-600/30 text-amber-500',
+                        };
+                        return (
+                        <tr key={standing.userId} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${isTopThree ? 'bg-primary/5' : ''}`}>
+                          <td className="py-4 pl-4">
+                            <div className={`flex items-center justify-center w-10 h-10 rounded-lg font-bold ${isTopThree ? rankColors[standing.rank as 1 | 2 | 3] + ' border' : 'bg-muted text-foreground'}`}>
+                              {standing.rank}
+                            </div>
                           </td>
-                          <td className="py-3 text-foreground">
-                            {standing.userName}
+                          <td className="py-4">
+                            <div className="flex items-center gap-3">
+                              <PlayerAvatar name={standing.userName} avatarUrl={standing.avatarUrl} size="sm" />
+                              <div>
+                                <div className="font-medium text-foreground">{standing.userName}</div>
+                                {isTopThree && (
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {standing.rank === 1 && '🥇 Champion'}
+                                    {standing.rank === 2 && '🥈 Runner-up'}
+                                    {standing.rank === 3 && '🥉 3rd Place'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="py-3 font-bold text-foreground text-right">
                             {standing.points}
