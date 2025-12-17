@@ -3,7 +3,10 @@
     "name": "Genki TCG",
     "slug": "genki-tcg",
     "version": "0.1.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -17,7 +20,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.genkitcg.app"
+      "bundleIdentifier": "com.genkitcg.app",
+      "newArchEnabled": false
     },
     "android": {
       "adaptiveIcon": {

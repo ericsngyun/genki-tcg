@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
@@ -6,9 +7,6 @@ import { SocketProvider } from '../contexts/SocketContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { initSentry } from '../lib/sentry';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-
-// Initialize Sentry error tracking
-initSentry();
 
 // Integrate custom theme with React Native Paper's Material Design 3 Dark Theme
 const paperTheme = {
@@ -35,6 +33,11 @@ const paperTheme = {
 };
 
 export default function RootLayout() {
+  // Initialize Sentry inside useEffect to avoid issues with New Architecture
+  useEffect(() => {
+    initSentry();
+  }, []);
+
   // Initialize push notifications on app launch
   usePushNotifications();
 
@@ -44,22 +47,22 @@ export default function RootLayout() {
         <PaperProvider theme={paperTheme}>
           <StatusBar style="light" />
           <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: customTheme.colors.background.primary },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="pairings" />
-          <Stack.Screen name="standings" />
-          <Stack.Screen name="match-details" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="notification-preferences" />
-          <Stack.Screen name="settings" />
-          <Stack.Screen name="edit-profile" />
-          <Stack.Screen name="leaderboard" />
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: customTheme.colors.background.primary },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="pairings" />
+            <Stack.Screen name="standings" />
+            <Stack.Screen name="match-details" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="notification-preferences" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="edit-profile" />
+            <Stack.Screen name="leaderboard" />
           </Stack>
         </PaperProvider>
       </SocketProvider>

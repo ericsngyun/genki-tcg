@@ -36,11 +36,12 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'), // Fallback: root node_modules
 ];
 
-// Force React and React-DOM to resolve from mobile's node_modules only
+// Force React and React-DOM to resolve from mobile's node_modules (React 19)
+// react-native is hoisted to monorepo root
 config.resolver.extraNodeModules = {
   'react': path.resolve(projectRoot, 'node_modules/react'),
   'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
-  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
+  'react-native': path.resolve(monorepoRoot, 'node_modules/react-native'),
 };
 
 // SVG transformer support
