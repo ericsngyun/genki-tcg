@@ -889,7 +889,8 @@ export default function EventDetailPage() {
                             {(standing.oomwPercent * 100).toFixed(1)}%
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
