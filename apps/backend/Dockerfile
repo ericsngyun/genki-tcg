@@ -17,13 +17,16 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.base.json ./
 
-# Copy workspace package files
+# Copy ALL workspace package files (required for npm ci with root package-lock.json)
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tournament-logic/package.json ./packages/tournament-logic/
 COPY apps/backend/package.json ./apps/backend/
+COPY apps/admin-web/package.json ./apps/admin-web/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/website/package.json ./apps/website/
 
 # Install all workspace dependencies
-# Using --legacy-peer-deps to handle React 18/19 version conflicts between admin-web and mobile
+# npm ci requires ALL workspace package.json files to match package-lock.json
 RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Copy workspace source code
