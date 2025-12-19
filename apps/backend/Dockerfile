@@ -93,8 +93,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.jso
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/dist ./packages/tournament-logic/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/package.json
 
-# Install production dependencies for all workspaces
-RUN npm ci --omit=dev --legacy-peer-deps || npm install --omit=dev --legacy-peer-deps
+# Copy node_modules from builder instead of reinstalling
+# This ensures all dependencies from the monorepo are available
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 # Copy built backend application
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
