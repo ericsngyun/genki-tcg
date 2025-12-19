@@ -32,7 +32,7 @@ export default function Home() {
 
       {/* Ambient glow behind model */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] rounded-full bg-red-900/20 blur-[100px]" />
+        <div className="w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] rounded-full bg-zinc-700/20 blur-[100px]" />
       </div>
 
       {/* 3D Model - Centered */}
@@ -55,7 +55,8 @@ export default function Home() {
             className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           >
             <h1
-              className="text-[18vw] sm:text-[16vw] md:text-[14vw] lg:text-[12vw] font-black tracking-[-0.02em] text-white/90 select-none mix-blend-difference"
+              className="text-[18vw] sm:text-[16vw] md:text-[14vw] lg:text-[12vw] font-black tracking-[-0.02em] select-none"
+              style={{ color: '#DC143C' }}
             >
               GENKI
             </h1>
@@ -72,7 +73,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="absolute top-0 left-0 right-0 z-30 p-4 sm:p-6 md:p-8 flex justify-between items-center"
           >
-            <span className="text-[10px] sm:text-xs tracking-[0.2em] text-white/40 uppercase">
+            <span className="text-[10px] sm:text-xs tracking-[0.2em] text-red-500/60 uppercase">
               Lakewood, CA
             </span>
 
@@ -81,7 +82,7 @@ export default function Home() {
                 href="https://discord.gg/6bAh6ArXhw"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/40 hover:text-white transition-colors duration-300"
+                className="text-red-500/60 hover:text-red-400 transition-colors duration-300"
                 aria-label="Discord"
               >
                 <FaDiscord className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -90,7 +91,7 @@ export default function Home() {
                 href="https://x.com/g3nkitcg"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/40 hover:text-white transition-colors duration-300"
+                className="text-red-500/60 hover:text-red-400 transition-colors duration-300"
                 aria-label="X"
               >
                 <FaXTwitter className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -110,18 +111,18 @@ export default function Home() {
             className="absolute bottom-0 left-0 right-0 z-30 p-4 sm:p-6 md:p-8"
           >
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <p className="text-xs sm:text-sm text-white/40 tracking-wide text-center sm:text-left max-w-md">
+              <p className="text-xs sm:text-sm text-red-500/60 tracking-wide text-center sm:text-left max-w-md">
                 The premier tournament platform for competitive TCG players
               </p>
 
               <Link
                 href="/download"
-                className="group flex items-center gap-3 text-white/60 hover:text-white transition-colors duration-300"
+                className="group flex items-center gap-3 text-red-500/80 hover:text-red-400 transition-colors duration-300"
               >
                 <span className="text-xs sm:text-sm tracking-[0.15em] uppercase font-medium">
                   Enter
                 </span>
-                <span className="w-8 sm:w-12 h-[1px] bg-white/30 group-hover:bg-white transition-colors duration-300" />
+                <span className="w-8 sm:w-12 h-[1px] bg-red-500/40 group-hover:bg-red-400 transition-colors duration-300" />
               </Link>
             </div>
 
@@ -131,7 +132,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 1.2 }}
               className="mt-4 text-center sm:text-left"
             >
-              <span className="text-[10px] tracking-[0.3em] text-white/20 uppercase">
+              <span className="text-[10px] tracking-[0.3em] text-red-500/30 uppercase">
                 Est. 2024
               </span>
             </motion.div>

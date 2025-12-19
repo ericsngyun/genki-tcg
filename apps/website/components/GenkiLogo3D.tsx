@@ -13,38 +13,66 @@ function Model() {
     // Clone to avoid mutating cached object
     const clonedObj = useMemo(() => obj.clone(), [obj]);
 
-    // Center and scale the object
+    // Center based on volume-weighted centroid (approximates center of mass)
     const { offsetX, offsetY, offsetZ, scale } = useMemo(() => {
-        // Compute bounding box of entire object
-        const box = new THREE.Box3().setFromObject(clonedObj);
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const size = new THREE.Vector3();
-        box.getSize(size);
+        let totalVolume = 0;
+        const weightedCenter = new THREE.Vector3();
+        const tempCenter = new THREE.Vector3();
+        const tempSize = new THREE.Vector3();
 
-        // Calculate scale to fit nicely in view
+        // Calculate volume-weighted centroid across all meshes
+        clonedObj.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.geometry) {
+                child.geometry.computeBoundingBox();
+                const box = child.geometry.boundingBox;
+                if (box) {
+                    box.getCenter(tempCenter);
+                    box.getSize(tempSize);
+                    // Apply world transform to get actual position
+                    child.localToWorld(tempCenter);
+                    // Volume approximation
+                    const volume = tempSize.x * tempSize.y * tempSize.z;
+                    weightedCenter.add(tempCenter.multiplyScalar(volume));
+                    totalVolume += volume;
+                }
+            }
+        });
+
+        // Finalize weighted center
+        if (totalVolume > 0) {
+            weightedCenter.divideScalar(totalVolume);
+        } else {
+            // Fallback to bounding box center
+            const box = new THREE.Box3().setFromObject(clonedObj);
+            box.getCenter(weightedCenter);
+        }
+
+        // Calculate scale based on overall bounding box
+        const overallBox = new THREE.Box3().setFromObject(clonedObj);
+        const size = new THREE.Vector3();
+        overallBox.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.5 / maxDim; // Balanced scale
+        const scale = 2.5 / maxDim;
 
         return {
-            offsetX: -center.x,
-            offsetY: -center.y,
-            offsetZ: -center.z,
+            offsetX: -weightedCenter.x,
+            offsetY: -weightedCenter.y,
+            offsetZ: -weightedCenter.z,
             scale
         };
     }, [clonedObj]);
 
-    // Apply material
+    // Apply dark stainless steel silver material
     useEffect(() => {
         clonedObj.traverse((child) => {
             if (child instanceof THREE.Mesh) {
                 child.material = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color('#DC2626'),
-                    metalness: 0.9,
-                    roughness: 0.12,
-                    emissive: new THREE.Color('#DC2626'),
-                    emissiveIntensity: 0.2,
-                    envMapIntensity: 1.8,
+                    color: new THREE.Color('#2a2a2a'), // Dark stainless steel
+                    metalness: 0.95,
+                    roughness: 0.15,
+                    emissive: new THREE.Color('#1a1a1a'),
+                    emissiveIntensity: 0.05,
+                    envMapIntensity: 2.0,
                 });
             }
         });
@@ -105,7 +133,7 @@ export default function GenkiLogo3D() {
                         color="#ffffff"
                     />
 
-                    <pointLight position={[0, 3, -6]} intensity={1.2} color="#EF4444" />
+                    <pointLight position={[0, 3, -6]} intensity={1.2} color="#ffffff" />
                     <pointLight position={[0, -4, 3]} intensity={0.4} color="#ffffff" />
 
                     <Environment preset="studio" />
