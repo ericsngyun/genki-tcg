@@ -87,7 +87,7 @@ export default function Home() {
                 <FaDiscord className="w-4 h-4 sm:w-5 sm:h-5" />
               </a>
               <a
-                href="https://x.com/genkitcg"
+                href="https://x.com/g3nkitcg"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white/40 hover:text-white transition-colors duration-300"
