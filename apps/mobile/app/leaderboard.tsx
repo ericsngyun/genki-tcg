@@ -214,13 +214,8 @@ export default function LeaderboardScreen() {
           {player.userName}
         </Text>
 
-        {/* Rating */}
-        <Text style={[styles.podiumRating, { color: tierConfig.color }]}>
-          {Math.round(player.lifetimeRating)}
-        </Text>
-
-        {/* Tier Badge */}
-        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg }]}>
+        {/* Tier Badge - Rating Number Hidden */}
+        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg, marginTop: 8 }]}>
           <Text style={[styles.podiumTierText, { color: tierConfig.color }]}>
             {tierConfig.icon} {tier}
           </Text>
@@ -291,12 +286,11 @@ export default function LeaderboardScreen() {
           </View>
         </View>
 
-        {/* Rating */}
+        {/* Tier Icon - Rating Number Hidden */}
         <View style={styles.rankRatingContainer}>
-          <Text style={[styles.rankRating, { color: tierConfig.color }]}>
-            {Math.round(player.lifetimeRating)}
+          <Text style={[styles.rankTierIcon, { color: tierConfig.color }]}>
+            {tierConfig.icon}
           </Text>
-          <Text style={styles.rankRatingLabel}>Rating</Text>
         </View>
       </AnimatedView>
     );
@@ -640,11 +634,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  podiumRating: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
   podiumTierBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -745,7 +734,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
   },
   rankRatingContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+  },
+  rankTierIcon: {
+    fontSize: 24,
   },
   rankRating: {
     fontSize: 16,

@@ -556,7 +556,7 @@ export default function ProfileScreen() {
                               </Text>
                               {rank.rank && rank.totalPlayers && (
                                 <Text style={styles.gameRankLight}>
-                                  Rank #{rank.rank} of {rank.totalPlayers}
+                                  Ranked #{rank.rank} • {rank.totalPlayers} players
                                 </Text>
                               )}
                             </View>
@@ -567,14 +567,23 @@ export default function ProfileScreen() {
                             </View>
                           </View>
 
-                          {/* Rating Display */}
+                          {/* Stats Display - Rating Number Hidden, Rank Shown Instead */}
                           <View style={styles.ratingRowTransparent}>
-                            <View style={styles.ratingMain}>
-                              <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
-                                {Math.round(rank.rating)}
-                              </Text>
-                              <Text style={styles.ratingLabelLight}>Rating</Text>
-                            </View>
+                            {rank.rank && rank.totalPlayers ? (
+                              <View style={styles.ratingMain}>
+                                <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
+                                  #{rank.rank}
+                                </Text>
+                                <Text style={styles.ratingLabelLight}>Rank</Text>
+                              </View>
+                            ) : (
+                              <View style={styles.ratingMain}>
+                                <Text style={[styles.ratingValue, { color: '#FFFFFF', fontSize: 24 }]}>
+                                  —
+                                </Text>
+                                <Text style={styles.ratingLabelLight}>Unranked</Text>
+                              </View>
+                            )}
                             <View style={styles.ratingDividerLight} />
                             <View style={styles.ratingStat}>
                               <Text style={styles.ratingStatValueLight}>{rank.wins}</Text>

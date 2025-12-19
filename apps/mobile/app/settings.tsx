@@ -110,13 +110,13 @@ export default function SettingsScreen() {
         {
           icon: 'shield-checkmark-outline',
           label: 'Privacy Policy',
-          onPress: () => openURL('https://genkitcg.com/privacy'),
+          onPress: () => Alert.alert('Privacy Policy', 'Privacy policy is being prepared for app store submission.'),
           showArrow: true,
         },
         {
           icon: 'document-text-outline',
           label: 'Terms of Service',
-          onPress: () => openURL('https://genkitcg.com/terms'),
+          onPress: () => Alert.alert('Terms of Service', 'Terms of service is being prepared for app store submission.'),
           showArrow: true,
         },
       ],
@@ -127,13 +127,13 @@ export default function SettingsScreen() {
         {
           icon: 'help-circle-outline',
           label: 'Help & Support',
-          onPress: () => openURL('https://github.com/yourusername/genki-tcg/issues'),
+          onPress: () => Alert.alert('Help & Support', 'For support, please contact us at support@genkitcg.com'),
           showArrow: true,
         },
         {
           icon: 'bug-outline',
           label: 'Report a Bug',
-          onPress: () => openURL('https://github.com/yourusername/genki-tcg/issues/new'),
+          onPress: () => Alert.alert('Report a Bug', 'To report a bug, please email bugs@genkitcg.com with details.'),
           showArrow: true,
         },
       ],
@@ -150,7 +150,7 @@ export default function SettingsScreen() {
         {
           icon: 'code-slash-outline',
           label: 'Open Source',
-          onPress: () => openURL('https://github.com/yourusername/genki-tcg'),
+          onPress: () => Alert.alert('Open Source', 'Genki TCG • Built with React Native & Expo'),
           showArrow: true,
         },
       ],

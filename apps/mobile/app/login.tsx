@@ -656,9 +656,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.footerMeta}>
-            <Text style={styles.versionText}>Version 1.0.0</Text>
+            <Text style={styles.versionText}>Version 0.1.0</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Early Access</Text>
+              <Text style={styles.badgeText}>Alpha</Text>
             </View>
           </View>
         </View>
