@@ -52,7 +52,7 @@ function Model() {
         const size = new THREE.Vector3();
         overallBox.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.5 / maxDim;
+        const scale = 3.2 / maxDim; // Larger model
 
         return {
             offsetX: -weightedCenter.x,
@@ -87,8 +87,8 @@ function Model() {
     });
 
     return (
-        <group ref={pivotRef} position={[0, 0, 0]}>
-            {/* Object offset so its center aligns with pivot origin */}
+        <group ref={pivotRef} position={[0, -0.3, 0]}>
+            {/* Object offset so its center aligns with pivot origin, lowered vertically */}
             <primitive
                 object={clonedObj}
                 position={[offsetX * scale, offsetY * scale, offsetZ * scale]}
@@ -103,7 +103,7 @@ export default function GenkiLogo3D() {
         <div className="absolute inset-0 w-full h-full">
             <Canvas
                 camera={{
-                    position: [0, 0, 4], // Zoomed out
+                    position: [1.2, 0, 4], // Off-center horizontally, zoomed out
                     fov: 50,
                 }}
                 gl={{
