@@ -1,264 +1,251 @@
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service - Genki TCG',
-  description: 'Terms of Service for Genki TCG tournament management platform',
-};
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaArrowLeft } from 'react-icons/fa';
 
 export default function TermsOfService() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const lastUpdated = 'December 18, 2024';
 
+  useEffect(() => {
+    const timer1 = setTimeout(() => setIsLoaded(true), 100);
+    const timer2 = setTimeout(() => setShowContent(true), 600);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
+
+  const sections = [
+    {
+      title: 'Agreement to Terms',
+      content: [
+        'These Terms of Service govern your access to and use of the Genki TCG mobile application and related services.',
+        'By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, you may not access or use the Service.',
+        'We reserve the right to modify these Terms at any time. Continued use constitutes acceptance of revised Terms.',
+      ],
+    },
+    {
+      title: 'Eligibility',
+      content: [
+        'You must be at least 13 years old to use the Service.',
+        'You must have legal capacity to enter into binding contracts.',
+        'You must provide accurate and complete registration information.',
+        'Users under 18 should have permission from a parent or guardian.',
+      ],
+    },
+    {
+      title: 'Account Security',
+      content: [
+        'You agree to maintain the security of your account credentials.',
+        'Promptly notify us of any unauthorized access.',
+        'You are responsible for all activities under your account.',
+        'We may suspend or terminate accounts that violate these Terms.',
+      ],
+    },
+    {
+      title: 'Prohibited Activities',
+      content: [
+        'Use the Service for any illegal or unauthorized purpose.',
+        'Harass, threaten, or abuse other users.',
+        'Submit false tournament results or manipulate rankings.',
+        'Use automated tools, bots, or scripts.',
+        'Attempt to gain unauthorized access to accounts.',
+        'Engage in any form of cheating or fraud.',
+      ],
+    },
+    {
+      title: 'Tournament Rules',
+      content: [
+        'Follow all tournament rules and guidelines.',
+        'Report match results accurately and honestly.',
+        'Respect tournament organizers and their decisions.',
+        'Communicate respectfully with opponents.',
+        'Penalties for violations may include warnings, suspensions, or bans.',
+      ],
+    },
+    {
+      title: 'Intellectual Property',
+      content: [
+        'The Service and its content are protected by intellectual property laws.',
+        'You retain ownership of content you submit (profiles, deck lists, etc.).',
+        'Trading card game names and logos belong to their respective owners.',
+        'Genki TCG is not affiliated with any trading card game publishers.',
+      ],
+    },
+    {
+      title: 'Disclaimers',
+      content: [
+        'The Service is provided "AS IS" without warranties of any kind.',
+        'We do not guarantee uninterrupted or error-free service.',
+        'We are not liable for indirect, incidental, or consequential damages.',
+        'We are not responsible for actions or conduct of other users.',
+      ],
+    },
+    {
+      title: 'Dispute Resolution',
+      content: [
+        'These Terms are governed by applicable laws of your jurisdiction.',
+        'Disputes shall be resolved through good faith negotiations.',
+        'If negotiations fail, binding arbitration applies.',
+        'You waive the right to jury trial or class action participation.',
+      ],
+    },
+    {
+      title: 'Contact',
+      content: [
+        'Legal: legal@genkitcg.app',
+        'Support: support@genkitcg.app',
+        'Website: https://genkitcg.app/support',
+      ],
+    },
+  ];
+
   return (
-    <div className="pt-24 pb-16 min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 text-text-primary">
-          Terms of Service
-        </h1>
-        <p className="text-text-secondary mb-8">
-          Last Updated: {lastUpdated}
-        </p>
+    <div className="min-h-screen bg-black">
+      {/* Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-zinc-950 via-black to-zinc-950" />
 
-        <div className="prose prose-invert max-w-none space-y-8">
-          {/* Introduction */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Agreement to Terms</h2>
-            <p className="text-text-secondary">
-              These Terms of Service ("Terms") govern your access to and use of the Genki TCG mobile application and related services (the "Service"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree to these Terms, you may not access or use the Service.
-            </p>
-            <p className="text-text-secondary mt-4">
-              We reserve the right to modify these Terms at any time. Your continued use of the Service after changes are posted constitutes your acceptance of the revised Terms.
-            </p>
-          </section>
+      {/* Subtle grid pattern */}
+      <div
+        className="fixed inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
 
-          {/* Eligibility */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Eligibility</h2>
-            <p className="text-text-secondary mb-3">
-              To use the Service, you must:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Be at least 13 years old</li>
-              <li>Have the legal capacity to enter into binding contracts</li>
-              <li>Not be prohibited from using the Service under applicable laws</li>
-              <li>Provide accurate and complete registration information</li>
-            </ul>
-            <p className="text-text-secondary mt-4">
-              Users under 18 should have permission from a parent or guardian to use the Service.
-            </p>
-          </section>
+      {/* Back navigation */}
+      <AnimatePresence>
+        {showContent && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="fixed top-6 left-6 sm:top-8 sm:left-8 z-40"
+          >
+            <Link
+              href="/"
+              className="group flex items-center gap-2 text-red-500/60 hover:text-red-400 transition-colors duration-300"
+            >
+              <FaArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform duration-300" />
+              <span className="text-xs tracking-[0.15em] uppercase">Back</span>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Account Registration and Security */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Account Registration and Security</h2>
+      {/* Main content */}
+      <div className="relative z-10 pt-24 pb-16 px-6">
+        <div className="max-w-3xl mx-auto">
+          {/* Header */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="text-center mb-16"
+              >
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="inline-block text-[10px] sm:text-xs tracking-[0.3em] text-red-500/50 uppercase mb-4"
+                >
+                  Legal
+                </motion.span>
 
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Account Creation</h3>
-            <p className="text-text-secondary mb-4">
-              To access certain features, you must create an account. You agree to:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2 mb-4">
-              <li>Provide accurate, current, and complete information</li>
-              <li>Maintain and update your information to keep it accurate</li>
-              <li>Maintain the security of your account credentials</li>
-              <li>Promptly notify us of any unauthorized access</li>
-              <li>Accept responsibility for all activities under your account</li>
-            </ul>
+                <h1
+                  className="text-[8vw] sm:text-[6vw] md:text-[4vw] font-black tracking-[-0.02em] leading-[0.9]"
+                  style={{ color: '#DC143C' }}
+                >
+                  TERMS OF SERVICE
+                </h1>
 
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Account Termination</h3>
-            <p className="text-text-secondary">
-              We reserve the right to suspend or terminate your account if you violate these Terms or engage in prohibited conduct. You may also delete your account at any time through the app settings.
-            </p>
-          </section>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="mt-4 text-xs text-white/30 tracking-wide"
+                >
+                  Last updated: {lastUpdated}
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* User Conduct and Prohibited Activities */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">User Conduct and Prohibited Activities</h2>
-            <p className="text-text-secondary mb-3">
-              You agree NOT to:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Use the Service for any illegal or unauthorized purpose</li>
-              <li>Harass, threaten, or abuse other users</li>
-              <li>Impersonate any person or entity</li>
-              <li>Submit false tournament results or manipulate rankings</li>
-              <li>Use automated tools, bots, or scripts to access the Service</li>
-              <li>Attempt to gain unauthorized access to the Service or other accounts</li>
-              <li>Reverse engineer, decompile, or disassemble the app</li>
-              <li>Interfere with or disrupt the Service's operation</li>
-              <li>Share inappropriate, offensive, or harmful content</li>
-              <li>Violate any applicable laws or regulations</li>
-              <li>Engage in any form of cheating or fraud</li>
-              <li>Sell, trade, or transfer your account to others</li>
-            </ul>
-          </section>
+          {/* Content Sections */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="space-y-6"
+              >
+                {sections.map((section, index) => (
+                  <motion.section
+                    key={section.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 + index * 0.05 }}
+                    className="p-6 border border-white/5 bg-white/[0.01]"
+                  >
+                    <h2 className="text-xs tracking-[0.2em] text-red-500/60 uppercase mb-4">
+                      {section.title}
+                    </h2>
+                    <ul className="space-y-2">
+                      {section.content.map((item, iIndex) => (
+                        <li
+                          key={iIndex}
+                          className="text-sm text-white/50 leading-relaxed flex items-start gap-2"
+                        >
+                          <span className="text-red-500/40 mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.section>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Tournament Participation */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Tournament Participation</h2>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Tournament Rules</h3>
-            <p className="text-text-secondary mb-4">
-              When participating in tournaments, you agree to:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2 mb-4">
-              <li>Follow all tournament rules and guidelines</li>
-              <li>Report match results accurately and honestly</li>
-              <li>Respect tournament organizers and their decisions</li>
-              <li>Arrive on time for scheduled matches</li>
-              <li>Communicate respectfully with opponents</li>
-              <li>Follow game-specific rules and regulations</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Disputes and Penalties</h3>
-            <p className="text-text-secondary mb-4">
-              Tournament organizers have final authority over tournament decisions. We may impose penalties for:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Match fixing or collusion</li>
-              <li>Intentionally misreporting results</li>
-              <li>Unsportsmanlike conduct</li>
-              <li>Repeated no-shows or late arrivals</li>
-            </ul>
-            <p className="text-text-secondary mt-4">
-              Penalties may include warnings, temporary suspensions, permanent bans, or ranking adjustments.
-            </p>
-          </section>
-
-          {/* Intellectual Property */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Intellectual Property</h2>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Our Content</h3>
-            <p className="text-text-secondary mb-4">
-              The Service and its original content, features, and functionality are owned by Genki TCG and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">User Content</h3>
-            <p className="text-text-secondary mb-4">
-              You retain ownership of content you submit (profile information, deck lists, etc.). By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2 mb-4">
-              <li>Use, reproduce, and display your content in the Service</li>
-              <li>Store and process your content to provide the Service</li>
-              <li>Create anonymized, aggregated data for analytics</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Third-Party Intellectual Property</h3>
-            <p className="text-text-secondary">
-              Trading card game names, logos, and related intellectual property belong to their respective owners. Genki TCG is not affiliated with, endorsed by, or sponsored by any trading card game publishers.
-            </p>
-          </section>
-
-          {/* Disclaimers and Limitations of Liability */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Disclaimers and Limitations of Liability</h2>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Service Availability</h3>
-            <p className="text-text-secondary mb-4">
-              The Service is provided "AS IS" and "AS AVAILABLE" without warranties of any kind. We do not guarantee that:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2 mb-4">
-              <li>The Service will be uninterrupted or error-free</li>
-              <li>All data will be accurate or complete</li>
-              <li>Defects will be corrected</li>
-              <li>The Service will be available at all times</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 text-text-primary mt-6">Limitation of Liability</h3>
-            <p className="text-text-secondary mb-4">
-              To the fullest extent permitted by law, Genki TCG shall not be liable for:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Indirect, incidental, special, or consequential damages</li>
-              <li>Lost profits, data, or opportunities</li>
-              <li>Service interruptions or data loss</li>
-              <li>Actions or conduct of other users</li>
-              <li>Unauthorized access to your account or data</li>
-            </ul>
-          </section>
-
-          {/* Indemnification */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Indemnification</h2>
-            <p className="text-text-secondary">
-              You agree to indemnify, defend, and hold harmless Genki TCG, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2 mt-4">
-              <li>Your use of the Service</li>
-              <li>Your violation of these Terms</li>
-              <li>Your violation of any rights of another party</li>
-              <li>Your conduct in connection with the Service</li>
-            </ul>
-          </section>
-
-          {/* Third-Party Services */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Third-Party Services</h2>
-            <p className="text-text-secondary mb-4">
-              The Service may integrate with third-party services (e.g., Discord). Your use of these services is subject to their respective terms and privacy policies. We are not responsible for:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Third-party service availability or performance</li>
-              <li>Content or practices of third-party services</li>
-              <li>Changes to third-party service terms or features</li>
-            </ul>
-          </section>
-
-          {/* Modifications to the Service */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Modifications to the Service</h2>
-            <p className="text-text-secondary">
-              We reserve the right to modify, suspend, or discontinue the Service (or any part thereof) at any time, with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the Service.
-            </p>
-          </section>
-
-          {/* Governing Law and Dispute Resolution */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Governing Law and Dispute Resolution</h2>
-            <p className="text-text-secondary mb-4">
-              These Terms are governed by and construed in accordance with the laws of your jurisdiction, without regard to conflict of law principles.
-            </p>
-            <p className="text-text-secondary mb-4">
-              Any disputes arising from these Terms or the Service shall be resolved through:
-            </p>
-            <ul className="list-disc list-inside text-text-secondary space-y-2">
-              <li>Good faith negotiations between the parties</li>
-              <li>Binding arbitration if negotiations fail</li>
-            </ul>
-            <p className="text-text-secondary mt-4">
-              You agree to waive any right to a jury trial or to participate in a class action lawsuit.
-            </p>
-          </section>
-
-          {/* Severability */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Severability</h2>
-            <p className="text-text-secondary">
-              If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall remain in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it valid and enforceable.
-            </p>
-          </section>
-
-          {/* Entire Agreement */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Entire Agreement</h2>
-            <p className="text-text-secondary">
-              These Terms, together with our Privacy Policy, constitute the entire agreement between you and Genki TCG regarding the Service and supersede all prior agreements and understandings.
-            </p>
-          </section>
-
-          {/* Contact Information */}
-          <section className="glass p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4 text-text-primary">Contact Information</h2>
-            <p className="text-text-secondary mb-4">
-              If you have questions about these Terms, please contact us:
-            </p>
-            <ul className="text-text-secondary space-y-2">
-              <li>Email: legal@genkitcg.app</li>
-              <li>Support: support@genkitcg.app</li>
-              <li>Website: https://genkitcg.app/support</li>
-            </ul>
-          </section>
+          {/* Bottom navigation */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 1 }}
+                className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4"
+              >
+                <Link
+                  href="/privacy"
+                  className="text-xs tracking-[0.15em] text-white/30 hover:text-red-400 uppercase transition-colors duration-300"
+                >
+                  Privacy Policy →
+                </Link>
+                <Link
+                  href="/support"
+                  className="text-xs tracking-[0.15em] text-white/30 hover:text-red-400 uppercase transition-colors duration-300"
+                >
+                  Support Center →
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {/* Decorative elements */}
+      <div className="fixed top-8 right-8 w-16 h-16 border-t border-r border-white/5 pointer-events-none hidden sm:block" />
+      <div className="fixed bottom-8 left-8 w-16 h-16 border-b border-l border-white/5 pointer-events-none hidden sm:block" />
     </div>
   );
 }

@@ -1,10 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { FaQuestionCircle, FaEnvelope, FaDiscord, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaEnvelope, FaDiscord, FaArrowLeft, FaChevronDown } from 'react-icons/fa';
+import { HiOutlineBugAnt } from 'react-icons/hi2';
 
 export default function Support() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => setIsLoaded(true), 100);
+    const timer2 = setTimeout(() => setShowContent(true), 600);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
 
   const faqs = [
     {
@@ -13,69 +27,45 @@ export default function Support() {
     },
     {
       question: 'How do I join a tournament?',
-      answer: 'Browse available tournaments in the app, select the tournament you want to join, and click "Register". Make sure to check in before the tournament starts to confirm your participation.',
+      answer: 'Browse available tournaments in the app, select the tournament you want to join, and click "Register". Make sure to check in before the tournament starts.',
     },
     {
       question: 'How are rankings calculated?',
-      answer: 'Rankings are based on a competitive rating system that takes into account your tournament performance, match results, and opponent strength. Your rank is updated after each tournament.',
+      answer: 'Rankings are based on a competitive rating system that takes into account your tournament performance, match results, and opponent strength.',
     },
     {
       question: 'Can I organize my own tournament?',
-      answer: 'Yes! Tournament organizers can use the Admin Portal to create and manage tournaments. Contact us at organizers@genkitcg.app to get organizer access.',
-    },
-    {
-      question: 'What happens if I disconnect during a tournament?',
-      answer: 'If you experience connectivity issues, try to reconnect as soon as possible. Tournament organizers can adjust pairings or extend round times if needed. Contact the organizer immediately if you have technical difficulties.',
+      answer: 'Yes! Contact us at organizers@genkitcg.app to get organizer access to the Admin Portal.',
     },
     {
       question: 'How do I report match results?',
-      answer: 'After each match, both players can submit the result through the app. Once both players confirm, the result is recorded. If there\'s a dispute, contact the tournament organizer.',
-    },
-    {
-      question: 'Can I change my username or profile picture?',
-      answer: 'Yes! Go to your profile settings in the app to update your username, profile picture, and other account information.',
-    },
-    {
-      question: 'How do I delete my account?',
-      answer: 'You can delete your account from the app settings under "Account" > "Delete Account". Note that this action is permanent and will remove all your data, including tournament history.',
+      answer: 'After each match, both players can submit the result through the app. Once both players confirm, the result is recorded.',
     },
     {
       question: 'What games are supported?',
       answer: 'Currently, Genki TCG supports One Piece TCG, Azuki TCG, and Riftbound. We\'re continuously adding support for more trading card games.',
-    },
-    {
-      question: 'Is there a desktop version?',
-      answer: 'Tournament organizers have access to a web-based Admin Portal for managing events. Players use the mobile app to participate in tournaments and track their rankings.',
-    },
-    {
-      question: 'How do I enable push notifications?',
-      answer: 'Go to your device settings, find Genki TCG, and enable notifications. You can also customize notification preferences in the app settings.',
-    },
-    {
-      question: 'What should I do if I find a bug?',
-      answer: 'Please report bugs to support@genkitcg.app with details about the issue, your device model, and steps to reproduce the problem. Screenshots are helpful!',
     },
   ];
 
   const contactMethods = [
     {
       icon: FaEnvelope,
-      title: 'Email Support',
-      description: 'Get help from our support team',
+      title: 'Email',
+      description: 'General support',
       contact: 'support@genkitcg.app',
       action: 'mailto:support@genkitcg.app',
     },
     {
       icon: FaDiscord,
-      title: 'Discord Community',
-      description: 'Join our community server',
+      title: 'Discord',
+      description: 'Community server',
       contact: 'Join Server',
       action: 'https://discord.gg/6bAh6ArXhw',
     },
     {
-      icon: FaQuestionCircle,
+      icon: HiOutlineBugAnt,
       title: 'Bug Reports',
-      description: 'Report technical issues',
+      description: 'Technical issues',
       contact: 'bugs@genkitcg.app',
       action: 'mailto:bugs@genkitcg.app',
     },
@@ -86,136 +76,216 @@ export default function Support() {
   };
 
   return (
-    <div className="pt-24 pb-16 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-text-primary">
-            How Can We Help?
-          </h1>
-          <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-            Find answers to common questions or get in touch with our support team
-          </p>
-        </div>
+    <div className="min-h-screen bg-black">
+      {/* Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-zinc-950 via-black to-zinc-950" />
 
-        {/* Contact Methods */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {contactMethods.map((method) => {
-            const Icon = method.icon;
-            return (
-              <a
-                key={method.title}
-                href={method.action}
-                className="glass p-6 rounded-xl hover:bg-background-elevated transition-all transform hover:scale-105 text-center"
-              >
-                <div className="w-16 h-16 bg-genki-red/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Icon className="w-8 h-8 text-genki-red" />
-                </div>
-                <h3 className="text-xl font-bold mb-2 text-text-primary">
-                  {method.title}
-                </h3>
-                <p className="text-text-secondary mb-3">
-                  {method.description}
-                </p>
-                <p className="text-genki-red font-semibold">
-                  {method.contact}
-                </p>
-              </a>
-            );
-          })}
-        </div>
+      {/* Subtle grid pattern */}
+      <div
+        className="fixed inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
 
-        {/* FAQ Section */}
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-text-primary text-center">
-            Frequently Asked Questions
-          </h2>
+      {/* Ambient glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[50vh] bg-zinc-800/20 blur-[120px] pointer-events-none" />
 
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="glass rounded-xl overflow-hidden transition-all"
-              >
-                <button
-                  onClick={() => toggleFaq(index)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-background-elevated transition-colors"
-                >
-                  <span className="text-left font-semibold text-text-primary">
-                    {faq.question}
-                  </span>
-                  {openFaq === index ? (
-                    <FaChevronUp className="w-5 h-5 text-genki-red flex-shrink-0 ml-4" />
-                  ) : (
-                    <FaChevronDown className="w-5 h-5 text-text-tertiary flex-shrink-0 ml-4" />
-                  )}
-                </button>
-                {openFaq === index && (
-                  <div className="px-6 pb-4">
-                    <p className="text-text-secondary leading-relaxed">
-                      {faq.answer}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Additional Resources */}
-        <div className="max-w-4xl mx-auto mt-16">
-          <div className="glass p-8 rounded-xl text-center">
-            <h3 className="text-2xl font-bold mb-4 text-text-primary">
-              Still Need Help?
-            </h3>
-            <p className="text-text-secondary mb-6">
-              Can't find what you're looking for? Our support team is here to help.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="mailto:support@genkitcg.app"
-                className="px-8 py-3 bg-genki-red hover:bg-genki-red-dark text-white rounded-lg font-semibold transition-all transform hover:scale-105"
-              >
-                Contact Support
-              </a>
-              <a
-                href="/download"
-                className="px-8 py-3 glass hover:bg-background-elevated text-text-primary rounded-lg font-semibold transition-all"
-              >
-                Download App
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Links */}
-        <div className="max-w-4xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass p-6 rounded-xl">
-            <h4 className="text-lg font-bold mb-3 text-text-primary">For Players</h4>
-            <ul className="space-y-2 text-text-secondary">
-              <li>• Getting started guide</li>
-              <li>• Tournament participation tips</li>
-              <li>• Understanding rankings</li>
-              <li>• Profile customization</li>
-            </ul>
-          </div>
-          <div className="glass p-6 rounded-xl">
-            <h4 className="text-lg font-bold mb-3 text-text-primary">For Organizers</h4>
-            <ul className="space-y-2 text-text-secondary">
-              <li>• Creating tournaments</li>
-              <li>• Managing participants</li>
-              <li>• Swiss pairings system</li>
-              <li>• Admin portal access</li>
-            </ul>
-            <a
-              href="mailto:organizers@genkitcg.app"
-              className="inline-block mt-4 text-genki-red hover:text-genki-red-light font-semibold transition-colors"
+      {/* Back navigation */}
+      <AnimatePresence>
+        {showContent && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="fixed top-6 left-6 sm:top-8 sm:left-8 z-40"
+          >
+            <Link
+              href="/"
+              className="group flex items-center gap-2 text-red-500/60 hover:text-red-400 transition-colors duration-300"
             >
-              Request Organizer Access →
-            </a>
-          </div>
+              <FaArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform duration-300" />
+              <span className="text-xs tracking-[0.15em] uppercase">Back</span>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main content */}
+      <div className="relative z-10 pt-24 pb-16 px-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="text-center mb-16"
+              >
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="inline-block text-[10px] sm:text-xs tracking-[0.3em] text-red-500/50 uppercase mb-4"
+                >
+                  Help Center
+                </motion.span>
+
+                <h1
+                  className="text-[10vw] sm:text-[8vw] md:text-[6vw] lg:text-[4vw] font-black tracking-[-0.02em] leading-[0.9]"
+                  style={{ color: '#DC143C' }}
+                >
+                  SUPPORT
+                </h1>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="mt-4 text-sm text-white/40 tracking-wide max-w-md mx-auto"
+                >
+                  Find answers or get in touch
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Contact Methods */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-16"
+              >
+                {contactMethods.map((method, index) => {
+                  const Icon = method.icon;
+                  return (
+                    <motion.a
+                      key={method.title}
+                      href={method.action}
+                      target={method.action.startsWith('http') ? '_blank' : undefined}
+                      rel={method.action.startsWith('http') ? 'noopener noreferrer' : undefined}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                      className="group relative p-6 border border-white/10 hover:border-red-500/30 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-500"
+                    >
+                      <div className="flex flex-col items-center text-center gap-3">
+                        <Icon className="w-6 h-6 text-red-500/60 group-hover:text-red-400 transition-colors duration-300" />
+                        <div>
+                          <div className="text-sm font-medium text-white/90">{method.title}</div>
+                          <div className="text-xs text-white/30 mt-1">{method.description}</div>
+                        </div>
+                        <div className="text-xs text-red-500/60 group-hover:text-red-400 transition-colors duration-300">
+                          {method.contact}
+                        </div>
+                      </div>
+                    </motion.a>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* FAQ Section */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+              >
+                <h2 className="text-xs tracking-[0.3em] text-red-500/50 uppercase mb-8 text-center">
+                  Frequently Asked Questions
+                </h2>
+
+                <div className="space-y-2">
+                  {faqs.map((faq, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.7 + index * 0.05 }}
+                      className="border border-white/5 bg-white/[0.01] overflow-hidden"
+                    >
+                      <button
+                        onClick={() => toggleFaq(index)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors duration-300"
+                      >
+                        <span className="text-left text-sm text-white/80">
+                          {faq.question}
+                        </span>
+                        <FaChevronDown
+                          className={`w-3 h-3 text-red-500/40 flex-shrink-0 ml-4 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''
+                            }`}
+                        />
+                      </button>
+                      <AnimatePresence>
+                        {openFaq === index && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-6 pb-4">
+                              <p className="text-sm text-white/40 leading-relaxed">
+                                {faq.answer}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Bottom CTA */}
+          <AnimatePresence>
+            {showContent && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 1 }}
+                className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6"
+              >
+                <div className="text-center sm:text-left">
+                  <div className="text-sm text-white/60">Still need help?</div>
+                  <div className="text-xs text-white/30 mt-1">Our team usually responds within 24 hours</div>
+                </div>
+
+                <div className="flex gap-4">
+                  <a
+                    href="mailto:support@genkitcg.app"
+                    className="px-6 py-2 border border-red-500/30 text-red-500/80 hover:bg-red-500/10 text-xs tracking-[0.15em] uppercase transition-all duration-300"
+                  >
+                    Contact Us
+                  </a>
+                  <Link
+                    href="/download"
+                    className="px-6 py-2 border border-white/10 text-white/60 hover:border-white/20 hover:text-white/80 text-xs tracking-[0.15em] uppercase transition-all duration-300"
+                  >
+                    Get App
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {/* Decorative elements */}
+      <div className="fixed top-8 right-8 w-16 h-16 border-t border-r border-white/5 pointer-events-none hidden sm:block" />
+      <div className="fixed bottom-8 left-8 w-16 h-16 border-b border-l border-white/5 pointer-events-none hidden sm:block" />
     </div>
   );
 }
