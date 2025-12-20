@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: "The ultimate tournament management platform for TCG players. Track rankings, manage tournaments, and compete with players worldwide.",
   keywords: "TCG, tournament, card game, rankings, One Piece TCG, Azuki TCG, Riftbound",
   authors: [{ name: "Genki TCG" }],
+  icons: {
+    icon: '/genki-head.png',
+    apple: '/genki-head.png',
+  },
   openGraph: {
     title: "Genki TCG - Tournament Management Made Easy",
     description: "The ultimate tournament management platform for TCG players.",
