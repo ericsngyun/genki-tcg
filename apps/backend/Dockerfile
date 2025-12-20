@@ -1,7 +1,7 @@
 # Railway-specific Dockerfile (must be built from monorepo root)
 # Railway should set: Root Directory = / (or leave blank)
 # Using Debian slim instead of Alpine for better Prisma compatibility
-# REBUILD: 2025-11-14-v2 - Force clean build with Debian + OpenSSL 3
+# REBUILD: 2025-12-19 - Force cache bust for deployment
 FROM node:20-slim AS builder
 
 # Install OpenSSL and required libraries for Prisma
