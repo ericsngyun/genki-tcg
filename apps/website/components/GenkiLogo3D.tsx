@@ -1,12 +1,12 @@
 'use client';
 
-import { Suspense, useRef, useMemo, useEffect } from 'react';
+import { Suspense, useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as THREE from 'three';
 
-function Model() {
+function Model({ isMobile }: { isMobile: boolean }) {
     const pivotRef = useRef<THREE.Group>(null);
     const obj = useLoader(OBJLoader, '/assets/genki-logo.obj');
 
@@ -48,11 +48,13 @@ function Model() {
         }
 
         // Calculate scale based on overall bounding box
+        // Smaller scale on mobile to prevent clipping
         const overallBox = new THREE.Box3().setFromObject(clonedObj);
         const size = new THREE.Vector3();
         overallBox.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 3.2 / maxDim; // Larger model
+        const baseScale = isMobile ? 2.2 : 3.2;
+        const scale = baseScale / maxDim;
 
         return {
             offsetX: -weightedCenter.x,
@@ -60,7 +62,7 @@ function Model() {
             offsetZ: -weightedCenter.z,
             scale
         };
-    }, [clonedObj]);
+    }, [clonedObj, isMobile]);
 
     // Apply dark stainless steel silver material
     useEffect(() => {
@@ -99,12 +101,31 @@ function Model() {
 }
 
 export default function GenkiLogo3D() {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Responsive camera and FOV settings
+    const cameraPosition: [number, number, number] = isMobile
+        ? [0, 0, 5]  // Centered and further back on mobile
+        : [1.2, 0, 4]; // Off-center on desktop
+
+    const fov = isMobile ? 60 : 50; // Wider FOV on mobile
+
     return (
         <div className="absolute inset-0 w-full h-full">
             <Canvas
                 camera={{
-                    position: [1.2, 0, 4], // Off-center horizontally, zoomed out
-                    fov: 50,
+                    position: cameraPosition,
+                    fov: fov,
                 }}
                 gl={{
                     antialias: true,
@@ -138,9 +159,10 @@ export default function GenkiLogo3D() {
 
                     <Environment preset="studio" />
 
-                    <Model />
+                    <Model isMobile={isMobile} />
                 </Suspense>
             </Canvas>
         </div>
     );
 }
+
