@@ -71,6 +71,7 @@ FROM node:20-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NODE_PATH=/app/node_modules
 
 # Install dumb-init, OpenSSL, and required runtime libraries
 RUN apt-get update && apt-get install -y \
@@ -107,6 +108,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backen
 # Copy Prisma client from builder (critical!)
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Verify rxjs is properly available (critical for NestJS)
+RUN echo "=== Verifying rxjs installation ===" && \
+    ls -la /app/node_modules/rxjs/ && \
+    node -e "require('rxjs'); require('rxjs/operators'); console.log('✅ rxjs verified successfully');"
 
 # Copy start script
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh
