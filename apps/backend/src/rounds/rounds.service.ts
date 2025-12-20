@@ -502,12 +502,14 @@ export class RoundsService {
           select: {
             id: true,
             name: true,
+            avatarUrl: true,
           },
         },
         playerB: {
           select: {
             id: true,
             name: true,
+            avatarUrl: true,
           },
         },
       },

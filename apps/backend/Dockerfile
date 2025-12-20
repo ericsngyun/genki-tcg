@@ -17,13 +17,16 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.base.json ./
 
-# Copy workspace package files
+# Copy ALL workspace package files (required for npm ci with root package-lock.json)
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tournament-logic/package.json ./packages/tournament-logic/
 COPY apps/backend/package.json ./apps/backend/
+COPY apps/admin-web/package.json ./apps/admin-web/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/website/package.json ./apps/website/
 
 # Install all workspace dependencies
-# Using --legacy-peer-deps to handle React 18/19 version conflicts between admin-web and mobile
+# npm ci requires ALL workspace package.json files to match package-lock.json
 RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Copy workspace source code
@@ -49,7 +52,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Verify Prisma binary was generated correctly
 RUN echo "Verifying Prisma client generation..." && \
-    ls -la ../../../node_modules/.prisma/client/ && \
+    ls -la /app/node_modules/.prisma/client/ && \
     echo "Prisma client generated successfully"
 
 # Build the application
@@ -68,6 +71,7 @@ FROM node:20-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NODE_PATH=/app/node_modules
 
 # Install dumb-init, OpenSSL, and required runtime libraries
 RUN apt-get update && apt-get install -y \
@@ -93,8 +97,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.jso
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/dist ./packages/tournament-logic/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/tournament-logic/package.json ./packages/tournament-logic/package.json
 
-# Install production dependencies for all workspaces
-RUN npm ci --omit=dev --legacy-peer-deps || npm install --omit=dev --legacy-peer-deps
+# Copy node_modules from builder instead of reinstalling
+# This ensures all dependencies from the monorepo are available
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 # Copy built backend application
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./apps/backend/dist
@@ -103,6 +108,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./apps/backen
 # Copy Prisma client from builder (critical!)
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Verify rxjs is properly available (critical for NestJS)
+RUN echo "=== Verifying rxjs installation ===" && \
+    ls -la /app/node_modules/rxjs/ && \
+    node -e "require('rxjs'); require('rxjs/operators'); console.log('✅ rxjs verified successfully');"
 
 # Copy start script
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/start.sh ./apps/backend/start.sh

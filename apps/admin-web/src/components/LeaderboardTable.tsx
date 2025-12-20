@@ -1,6 +1,5 @@
 import { TierBadge } from './TierBadge';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { RankedAvatar } from './RankedAvatar';
 
 type PlayerTier =
   | 'SPROUT'
@@ -90,7 +89,7 @@ export function LeaderboardTable({
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto max-h-[800px] overflow-y-auto custom-scrollbar">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm shadow-sm">
+            <thead className="sticky top-0 z-30 bg-card/95 backdrop-blur-sm shadow-sm">
               <tr className="border-b border-border">
                 <th className="text-left py-4 px-6 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-24">
                   Rank
@@ -136,12 +135,15 @@ export function LeaderboardTable({
                   {/* Player */}
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
-                      <RankedAvatar
-                        user={{ name: entry.userName, avatarUrl: entry.userAvatar }}
-                        tier={entry.tier}
-                        size="md"
-                        showTierBadge={true}
-                      />
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                        {entry.userAvatar ? (
+                          <img src={entry.userAvatar} alt={entry.userName} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {entry.userName.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                       <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
                         {entry.userName}
                       </div>

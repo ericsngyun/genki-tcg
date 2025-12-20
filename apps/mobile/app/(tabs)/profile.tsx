@@ -11,6 +11,8 @@ import {
   Alert,
   Dimensions,
   ImageBackground,
+  Image,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -19,7 +21,6 @@ import { theme } from '../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api'
 import { TIER_COLORS } from '../../components/TierEmblem';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../../components/RankedAvatar';
 import { getGameImagePath } from '../../lib/formatters';
 import { BORDER_PREFERENCE_KEY } from '../edit-profile';
 
@@ -75,6 +76,29 @@ const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string]; ic
   AZUKI_TCG: { gradient: ['#8B5CF6', '#7C3AED'] as const, icon: '🎴' },
   RIFTBOUND: { gradient: ['#3B82F6', '#2563EB'] as const, icon: '⚔️' },
 };
+
+// Player Tier type
+type PlayerTier =
+  | 'SPROUT'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED';
+
+// Map rating to tier
+function mapRatingToTier(rating: number): PlayerTier {
+  if (rating >= 2200) return 'GENKI';
+  if (rating >= 2000) return 'DIAMOND';
+  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 1600) return 'GOLD';
+  if (rating >= 1400) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
+  if (rating >= 800) return 'SPROUT';
+  return 'UNRANKED';
+}
 
 // Tier configuration for display
 const TIER_DISPLAY: Record<PlayerTier, { label: string; icon: string }> = {
@@ -275,14 +299,13 @@ export default function ProfileScreen() {
         >
           <View style={styles.headerContent}>
             {/* Left: Avatar */}
-            <RankedAvatar
-              avatarUrl={user?.avatarUrl}
-              name={user?.name || 'Unknown Player'}
-              tier={displayTier}
-              size={84}
-              showTierBadge={false}
-              showEmblem={true}
-            />
+            <View style={styles.profileAvatar}>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.profileAvatarImage} />
+              ) : (
+                <Text style={styles.profileAvatarInitial}>{initial}</Text>
+              )}
+            </View>
 
             {/* Right: User Info */}
             <View style={styles.headerInfo}>
@@ -516,10 +539,14 @@ export default function ProfileScreen() {
                         source={gameImage}
                         style={styles.gameCardImage}
                         imageStyle={styles.gameCardImageStyle}
+                        resizeMode="cover"
+                        blurRadius={0}
                       >
                         <LinearGradient
-                          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
+                          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
                           style={styles.gameCardGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 0, y: 1 }}
                         >
                           {/* Game Header */}
                           <View style={styles.gameHeader}>
@@ -529,7 +556,7 @@ export default function ProfileScreen() {
                               </Text>
                               {rank.rank && rank.totalPlayers && (
                                 <Text style={styles.gameRankLight}>
-                                  Rank #{rank.rank} of {rank.totalPlayers}
+                                  Ranked #{rank.rank} • {rank.totalPlayers} players
                                 </Text>
                               )}
                             </View>
@@ -540,14 +567,23 @@ export default function ProfileScreen() {
                             </View>
                           </View>
 
-                          {/* Rating Display */}
+                          {/* Stats Display - Rating Number Hidden, Rank Shown Instead */}
                           <View style={styles.ratingRowTransparent}>
-                            <View style={styles.ratingMain}>
-                              <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
-                                {Math.round(rank.rating)}
-                              </Text>
-                              <Text style={styles.ratingLabelLight}>Rating</Text>
-                            </View>
+                            {rank.rank && rank.totalPlayers ? (
+                              <View style={styles.ratingMain}>
+                                <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
+                                  #{rank.rank}
+                                </Text>
+                                <Text style={styles.ratingLabelLight}>Rank</Text>
+                              </View>
+                            ) : (
+                              <View style={styles.ratingMain}>
+                                <Text style={[styles.ratingValue, { color: '#FFFFFF', fontSize: 24 }]}>
+                                  —
+                                </Text>
+                                <Text style={styles.ratingLabelLight}>Unranked</Text>
+                              </View>
+                            )}
                             <View style={styles.ratingDividerLight} />
                             <View style={styles.ratingStat}>
                               <Text style={styles.ratingStatValueLight}>{rank.wins}</Text>
@@ -581,14 +617,13 @@ export default function ProfileScreen() {
                       </ImageBackground>
                     </View>
                   );
-                  );
                 })
               ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
-                <Text style={styles.emptyText}>No ratings yet</Text>
-                <Text style={styles.emptySubtext}>Play in tournaments to earn your ranking!</Text>
-              </View>
+                <View style={styles.emptyState}>
+                  <Ionicons name="trophy-outline" size={48} color={theme.colors.text.tertiary} />
+                  <Text style={styles.emptyText}>No ratings yet</Text>
+                  <Text style={styles.emptySubtext}>Play in tournaments to earn your ranking!</Text>
+                </View>
               )}
             </>
           ) : (
@@ -994,17 +1029,31 @@ const styles = StyleSheet.create({
   // Game Cards
   gameCardContainer: {
     borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     backgroundColor: theme.colors.background.card,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   gameCardImage: {
     width: '100%',
+    minHeight: 220,
+    overflow: 'hidden',
   },
   gameCardImageStyle: {
     borderRadius: 16,
+    opacity: 1,
   },
   gameCardGradient: {
     padding: 16,
@@ -1217,6 +1266,28 @@ const styles = StyleSheet.create({
   },
 
   bottomSpacer: {
-    height: 40,
+    height: 100,
+  },
+
+  // Profile Avatar
+  profileAvatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: theme.colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileAvatarInitial: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: theme.colors.text.secondary,
   },
 });

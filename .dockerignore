@@ -64,9 +64,14 @@ QUICK_*.md
 FILE_*.txt
 VULNERABILITY_*.txt
 
-# Apps we don't need for backend build
-apps/mobile
-apps/admin-web
+# Apps we don't need for backend build (source code)
+# But we DO need their package.json for npm ci to work with monorepo
+apps/mobile/*
+!apps/mobile/package.json
+apps/admin-web/*
+!apps/admin-web/package.json
+apps/website/*
+!apps/website/package.json
 
 # CI/CD
 .github

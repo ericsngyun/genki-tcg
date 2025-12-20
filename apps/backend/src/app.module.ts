@@ -22,20 +22,26 @@ import { RatingsModule } from './ratings/ratings.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { SentryModule } from './sentry/sentry.module';
 import { SentryModule as SentryNestModule } from '@sentry/nestjs/setup';
+import configuration from './config/configuration';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
     // Sentry error tracking (must be first)
     SentryNestModule.forRoot(),
 
-    // Configuration
+    // Configuration with Validation
+    // Validates all required environment variables on startup
+    // App will fail fast with clear error messages if any variable is missing/invalid
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        '../../.env',      // From apps/backend when running with npm run dev
-        '../../../.env',   // From apps/backend/src if needed
-        '.env',            // Current directory fallback
-      ],
+      envFilePath: '.env',
+      load: [configuration],
+      validate, // Validates env vars against EnvironmentVariables schema
+      validationOptions: {
+        allowUnknown: true, // Allow extra env vars not in schema
+        abortEarly: false,  // Show all validation errors, not just first one
+      },
     }),
 
     // Rate limiting - configurable via environment

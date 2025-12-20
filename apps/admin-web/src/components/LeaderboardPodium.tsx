@@ -1,4 +1,3 @@
-import { RankedAvatar } from './RankedAvatar';
 import { TierBadge } from './TierBadge';
 import { TIER_COLORS } from './TierEmblem';
 
@@ -69,7 +68,7 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
   const tierColor = TIER_COLORS[player.tier];
 
   return (
-    <div className={`relative flex flex-col justify-end ${rank === 2 ? 'order-first md:order-none' : ''}`}>
+    <div className={`relative flex flex-col justify-end ${rank === 2 ? 'order-2 md:order-none' : rank === 1 ? 'order-1 md:order-none' : 'order-3 md:order-none'}`}>
       <div
         className={`
           animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both
@@ -107,14 +106,17 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
 
           {/* Player Info */}
           <div className="mt-8 text-center space-y-4">
-            {/* Avatar with Emblem */}
+            {/* Avatar */}
             <div className="flex justify-center">
-              <RankedAvatar
-                user={{ name: player.userName, avatarUrl: player.userAvatar }}
-                tier={player.tier}
-                size={style.avatarSize}
-                showTierBadge={true}
-              />
+              <div className={`${style.avatarSize === '2xl' ? 'w-24 h-24' : 'w-20 h-20'} rounded-full bg-muted flex items-center justify-center overflow-hidden ring-4 ${style.ringColor}`}>
+                {player.userAvatar ? (
+                  <img src={player.userAvatar} alt={player.userName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className={`${style.avatarSize === '2xl' ? 'text-3xl' : 'text-2xl'} font-bold text-muted-foreground`}>
+                    {player.userName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Name */}
@@ -150,6 +152,7 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
             rounded-t-xl border-x-2 border-t-2 flex items-end justify-center
             bg-gradient-to-b from-background/90 to-background/30 backdrop-blur-sm
             ${style.border} ${style.height} transition-all duration-300 group-hover:opacity-80
+            hidden md:flex
           `}
         >
           <div className={`text-9xl font-black opacity-10 mb-4 ${style.textGlow}`}>

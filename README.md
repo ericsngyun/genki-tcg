@@ -32,14 +32,20 @@ genki-tcg/
 
 ## Quick Start
 
-**New to the project?** See the [Complete Setup Guide](./SETUP_GUIDE.md) for detailed Windows setup instructions.
+**New to the project?** Choose your development setup:
+
+- **[Environment Setup Guide](./ENVIRONMENT_SETUP.md)** - **START HERE** - Choose between Railway (frontend-only) or Local (full stack) development
+- **[Complete Setup Guide](./SETUP_GUIDE.md)** - Detailed Windows setup instructions
 
 ### Prerequisites
 
 - Node.js >= 20.0.0
 - npm >= 10.0.0
+- **Docker Desktop** (optional, only for local backend development)
 
-### Development (Using Railway Backend)
+### Quick Setup (Railway Backend - Recommended)
+
+Use the production Railway backend for frontend development:
 
 ```bash
 # 1. Clone and install
@@ -47,10 +53,14 @@ git clone [YOUR_REPO_URL]
 cd genki-tcg
 npm install
 
-# 2. Configure frontend apps
-# Copy and edit these files with Railway backend URL:
-# - apps/admin-web/.env.local
-# - apps/mobile/.env
+# 2. Configure frontend apps to use Railway
+# Admin web:
+cp apps/admin-web/.env.local.example apps/admin-web/.env.local
+# Set NEXT_PUBLIC_API_URL=https://genki-tcg-production.up.railway.app
+
+# Mobile:
+# Edit apps/mobile/.env
+# Set EXPO_PUBLIC_API_URL=https://genki-tcg-production.up.railway.app
 
 # 3. Start admin dashboard
 npm run dev:admin
@@ -61,25 +71,35 @@ npm run dev:admin
 npm run dev:mobile
 ```
 
-### Local Backend Development (Optional)
+### Local Backend Development
 
-If you need to run the backend locally:
+For backend development or offline work:
 
-- PostgreSQL >= 14
-- Redis >= 7
+**Prerequisites:**
+- Docker Desktop (for PostgreSQL and Redis)
 
 ```bash
-# Configure backend environment
-cp .env.example .env
-# Edit .env with your local database credentials
+# 1. Start database services
+docker-compose -f docker-compose.dev.yml up -d
 
-# Setup database
+# 2. Configure backend
+cp apps/backend/.env.local.example apps/backend/.env
+# Generate JWT secrets: openssl rand -base64 64
+# Update .env with generated secrets
+
+# 3. Setup database
 npm run db:migrate
 npm run db:seed
 
-# Start backend
+# 4. Configure frontends to use local backend
+# Update apps/admin-web/.env.local and apps/mobile/.env
+# Set API URLs to http://localhost:3001
+
+# 5. Start backend
 npm run dev:backend
 ```
+
+**For complete setup instructions, see [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md)**
 
 ## Core Features
 
@@ -146,6 +166,8 @@ npm run db:seed          # Seed database with initial data
 ## Documentation
 
 ### Getting Started
+- **[Environment Setup](./ENVIRONMENT_SETUP.md)** - **START HERE** - Railway vs Local development setup
+- **[Production Roadmap](./PRODUCTION_ROADMAP.md)** - **Production readiness plan** - Next steps to production
 - **[Quick Start](./QUICK_START.md)** - Get up and running quickly
 - **[Setup Guide](./SETUP_GUIDE.md)** - Complete setup instructions for Windows
 - **[Seeding Instructions](./SEEDING_INSTRUCTIONS.md)** - How to seed the database with test data

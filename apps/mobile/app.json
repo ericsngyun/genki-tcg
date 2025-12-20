@@ -3,6 +3,10 @@
     "name": "Genki TCG",
     "slug": "genki-tcg",
     "version": "0.1.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +20,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.genkitcg.app"
+      "bundleIdentifier": "com.genkitcg.app",
+      "newArchEnabled": false
     },
     "android": {
       "adaptiveIcon": {
@@ -43,7 +48,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "your-org-slug",
+          "organization": "genki-tcg",
           "project": "genki-tcg-mobile"
         }
       ]
@@ -54,7 +59,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "27dbcc84-6f7b-4cbf-bfff-c320c0de0938"
       }
     }
   }

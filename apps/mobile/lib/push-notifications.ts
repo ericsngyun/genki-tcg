@@ -56,8 +56,15 @@ export class PushNotificationService {
       }
 
       // Get Expo push token
+      const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+
+      if (!projectId) {
+        logger.error('EXPO_PUBLIC_PROJECT_ID environment variable is not set');
+        throw new Error('Push notifications are not configured. Please set EXPO_PUBLIC_PROJECT_ID in your environment variables.');
+      }
+
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'your-project-id',
+        projectId,
       });
       const token = tokenData.data;
 

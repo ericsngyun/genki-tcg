@@ -24,7 +24,12 @@
       "Bash(taskkill:*)",
       "Bash(railway status:*)",
       "Bash(railway variables:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(wc:*)",
+      "Bash(git rm:*)",
+      "Bash(git -C \"C:\\Users\\rayno\\eric\\genki-tcg\" log --oneline)",
+      "Bash(dir \"C:\\\\Users\\\\rayno\\\\eric\\\\genki-tcg\\\\apps\\\\mobile\\\\lib\")",
+      "Bash(dir \"C:\\\\Users\\\\rayno\\\\eric\\\\genki-tcg\\\\apps\\\\mobile\\\\app\\\\auth\")"
     ],
     "deny": [],
     "ask": []

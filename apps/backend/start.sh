@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e  # Exit on error after validation checks
 
+# Ensure modules from root node_modules are resolvable
+export NODE_PATH=/app/node_modules
+
 echo "=================================="
 echo "🚀 Starting Genki TCG Backend"
 echo "=================================="

@@ -6,7 +6,7 @@
  * - IN_PROGRESS (Live): Check Pairings, Standings, Drop, View Active Match
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../lib/theme';
 import { formatGameName, formatEventFormat } from '../lib/formatters';
+import { api } from '../lib/api';
+import { logger } from '../lib/logger';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -74,6 +76,7 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
 }) => {
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const [hasActiveMatch, setHasActiveMatch] = useState<boolean | null>(null); // null = loading, true = has real match, false = BYE or no match
 
   useEffect(() => {
     if (visible) {
@@ -105,6 +108,39 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
       ]).start();
     }
   }, [visible]);
+
+  // Fetch active match data to determine if player has a BYE
+  useEffect(() => {
+    const checkActiveMatch = async () => {
+      if (!visible || !event || event.status !== 'IN_PROGRESS') {
+        setHasActiveMatch(null);
+        return;
+      }
+
+      const myEntry = event.entries?.find((entry) => entry.userId === myUserId);
+      const isCheckedIn = myEntry?.checkedInAt !== undefined && myEntry?.checkedInAt !== null;
+
+      if (!isCheckedIn) {
+        setHasActiveMatch(null);
+        return;
+      }
+
+      try {
+        const matchData = await api.getActiveMatch(event.id);
+        // If there's no match at all, or if opponent is null (BYE), set hasActiveMatch to false
+        if (!matchData || !matchData.match || !matchData.match.opponent) {
+          setHasActiveMatch(false);
+        } else {
+          setHasActiveMatch(true);
+        }
+      } catch (error) {
+        logger.error('Failed to fetch active match:', error);
+        setHasActiveMatch(null); // On error, allow button to show (fallback to existing behavior)
+      }
+    };
+
+    checkActiveMatch();
+  }, [visible, event, myUserId]);
 
   if (!event) return null;
 
@@ -296,13 +332,26 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
             {/* LIVE EVENT ACTIONS */}
             {isLive && (
               <>
-                {isCheckedIn && (
+                {/* Only show "View Active Match" if player has a real match (not a BYE) */}
+                {isCheckedIn && hasActiveMatch === true && (
                   <ActionButton
                     icon="flash"
                     label="View Active Match"
                     description="Go to your current match"
                     onPress={() => handleAction(() => onViewMatch(event))}
                     variant="primary"
+                  />
+                )}
+
+                {/* Show BYE notification if player has a BYE round */}
+                {isCheckedIn && hasActiveMatch === false && (
+                  <ActionButton
+                    icon="information-circle"
+                    label="Bye Round"
+                    description="You have a bye this round - automatic win"
+                    onPress={() => { }}
+                    variant="default"
+                    disabled
                   />
                 )}
 

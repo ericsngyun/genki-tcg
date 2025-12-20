@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -16,11 +17,33 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../components/RankedAvatar';
 import { TIER_COLORS } from '../components/TierEmblem';
 
 // Storage key for border preference
 export const BORDER_PREFERENCE_KEY = 'profile_border_game';
+
+// Player Tier type
+type PlayerTier =
+  | 'SPROUT'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED';
+
+// Map rating to tier
+function mapRatingToTier(rating: number): PlayerTier {
+  if (rating >= 2200) return 'GENKI';
+  if (rating >= 2000) return 'DIAMOND';
+  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 1600) return 'GOLD';
+  if (rating >= 1400) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
+  if (rating >= 800) return 'SPROUT';
+  return 'UNRANKED';
+}
 
 interface User {
   id: string;
@@ -60,15 +83,26 @@ export default function EditProfileScreen() {
 
   const loadProfile = async () => {
     try {
-      const [userResponse, ranksResponse] = await Promise.all([
+      const [userResponse, ratingsResponse] = await Promise.all([
         api.getMe(),
-        api.getMyRanks().catch(() => ({ ranks: [] })),
+        api.getMyLifetimeRatings().catch(() => ({ categories: [] })),
       ]);
       const userData = userResponse.user || userResponse;
       setUser(userData);
       setName(userData.name || '');
-      if (ranksResponse?.ranks) {
-        setRanks(ranksResponse.ranks);
+
+      // Map categories to ranks format (category -> gameType)
+      if (ratingsResponse?.categories) {
+        const mappedRanks = ratingsResponse.categories.map((cat: any) => ({
+          gameType: cat.category,
+          rating: cat.rating,
+          deviation: cat.ratingDeviation || 350,
+          matchesPlayed: cat.matchesPlayed || 0,
+          wins: cat.matchWins || 0,
+          losses: cat.matchLosses || 0,
+          draws: cat.matchDraws || 0,
+        }));
+        setRanks(mappedRanks);
       }
     } catch (error) {
       logger.error('Failed to load profile:', error);
@@ -172,14 +206,15 @@ export default function EditProfileScreen() {
         <View style={styles.avatarPreviewCard}>
           <Text style={styles.sectionTitle}>Profile Preview</Text>
           <View style={styles.avatarPreviewContainer}>
-            <RankedAvatar
-              avatarUrl={user?.avatarUrl}
-              name={user?.name || 'Unknown'}
-              tier={displayTier}
-              size={120}
-              showTierBadge={true}
-              showEmblem={true}
-            />
+            <View style={styles.previewAvatar}>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.previewAvatarImage} />
+              ) : (
+                <Text style={styles.previewAvatarInitial}>
+                  {(user?.name || 'U').charAt(0).toUpperCase()}
+                </Text>
+              )}
+            </View>
             <View style={styles.previewInfo}>
               <Text style={styles.previewName}>{name || user?.name}</Text>
               {displayTier !== 'UNRANKED' && (
@@ -513,5 +548,27 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
     lineHeight: 18,
+  },
+
+  // Preview Avatar
+  previewAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: theme.colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
+  },
+  previewAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewAvatarInitial: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: theme.colors.text.secondary,
   },
 });

@@ -49,14 +49,18 @@ export class ErrorBoundary extends Component<Props, State> {
     // Log error to console in development
     logger.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // Send to Sentry
-    Sentry.captureException(error, {
-      contexts: {
-        react: {
-          componentStack: errorInfo.componentStack,
+    // Send to Sentry (wrapped in try-catch in case Sentry isn't initialized yet)
+    try {
+      Sentry.captureException(error, {
+        contexts: {
+          react: {
+            componentStack: errorInfo.componentStack,
+          },
         },
-      },
-    });
+      });
+    } catch (sentryError) {
+      logger.warn('Could not send error to Sentry:', sentryError);
+    }
 
     // Call optional error handler
     this.props.onError?.(error, errorInfo);

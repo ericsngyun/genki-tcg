@@ -1,6 +1,5 @@
 import { Download, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useMemo } from 'react';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../RankedAvatar';
 
 interface Transaction {
     id: string;
@@ -53,13 +52,6 @@ export function BalanceCard({
         return { totalEarned, totalSpent, totalTransactions };
     }, [transactions]);
 
-    // Helper to get highest tier
-    const getHighestTier = (): PlayerTier => {
-        if (!user.lifetimeRatings || user.lifetimeRatings.length === 0) return 'UNRANKED';
-        const highestRating = Math.max(...user.lifetimeRatings.map(r => r.rating));
-        return mapRatingToTier(highestRating);
-    };
-
     return (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Header */}
@@ -67,13 +59,15 @@ export function BalanceCard({
                 <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-4 flex-1">
                         {/* Avatar */}
-                        <RankedAvatar
-                            user={{ name: user.name, avatarUrl: user.avatarUrl }}
-                            tier={getHighestTier()}
-                            size="lg"
-                            showTierBadge={true}
-                            className="shadow-lg"
-                        />
+                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shadow-lg">
+                            {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-xl font-bold text-muted-foreground">
+                                    {user.name.charAt(0).toUpperCase()}
+                                </span>
+                            )}
+                        </div>
 
                         {/* User Info */}
                         <div className="flex-1 min-w-0">

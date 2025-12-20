@@ -2,306 +2,274 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { DollarSign, Trophy, Users } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
+
+// --- Schema Definition ---
+
+const eventSchema = z.object({
+  name: z.string().min(3, 'Event name must be at least 3 characters').max(100, 'Event name too long'),
+  game: z.enum(['ONE_PIECE_TCG', 'AZUKI_TCG', 'RIFTBOUND']),
+  format: z.enum(['CONSTRUCTED', 'DRAFT', 'SEALED', 'PRE_RELEASE', 'SUPER_PRE_RELEASE']),
+  startAt: z.date({
+    required_error: 'Start date and time are required',
+  }).refine((date) => date > new Date(), {
+    message: 'Start date must be in the future',
+  }),
+  maxPlayers: z.string().optional().refine((val) => !val || (parseInt(val) >= 2 && parseInt(val) <= 256), {
+    message: 'Max players must be between 2 and 256',
+  }),
+  entryFeeCents: z.string().optional().refine((val) => !val || parseInt(val) >= 0, {
+    message: 'Entry fee cannot be negative',
+  }),
+  totalPrizeCredits: z.string().optional().refine((val) => !val || parseInt(val) >= 0, {
+    message: 'Prize credits cannot be negative',
+  }),
+  requiresDecklist: z.boolean().default(false),
+  description: z.string().optional(),
+});
+
+type EventFormValues = z.infer<typeof eventSchema>;
 
 export default function NewEventPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    game: 'ONE_PIECE_TCG',
-    format: 'CONSTRUCTED',
-    startAt: '',
-    maxPlayers: '',
-    entryFeeCents: '',
-    totalPrizeCredits: '',
-    requiresDecklist: false,
-    description: '',
+  const form = useForm<EventFormValues>({
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      name: '',
+      game: 'ONE_PIECE_TCG',
+      format: 'CONSTRUCTED',
+      startAt: undefined,
+      maxPlayers: '',
+      entryFeeCents: '',
+      totalPrizeCredits: '',
+      requiresDecklist: false,
+      description: '',
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const { register, handleSubmit, control, formState: { errors } } = form;
 
-    // Validation
-    if (!formData.name.trim()) {
-      setError('Event name is required');
-      return;
-    }
-
-    if (formData.name.length > 100) {
-      setError('Event name must be 100 characters or less');
-      return;
-    }
-
-    if (!formData.startAt) {
-      setError('Start date/time is required');
-      return;
-    }
-
-    const startDate = new Date(formData.startAt);
-    const now = new Date();
-    if (startDate <= now) {
-      setError('Start date must be in the future');
-      return;
-    }
-
-    const maxPlayers = formData.maxPlayers ? parseInt(formData.maxPlayers) : undefined;
-    if (maxPlayers !== undefined && (maxPlayers < 2 || maxPlayers > 256)) {
-      setError('Max players must be between 2 and 256');
-      return;
-    }
-
-    const entryFee = formData.entryFeeCents ? parseInt(formData.entryFeeCents) : undefined;
-    if (entryFee !== undefined && entryFee < 0) {
-      setError('Entry fee cannot be negative');
-      return;
-    }
-
-    const prizeCredits = formData.totalPrizeCredits ? parseInt(formData.totalPrizeCredits) : undefined;
-    if (prizeCredits !== undefined && prizeCredits < 0) {
-      setError('Prize credits cannot be negative');
-      return;
-    }
-
-    setLoading(true);
-
+  const onSubmit = async (data: EventFormValues) => {
+    setIsSubmitting(true);
     try {
       const payload = {
-        ...formData,
-        startAt: startDate,
-        maxPlayers,
-        entryFeeCents: entryFee,
-        totalPrizeCredits: prizeCredits,
+        ...data,
+        startAt: data.startAt, // Already a Date object
+        maxPlayers: data.maxPlayers ? parseInt(data.maxPlayers) : undefined,
+        entryFeeCents: data.entryFeeCents ? parseInt(data.entryFeeCents) : undefined,
+        totalPrizeCredits: data.totalPrizeCredits ? parseInt(data.totalPrizeCredits) : undefined,
       };
 
       const event = await api.createEvent(payload);
+      toast.success('Event created successfully');
       router.push(`/dashboard/events/${event.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create event');
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to create event');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Create Event</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Create Event</h1>
         <p className="text-muted-foreground mt-2">
-          Set up a new tournament for your store
+          Schedule and configure a new tournament for your community.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-card rounded-lg border border-border p-8">
-        <div className="space-y-6">
-          {/* Event Name */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-2">
-              Event Name *
-            </label>
-            <input
-              id="name"
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              placeholder="Friday Night OPTCG"
-            />
-          </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
-          {/* Game and Format */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="game" className="block text-sm font-medium text-muted-foreground mb-2">
-                Game *
-              </label>
-              <select
-                id="game"
-                required
-                value={formData.game}
-                onChange={(e) =>
-                  setFormData({ ...formData, game: e.target.value })
-                }
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              >
-                <option value="ONE_PIECE_TCG">One Piece TCG</option>
-                <option value="AZUKI_TCG">Azuki TCG</option>
-                <option value="RIFTBOUND">Riftbound</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="format" className="block text-sm font-medium text-muted-foreground mb-2">
-                Format *
-              </label>
-              <select
-                id="format"
-                required
-                value={formData.format}
-                onChange={(e) =>
-                  setFormData({ ...formData, format: e.target.value })
-                }
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              >
-                <option value="CONSTRUCTED">Constructed</option>
-                <option value="DRAFT">Draft</option>
-                <option value="SEALED">Sealed</option>
-                <option value="PRE_RELEASE">Pre-Release</option>
-                <option value="SUPER_PRE_RELEASE">Super Pre-Release</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Start Date/Time */}
-          <div>
-            <label htmlFor="startAt" className="block text-sm font-medium text-muted-foreground mb-2">
-              Start Date & Time *
-            </label>
-            <input
-              id="startAt"
-              type="datetime-local"
-              required
-              value={formData.startAt}
-              onChange={(e) =>
-                setFormData({ ...formData, startAt: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-            />
-          </div>
-
-          {/* Max Players and Entry Fee */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="maxPlayers" className="block text-sm font-medium text-muted-foreground mb-2">
-                Max Players
-              </label>
-              <input
-                id="maxPlayers"
-                type="number"
-                min="2"
-                value={formData.maxPlayers}
-                onChange={(e) =>
-                  setFormData({ ...formData, maxPlayers: e.target.value })
-                }
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                placeholder="32"
+        {/* Basic Info Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Event Details</CardTitle>
+            <CardDescription>Basic information about the tournament.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Event Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="name"
+                placeholder="e.g. Weekly Friday Night Locals"
+                {...register('name')}
+                className={errors.name ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Leave empty for unlimited
-              </p>
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
 
-            <div>
-              <label htmlFor="entryFeeCents" className="block text-sm font-medium text-muted-foreground mb-2">
-                Entry Fee (cents)
-              </label>
-              <input
-                id="entryFeeCents"
-                type="number"
-                min="0"
-                value={formData.entryFeeCents}
-                onChange={(e) =>
-                  setFormData({ ...formData, entryFeeCents: e.target.value })
-                }
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                placeholder="500"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="game">Game System</Label>
+                <Select id="game" {...register('game')}>
+                  <option value="ONE_PIECE_TCG">One Piece TCG</option>
+                  <option value="AZUKI_TCG">Azuki TCG</option>
+                  <option value="RIFTBOUND">Riftbound</option>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="format">Format</Label>
+                <Select id="format" {...register('format')}>
+                  <option value="CONSTRUCTED">Constructed</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="SEALED">Sealed</option>
+                  <option value="PRE_RELEASE">Pre-Release</option>
+                  <option value="SUPER_PRE_RELEASE">Super Pre-Release</option>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Enter event details, rules, and any other important information..."
+                className="h-32"
+                {...register('description')}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Example: 500 = $5.00
-              </p>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Prize Credits */}
-          <div>
-            <label htmlFor="totalPrizeCredits" className="block text-sm font-medium text-muted-foreground mb-2">
-              Total Prize Credits
-            </label>
-            <input
-              id="totalPrizeCredits"
-              type="number"
-              min="0"
-              value={formData.totalPrizeCredits}
-              onChange={(e) =>
-                setFormData({ ...formData, totalPrizeCredits: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              placeholder="100"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Store credits to distribute to top players after tournament
-            </p>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-2">
-              Description
-            </label>
-            <textarea
-              id="description"
-              rows={4}
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              placeholder="Weekly Friday night tournament for One Piece TCG..."
-            />
-          </div>
-
-          {/* Decklist Requirement */}
-          <div className="flex items-center">
-            <input
-              id="requiresDecklist"
-              type="checkbox"
-              checked={formData.requiresDecklist}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  requiresDecklist: e.target.checked,
-                })
-              }
-              className="h-5 w-5 text-primary border-border rounded focus:ring-primary"
-            />
-            <label
-              htmlFor="requiresDecklist"
-              className="ml-3 text-sm text-muted-foreground"
-            >
-              Require decklist submission
-            </label>
-          </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {error}
+        {/* Schedule & Capacity Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedule & Capacity</CardTitle>
+            <CardDescription>When is it happening and who can join?</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="startAt">Start Date & Time <span className="text-destructive">*</span></Label>
+              <Controller
+                name="startAt"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Pick a date and time"
+                    error={!!errors.startAt}
+                  />
+                )}
+              />
+              {errors.startAt && <p className="text-sm text-destructive">{errors.startAt.message}</p>}
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex space-x-4 pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating...' : 'Create Event'}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3 border border-border rounded-lg font-medium text-muted-foreground hover:bg-muted/50 transition"
-            >
-              Cancel
-            </button>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxPlayers">Max Players</Label>
+              <div className="relative">
+                <Input
+                  id="maxPlayers"
+                  type="number"
+                  placeholder="32"
+                  {...register('maxPlayers')}
+                  className="pl-10"
+                />
+                <Users className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">Leave empty for unlimited cap.</p>
+              {errors.maxPlayers && <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Financials Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Entry & Prizes</CardTitle>
+            <CardDescription>Set the stakes for the tournament.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="entryFeeCents">Entry Fee (Cents)</Label>
+              <div className="relative">
+                <Input
+                  id="entryFeeCents"
+                  type="number"
+                  placeholder="500"
+                  {...register('entryFeeCents')}
+                  className="pl-10"
+                />
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">500 cents = $5.00</p>
+              {errors.entryFeeCents && <p className="text-sm text-destructive">{errors.entryFeeCents.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="totalPrizeCredits">Total Prize Pool (Credits)</Label>
+              <div className="relative">
+                <Input
+                  id="totalPrizeCredits"
+                  type="number"
+                  placeholder="1000"
+                  {...register('totalPrizeCredits')}
+                  className="pl-10"
+                />
+                <Trophy className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">Store credits distributed independently of entry fees.</p>
+              {errors.totalPrizeCredits && <p className="text-sm text-destructive">{errors.totalPrizeCredits.message}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Rules Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Rules & Regulations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2 rounded-md border p-4 bg-muted/20">
+              <input
+                id="requiresDecklist"
+                type="checkbox"
+                {...register('requiresDecklist')}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="requiresDecklist" className="text-base font-medium">Require Decklist Submission</Label>
+                <p className="text-sm text-muted-foreground">
+                  Players must submit a valid decklist before checking in.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center gap-4 justify-end">
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
+            {isSubmitting ? (
+              <>
+                <span className="animate-spin mr-2">•</span> Creating...
+              </>
+            ) : (
+              'Create Event'
+            )}
+          </Button>
         </div>
+
       </form>
     </div>
   );

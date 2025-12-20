@@ -18,7 +18,6 @@ import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
-import { RankedAvatar, mapRatingToTier, PlayerTier } from '../components/RankedAvatar';
 
 // Conditionally import reanimated for native platforms only
 let Animated: any;
@@ -45,6 +44,29 @@ const GAME_TYPES = [
   { value: 'AZUKI_TCG', label: 'Azuki' },
   { value: 'RIFTBOUND', label: 'Riftbound' },
 ];
+
+// Player Tier type
+type PlayerTier =
+  | 'SPROUT'
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED';
+
+// Map rating to tier (simplified from removed RankedAvatar component)
+function mapRatingToTier(rating: number): PlayerTier {
+  if (rating >= 2200) return 'GENKI';
+  if (rating >= 2000) return 'DIAMOND';
+  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 1600) return 'GOLD';
+  if (rating >= 1400) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
+  if (rating >= 800) return 'SPROUT';
+  return 'UNRANKED';
+}
 
 // Tier configuration with colors
 const TIER_CONFIG: Record<PlayerTier, { color: string; bg: string; icon: string }> = {
@@ -180,14 +202,11 @@ export default function LeaderboardScreen() {
           <Text style={styles.crownIcon}>{config.icon}</Text>
         )}
 
-        {/* Avatar with tier emblem */}
-        <RankedAvatar
+        {/* Avatar */}
+        <PlayerAvatar
           avatarUrl={player.avatarUrl}
           name={player.userName}
-          tier={tier}
-          size={avatarSize + 16}
-          showTierBadge={false}
-          showEmblem={true}
+          size={avatarSize}
         />
 
         {/* Player Info */}
@@ -195,13 +214,8 @@ export default function LeaderboardScreen() {
           {player.userName}
         </Text>
 
-        {/* Rating */}
-        <Text style={[styles.podiumRating, { color: tierConfig.color }]}>
-          {Math.round(player.lifetimeRating)}
-        </Text>
-
-        {/* Tier Badge */}
-        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg }]}>
+        {/* Tier Badge - Rating Number Hidden */}
+        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg, marginTop: 8 }]}>
           <Text style={[styles.podiumTierText, { color: tierConfig.color }]}>
             {tierConfig.icon} {tier}
           </Text>
@@ -246,9 +260,11 @@ export default function LeaderboardScreen() {
         </View>
 
         {/* Avatar */}
-        <View style={[styles.rankAvatarContainer, { borderColor: tierConfig.color }]}>
-          <PlayerAvatar avatarUrl={player.avatarUrl} name={player.userName} size={40} />
-        </View>
+        <PlayerAvatar
+          avatarUrl={player.avatarUrl}
+          name={player.userName}
+          size={40}
+        />
 
         {/* Player info */}
         <View style={styles.rankInfo}>
@@ -270,12 +286,11 @@ export default function LeaderboardScreen() {
           </View>
         </View>
 
-        {/* Rating */}
+        {/* Tier Icon - Rating Number Hidden */}
         <View style={styles.rankRatingContainer}>
-          <Text style={[styles.rankRating, { color: tierConfig.color }]}>
-            {Math.round(player.lifetimeRating)}
+          <Text style={[styles.rankTierIcon, { color: tierConfig.color }]}>
+            {tierConfig.icon}
           </Text>
-          <Text style={styles.rankRatingLabel}>Rating</Text>
         </View>
       </AnimatedView>
     );
@@ -619,11 +634,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  podiumRating: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
   podiumTierBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -694,14 +704,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.text.tertiary,
   },
-  rankAvatarContainer: {
-    borderRadius: 100,
-    borderWidth: 2,
-    marginLeft: 8,
-    marginRight: 12,
-  },
   rankInfo: {
     flex: 1,
+    marginLeft: 12,
     marginRight: 8,
   },
   rankName: {
@@ -729,7 +734,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
   },
   rankRatingContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+  },
+  rankTierIcon: {
+    fontSize: 24,
   },
   rankRating: {
     fontSize: 16,
