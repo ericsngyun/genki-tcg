@@ -17,17 +17,13 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.base.json ./
 
-# Copy ALL workspace package files (required for npm ci with root package-lock.json)
+# Copy workspace package files needed for backend
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/tournament-logic/package.json ./packages/tournament-logic/
 COPY apps/backend/package.json ./apps/backend/
-COPY apps/admin-web/package.json ./apps/admin-web/
-COPY apps/mobile/package.json ./apps/mobile/
-COPY apps/website/package.json ./apps/website/
 
-# Install all workspace dependencies
-# npm ci requires ALL workspace package.json files to match package-lock.json
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+# Install dependencies (use npm install since we don't have all workspace package.jsons)
+RUN npm install --legacy-peer-deps
 
 # Copy workspace source code
 COPY packages ./packages/
