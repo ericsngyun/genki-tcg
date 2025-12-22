@@ -202,23 +202,22 @@ export class RatingsService {
 
   private getScore(
     result: MatchResult,
-    playerId: string,
-    opponentId: string
+    isPlayerA: boolean
   ): number {
     switch (result) {
       case 'PLAYER_A_WIN':
-        return playerId < opponentId ? 1 : 0;
+        return isPlayerA ? 1 : 0;
       case 'PLAYER_B_WIN':
-        return playerId > opponentId ? 1 : 0;
+        return isPlayerA ? 0 : 1;
       case 'DRAW':
       case 'INTENTIONAL_DRAW':
         return 0.5;
       case 'DOUBLE_LOSS':
         return 0;
       case 'PLAYER_A_DQ':
-        return playerId < opponentId ? 0 : 1;
+        return isPlayerA ? 0 : 1;
       case 'PLAYER_B_DQ':
-        return playerId > opponentId ? 0 : 1;
+        return isPlayerA ? 1 : 0;
       default:
         return 0.5;
     }
@@ -281,6 +280,7 @@ export class RatingsService {
       opponentId: string;
       result: MatchResult;
       matchId: string;
+      isPlayerA: boolean;
     }>>();
 
     for (const round of tournament.rounds) {
@@ -295,6 +295,7 @@ export class RatingsService {
             opponentId: match.playerBId,
             result: match.result,
             matchId: match.id,
+            isPlayerA: true,
           });
         }
 
@@ -306,7 +307,43 @@ export class RatingsService {
             opponentId: match.playerAId,
             result: match.result,
             matchId: match.id,
+            isPlayerA: false,
           });
+        }
+      }
+    }
+
+    // Handle dropped players - add phantom losses for rounds they missed
+    const entries = await this.prisma.entry.findMany({
+      where: { eventId: tournamentId },
+      select: {
+        userId: true,
+        droppedAfterRound: true,
+      },
+    });
+
+    const totalRounds = tournament.rounds.length;
+    for (const entry of entries) {
+      if (entry.droppedAfterRound !== null && entry.droppedAfterRound < totalRounds) {
+        const missedRounds = totalRounds - entry.droppedAfterRound;
+
+        // Initialize player matches array if not exists
+        if (!playerMatches.has(entry.userId)) {
+          playerMatches.set(entry.userId, []);
+        }
+
+        const matches = playerMatches.get(entry.userId);
+        if (matches) {
+          // Add phantom losses for each missed round
+          for (let i = 0; i < missedRounds; i++) {
+            matches.push({
+              opponentId: 'PHANTOM_OPPONENT', // Special marker for phantom losses
+              result: 'PLAYER_B_WIN' as MatchResult, // Player loses (as player A)
+              matchId: `phantom-${entry.userId}-round-${entry.droppedAfterRound! + i + 1}`,
+              isPlayerA: true,
+            });
+          }
+          this.logger.log(`Added ${missedRounds} phantom losses for dropped player ${entry.userId}`);
         }
       }
     }
@@ -340,7 +377,7 @@ export class RatingsService {
     category: GameType,
     seasonId: string | null,
     tournamentId: string,
-    matches: Array<{ opponentId: string; result: MatchResult; matchId: string }>
+    matches: Array<{ opponentId: string; result: MatchResult; matchId: string; isPlayerA: boolean }>
   ) {
     // 1. Load Lifetime Rating
     let lifetimeRating = await this.prisma.playerCategoryLifetimeRating.findUnique({
@@ -426,14 +463,21 @@ export class RatingsService {
 
     // 4. Calculate New Lifetime Rating
     const lifetimeMatches: GlickoMatchResult[] = matches.map(m => {
-      const opp = oppLifetimeMap.get(m.opponentId) || {
-        rating: GLICKO2_DEFAULTS.initialRating,
-        ratingDeviation: GLICKO2_DEFAULTS.initialRD,
-        volatility: GLICKO2_DEFAULTS.initialVolatility,
-      };
+      // For phantom opponents (dropped player losses), use default rating
+      const opp = m.opponentId === 'PHANTOM_OPPONENT'
+        ? {
+            rating: GLICKO2_DEFAULTS.initialRating,
+            ratingDeviation: GLICKO2_DEFAULTS.initialRD,
+            volatility: GLICKO2_DEFAULTS.initialVolatility,
+          }
+        : oppLifetimeMap.get(m.opponentId) || {
+            rating: GLICKO2_DEFAULTS.initialRating,
+            ratingDeviation: GLICKO2_DEFAULTS.initialRD,
+            volatility: GLICKO2_DEFAULTS.initialVolatility,
+          };
       return {
         opponentRating: opp,
-        score: this.getScore(m.result, userId, m.opponentId) as 1 | 0 | 0.5,
+        score: this.getScore(m.result, m.isPlayerA) as 1 | 0 | 0.5,
       };
     });
 
@@ -445,14 +489,21 @@ export class RatingsService {
 
     if (seasonalRating && seasonId) {
       const seasonalMatches: GlickoMatchResult[] = matches.map(m => {
-        const opp = oppSeasonalMap.get(m.opponentId) || {
-          rating: GLICKO2_DEFAULTS.initialRating,
-          ratingDeviation: GLICKO2_DEFAULTS.initialRD,
-          volatility: GLICKO2_DEFAULTS.initialVolatility,
-        };
+        // For phantom opponents (dropped player losses), use default rating
+        const opp = m.opponentId === 'PHANTOM_OPPONENT'
+          ? {
+              rating: GLICKO2_DEFAULTS.initialRating,
+              ratingDeviation: GLICKO2_DEFAULTS.initialRD,
+              volatility: GLICKO2_DEFAULTS.initialVolatility,
+            }
+          : oppSeasonalMap.get(m.opponentId) || {
+              rating: GLICKO2_DEFAULTS.initialRating,
+              ratingDeviation: GLICKO2_DEFAULTS.initialRD,
+              volatility: GLICKO2_DEFAULTS.initialVolatility,
+            };
         return {
           opponentRating: opp,
-          score: this.getScore(m.result, userId, m.opponentId) as 1 | 0 | 0.5,
+          score: this.getScore(m.result, m.isPlayerA) as 1 | 0 | 0.5,
         };
       });
 
@@ -487,16 +538,19 @@ export class RatingsService {
         ratingDeviation: newLifetime.ratingDeviation,
         volatility: newLifetime.volatility,
         totalRatedMatches: { increment: matches.length },
-        matchWins: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 1).length },
-        matchLosses: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 0).length },
-        matchDraws: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 0.5).length },
+        matchWins: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 1).length },
+        matchLosses: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 0).length },
+        matchDraws: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 0.5).length },
         lastMatchAt: new Date(),
       },
     });
 
     // Create Lifetime History
-    // Note: We create one history entry per match
+    // Note: We create one history entry per match (skip phantom matches)
     for (const match of matches) {
+      // Skip history entries for phantom losses (no real opponent)
+      if (match.opponentId === 'PHANTOM_OPPONENT') continue;
+
       const opp = oppLifetimeMap.get(match.opponentId);
       await this.prisma.lifetimeRatingHistory.create({
         data: {
@@ -526,9 +580,9 @@ export class RatingsService {
           ratingDeviation: newSeasonal.ratingDeviation,
           volatility: newSeasonal.volatility,
           totalRatedMatches: { increment: matches.length },
-          matchWins: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 1).length },
-          matchLosses: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 0).length },
-          matchDraws: { increment: matches.filter(m => this.getScore(m.result, userId, m.opponentId) === 0.5).length },
+          matchWins: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 1).length },
+          matchLosses: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 0).length },
+          matchDraws: { increment: matches.filter(m => this.getScore(m.result, m.isPlayerA) === 0.5).length },
           lastMatchAt: new Date(),
         },
       });
@@ -727,12 +781,26 @@ export class RatingsService {
         where: { category },
       });
 
+      // Reset ratingsProcessed flag on all tournaments for this category
+      const resetTournaments = await tx.event.updateMany({
+        where: {
+          orgId,
+          game: category,
+          ratingsProcessed: true,
+        },
+        data: {
+          ratingsProcessed: false,
+          ratingsProcessedAt: null,
+        },
+      });
+
       return {
         success: true,
         deletedLifetimeRatings: deletedLifetime.count,
         deletedSeasonalRatings: deletedSeasonal.count,
         deletedHistoryEntries: deletedHistory.count,
         deletedUpdates: deletedUpdates.count,
+        resetTournaments: resetTournaments.count,
       };
     });
   }
