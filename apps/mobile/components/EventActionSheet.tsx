@@ -4,6 +4,7 @@
  * Shows different options based on tournament status:
  * - SCHEDULED (Upcoming): Apply, Check In, View Details
  * - IN_PROGRESS (Live): Check Pairings, Standings, Drop, View Active Match
+ * - COMPLETED (Past): Final Standings, Match History, My Matches
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -159,6 +160,7 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
 
   const isUpcoming = event.status === 'SCHEDULED' || event.status === 'REGISTRATION_CLOSED';
   const isLive = event.status === 'IN_PROGRESS';
+  const isCompleted = event.status === 'COMPLETED';
 
   const handleHaptic = () => {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
@@ -390,6 +392,35 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
                 )}
               </>
             )}
+
+            {/* COMPLETED EVENT ACTIONS */}
+            {isCompleted && (
+              <>
+                <ActionButton
+                  icon="trophy"
+                  label="Final Standings"
+                  description="View final tournament rankings"
+                  onPress={() => handleAction(() => onViewStandings(event.id))}
+                  variant="primary"
+                />
+
+                <ActionButton
+                  icon="list"
+                  label="Match History"
+                  description="View all rounds and match results"
+                  onPress={() => handleAction(() => onViewPairings(event.id))}
+                />
+
+                {isRegistered && (
+                  <ActionButton
+                    icon="person"
+                    label="My Matches"
+                    description="View your matchups and results"
+                    onPress={() => handleAction(() => onViewPairings(event.id))}
+                  />
+                )}
+              </>
+            )}
           </View>
 
           {/* Cancel Button */}
@@ -505,6 +536,8 @@ function getStatusBadgeStyle(status: string) {
       return { backgroundColor: theme.colors.success.lightest };
     case 'REGISTRATION_CLOSED':
       return { backgroundColor: theme.colors.warning.lightest };
+    case 'COMPLETED':
+      return { backgroundColor: theme.colors.neutral[200] };
     default:
       return { backgroundColor: theme.colors.neutral[100] };
   }
@@ -518,6 +551,8 @@ function getStatusTextStyle(status: string) {
       return { color: theme.colors.success.dark };
     case 'REGISTRATION_CLOSED':
       return { color: theme.colors.warning.dark };
+    case 'COMPLETED':
+      return { color: theme.colors.neutral[700] };
     default:
       return { color: theme.colors.neutral[600] };
   }

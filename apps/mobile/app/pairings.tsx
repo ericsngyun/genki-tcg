@@ -43,6 +43,7 @@ interface Event {
   id: string;
   name: string;
   game: string;
+  status: string;
   rounds: Round[];
 }
 
@@ -288,8 +289,8 @@ export default function PairingsScreen() {
                 </Text>
               </View>
 
-              {/* Report Result Button */}
-              {!myPairing.result && myPairing.playerB && (
+              {/* Report Result Button - only show for in-progress tournaments */}
+              {!myPairing.result && myPairing.playerB && event.status === 'IN_PROGRESS' && (
                 <TouchableOpacity
                   style={styles.reportResultButton}
                   onPress={handleReportResult}
