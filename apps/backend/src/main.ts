@@ -59,6 +59,10 @@ async function bootstrap() {
       // Allow requests with no origin (mobile apps, server-to-server)
       if (!origin) return callback(null, true);
 
+      // Allow 'null' origin (local file:// requests from admin tools)
+      // This is safe because we use JWT authentication
+      if (origin === 'null') return callback(null, true);
+
       // Check if origin is in allowed list or matches a pattern
       const isAllowed = allowedOrigins.some(allowed => {
         // Exact match
