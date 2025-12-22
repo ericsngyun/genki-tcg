@@ -186,12 +186,16 @@ export class MatchesService {
     }
 
     // Update match result with override tracking
+    // Set both reportedBy and confirmedBy to ensure consistency with round completion checks
     const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
       data: {
         result,
         gamesWonA,
         gamesWonB,
+        reportedBy: overriddenBy,
+        reportedAt: new Date(),
+        confirmedBy: overriddenBy,
         overriddenBy,
         overriddenAt: new Date(),
       },

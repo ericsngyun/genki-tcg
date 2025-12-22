@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import type { EventStatus } from '@prisma/client';
 import { NotificationType, NotificationPriority } from '@prisma/client';
 import { CreateEventDto, UpdateEventDto } from './dto';
@@ -12,6 +13,7 @@ export class EventsService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private realtimeGateway: RealtimeGateway,
   ) { }
 
   async createEvent(orgId: string, createdBy: string, dto: CreateEventDto) {
@@ -400,7 +402,25 @@ export class EventsService {
     const entry = await this.prisma.entry.findUnique({
       where: { id: entryId },
       include: {
-        event: true,
+        event: {
+          include: {
+            rounds: {
+              where: {
+                status: 'ACTIVE',
+              },
+              include: {
+                matches: {
+                  where: {
+                    OR: [
+                      { playerAId: '' }, // Will be replaced with actual userId
+                      { playerBId: '' }, // Will be replaced with actual userId
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
         user: {
           select: {
             name: true,
@@ -416,6 +436,41 @@ export class EventsService {
     // Validate organization
     if (entry.event.orgId !== userOrgId) {
       throw new ForbiddenException('Access denied');
+    }
+
+    // Find any active matches involving this player
+    const activeRound = entry.event.rounds.find(r => r.status === 'ACTIVE');
+    if (activeRound) {
+      const playerMatches = await this.prisma.match.findMany({
+        where: {
+          roundId: activeRound.id,
+          OR: [
+            { playerAId: entry.userId },
+            { playerBId: entry.userId },
+          ],
+          result: null, // Only unreported matches
+        },
+      });
+
+      // Auto-forfeit unreported matches for the dropped player
+      for (const match of playerMatches) {
+        const isPlayerA = match.playerAId === entry.userId;
+        const result = isPlayerA ? 'PLAYER_B_DQ' : 'PLAYER_A_DQ';
+
+        await this.prisma.match.update({
+          where: { id: match.id },
+          data: {
+            result,
+            gamesWonA: isPlayerA ? 0 : 2,
+            gamesWonB: isPlayerA ? 2 : 0,
+            reportedBy: 'SYSTEM_DROP',
+            reportedAt: new Date(),
+            confirmedBy: 'SYSTEM_DROP',
+          },
+        });
+
+        this.logger.log(`Auto-forfeited match ${match.id} due to player drop`);
+      }
     }
 
     const updatedEntry = await this.prisma.entry.update({
@@ -434,6 +489,11 @@ export class EventsService {
       body: `${entry.user.name} dropped from ${entry.event.name}`,
       eventId: entry.event.id,
     }).catch(err => this.logger.error('Failed to send player dropped notification:', err));
+
+    // Emit standings updated since forfeited matches affect standings
+    if (activeRound) {
+      this.realtimeGateway.emitStandingsUpdated(entry.event.id);
+    }
 
     return updatedEntry;
   }
@@ -896,6 +956,50 @@ export class EventsService {
     }
 
     // IN_PROGRESS or other events: Mark as dropped (existing behavior)
+    // Find any active matches involving this player and auto-forfeit them
+    const activeRound = await this.prisma.round.findFirst({
+      where: {
+        eventId,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (activeRound) {
+      const playerMatches = await this.prisma.match.findMany({
+        where: {
+          roundId: activeRound.id,
+          OR: [
+            { playerAId: userId },
+            { playerBId: userId },
+          ],
+          result: null, // Only unreported matches
+        },
+      });
+
+      // Auto-forfeit unreported matches for the dropped player
+      for (const match of playerMatches) {
+        const isPlayerA = match.playerAId === userId;
+        const result = isPlayerA ? 'PLAYER_B_DQ' : 'PLAYER_A_DQ';
+
+        await this.prisma.match.update({
+          where: { id: match.id },
+          data: {
+            result,
+            gamesWonA: isPlayerA ? 0 : 2,
+            gamesWonB: isPlayerA ? 2 : 0,
+            reportedBy: 'SYSTEM_DROP',
+            reportedAt: new Date(),
+            confirmedBy: 'SYSTEM_DROP',
+          },
+        });
+
+        this.logger.log(`Auto-forfeited match ${match.id} due to player self-drop`);
+      }
+
+      // Emit standings updated since forfeited matches affect standings
+      this.realtimeGateway.emitStandingsUpdated(eventId);
+    }
+
     const updatedEntry = await this.prisma.entry.update({
       where: { id: entry.id },
       data: {

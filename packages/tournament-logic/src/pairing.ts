@@ -176,22 +176,24 @@ function pairPlayersByBuckets(
       if (pair.playerBId) paired.add(pair.playerBId);
     }
 
-    // If odd player remains, try to float down to next bucket
+    // If odd player remains, cascade float down through lower buckets
     const remainingInBucket = unpaired.filter((p) => !paired.has(p.userId));
     if (remainingInBucket.length === 1) {
       const floater = remainingInBucket[0];
 
-      // Try to find opponent in next lower bucket
-      const nextBucketIdx = pointValues.indexOf(points) + 1;
-      if (nextBucketIdx < pointValues.length) {
-        const nextPoints = pointValues[nextBucketIdx];
-        const nextBucket = buckets.get(nextPoints)!;
-        const nextUnpaired = nextBucket.filter((p) => !paired.has(p.userId));
+      // Try to find opponent in next lower buckets (cascade through multiple buckets if needed)
+      const currentBucketIdx = pointValues.indexOf(points);
+      let foundPair = false;
 
-        if (nextUnpaired.length > 0) {
+      for (let i = currentBucketIdx + 1; i < pointValues.length && !foundPair; i++) {
+        const lowerPoints = pointValues[i];
+        const lowerBucket = buckets.get(lowerPoints)!;
+        const lowerUnpaired = lowerBucket.filter((p) => !paired.has(p.userId));
+
+        if (lowerUnpaired.length > 0) {
           const opponent = findBestOpponent(
             floater,
-            nextUnpaired,
+            lowerUnpaired,
             avoidRematches
           );
 
@@ -203,6 +205,7 @@ function pairPlayersByBuckets(
             });
             paired.add(floater.userId);
             paired.add(opponent.userId);
+            foundPair = true;
           }
         }
       }

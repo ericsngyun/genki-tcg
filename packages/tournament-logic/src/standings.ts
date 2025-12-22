@@ -213,6 +213,8 @@ export function calculateStandings(
 
 /**
  * Calculate Opponent Match Win % with 33.33% floor
+ * Dropped players are counted at the minimum floor (33.33%) regardless of their record
+ * to negatively impact the OMW of players who faced them
  */
 function calculateOMW(
   player: PlayerStats,
@@ -225,6 +227,13 @@ function calculateOMW(
   for (const opponentId of player.opponentIds) {
     const opponent = allPlayers.get(opponentId);
     if (!opponent) continue;
+
+    // Dropped players always count at minimum floor for OMW purposes
+    // This negatively impacts players who faced opponents that later dropped
+    if (opponent.isDropped) {
+      totalOpponentWinRate += 0.3333;
+      continue;
+    }
 
     const totalMatches =
       opponent.matchWins + opponent.matchLosses + opponent.matchDraws;
