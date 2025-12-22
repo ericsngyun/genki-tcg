@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { RatingsService } from './ratings.service';
 import { SeasonsService } from './seasons.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -8,13 +8,15 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import type { GameType } from '@prisma/client';
 import { SeasonStatus } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('ratings')
 @UseGuards(JwtAuthGuard)
 export class RatingsController {
   constructor(
     private ratingsService: RatingsService,
-    private seasonsService: SeasonsService
+    private seasonsService: SeasonsService,
+    private prisma: PrismaService
   ) { }
 
   // ===========================================================================
@@ -27,6 +29,112 @@ export class RatingsController {
   async processTournamentRatings(@Param('id') tournamentId: string) {
     await this.ratingsService.processTournamentRatings(tournamentId);
     return { success: true };
+  }
+
+  /**
+   * Admin endpoint: Process ratings for the most recent unprocessed tournament of a specific game
+   * Usage: POST /ratings/process-latest/:gameType
+   * Example: POST /ratings/process-latest/AZUKI_TCG
+   */
+  @Post('process-latest/:gameType')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async processLatestUnprocessed(
+    @Param('gameType') gameType: GameType,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    // Find the most recent unprocessed completed tournament for this game
+    const tournament = await this.prisma.event.findFirst({
+      where: {
+        game: gameType,
+        status: 'COMPLETED',
+        ratingsProcessed: false,
+      },
+      include: {
+        _count: {
+          select: { entries: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!tournament) {
+      throw new BadRequestException(
+        `No unprocessed completed ${gameType} tournaments found`
+      );
+    }
+
+    // Process the ratings
+    await this.ratingsService.processTournamentRatings(tournament.id);
+
+    // Get some sample updated ratings to show
+    const ratingUpdates = await this.prisma.tournamentRatingUpdate.findMany({
+      where: { tournamentId: tournament.id },
+      orderBy: { seasonalRatingAfter: 'desc' },
+      take: 10,
+    });
+
+    // Get user names for the top rating changes
+    const userIds = ratingUpdates.map(u => u.userId);
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    const userMap = new Map(users.map(u => [u.id, u.name]));
+
+    return {
+      success: true,
+      tournament: {
+        id: tournament.id,
+        name: tournament.name,
+        game: tournament.game,
+        playerCount: tournament._count.entries,
+      },
+      topRatingChanges: ratingUpdates.map((update) => ({
+        playerName: userMap.get(update.userId) || 'Unknown',
+        ratingBefore: Math.round(update.seasonalRatingBefore),
+        ratingAfter: Math.round(update.seasonalRatingAfter),
+        change: Math.round(update.seasonalRatingDelta),
+        tierBefore: update.tierBefore,
+        tierAfter: update.tierAfter,
+      })),
+      totalPlayersProcessed: ratingUpdates.length,
+    };
+  }
+
+  /**
+   * Admin endpoint: List all tournaments that need rating processing
+   * Usage: GET /ratings/unprocessed-tournaments
+   */
+  @Get('unprocessed-tournaments')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async getUnprocessedTournaments(@CurrentUser() user: AuthenticatedUser) {
+    const tournaments = await this.prisma.event.findMany({
+      where: {
+        orgId: user.orgId,
+        status: 'COMPLETED',
+        ratingsProcessed: false,
+      },
+      include: {
+        _count: {
+          select: { entries: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    return {
+      count: tournaments.length,
+      tournaments: tournaments.map((t) => ({
+        id: t.id,
+        name: t.name,
+        game: t.game,
+        playerCount: t._count.entries,
+        completedAt: t.endAt,
+      })),
+    };
   }
 
   // ===========================================================================
