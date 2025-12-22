@@ -151,16 +151,6 @@ export function areAllMatchesReported(
 }
 
 /**
- * Check if a round can be completed
- * A round can be completed when all matches have results
- */
-export function canCompleteRound(
-  matches: Array<{ result: string | null; playerBId: string | null }>
-): boolean {
-  return areAllMatchesReported(matches);
-}
-
-/**
  * Get the minimum number of Swiss rounds needed to guarantee
  * mathematical possibility of a unique winner
  */

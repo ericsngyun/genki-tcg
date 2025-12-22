@@ -2,7 +2,6 @@ import {
   calculateRecommendedRounds,
   getTournamentStatus,
   areAllMatchesReported,
-  canCompleteRound,
   getPlayersInContention,
   canPlayerStillWin,
   TournamentState,
@@ -211,24 +210,6 @@ describe('areAllMatchesReported', () => {
       { result: null, playerBId: null }, // Bye
     ];
     expect(areAllMatchesReported(matches)).toBe(true);
-  });
-});
-
-describe('canCompleteRound', () => {
-  it('should return true when all matches reported', () => {
-    const matches = [
-      { result: 'PLAYER_A_WIN', playerBId: 'p2' },
-      { result: 'DRAW', playerBId: 'p4' },
-    ];
-    expect(canCompleteRound(matches)).toBe(true);
-  });
-
-  it('should return false when matches pending', () => {
-    const matches = [
-      { result: 'PLAYER_A_WIN', playerBId: 'p2' },
-      { result: null, playerBId: 'p4' },
-    ];
-    expect(canCompleteRound(matches)).toBe(false);
   });
 });
 
