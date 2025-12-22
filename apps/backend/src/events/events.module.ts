@@ -3,9 +3,10 @@ import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
 import { EventsScheduler } from './events.scheduler';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, RealtimeModule],
   controllers: [EventsController],
   providers: [EventsService, EventsScheduler],
   exports: [EventsService],
