@@ -63,6 +63,13 @@ export default function DashboardLayout({
                   Players
                 </Link>
                 <Link
+                  href="/dashboard/ratings"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
+                  aria-label="Ratings management"
+                >
+                  Ratings
+                </Link>
+                <Link
                   href="/dashboard/credits"
                   className="text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background font-medium"
                   aria-label="Credits management"
