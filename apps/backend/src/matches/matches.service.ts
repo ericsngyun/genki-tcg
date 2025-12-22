@@ -49,6 +49,7 @@ export class MatchesService {
     }
 
     // Update match result
+    // Staff reports are auto-confirmed (don't need opponent confirmation)
     const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
       data: {
@@ -57,6 +58,7 @@ export class MatchesService {
         gamesWonB,
         reportedBy,
         reportedAt: new Date(),
+        confirmedBy: reportedBy, // Auto-confirm staff reports
       },
     });
 
