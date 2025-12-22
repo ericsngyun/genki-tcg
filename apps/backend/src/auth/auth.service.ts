@@ -171,7 +171,8 @@ export class AuthService {
   private generateToken(
     user: User,
     membership: OrgMembership,
-    orgId: string
+    orgId: string,
+    isOAuthLogin: boolean = false
   ): string {
     const payload: JwtPayload = {
       sub: user.id,
@@ -180,9 +181,11 @@ export class AuthService {
       role: membership.role,
     };
 
-    // Role-based token expiry for enhanced security
-    // Admins get shorter sessions, players get longer sessions
-    const expiresIn = this.getTokenExpiryByRole(membership.role);
+    // OAuth logins (Discord) get extended sessions for better UX
+    // Users stay logged in until they explicitly log out
+    const expiresIn = isOAuthLogin
+      ? '365d' // 1 year for OAuth logins (Discord)
+      : this.getTokenExpiryByRole(membership.role);
 
     return this.jwtService.sign(payload, { expiresIn });
   }
@@ -254,13 +257,16 @@ export class AuthService {
     deviceType?: string;
     ipAddress?: string;
     userAgent?: string;
+    isOAuthLogin?: boolean;
   }): Promise<string> {
     // Generate a secure random token
     const token = crypto.randomBytes(64).toString('hex');
 
-    // Refresh tokens expire in 90 days
+    // OAuth logins get extended refresh token expiration (2 years vs 90 days)
+    // This keeps users logged in until they explicitly log out
+    const daysToExpire = deviceInfo?.isOAuthLogin ? 730 : 90;
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 90);
+    expiresAt.setDate(expiresAt.getDate() + daysToExpire);
 
     // Store refresh token in database
     await this.prisma.refreshToken.create({
@@ -880,11 +886,12 @@ export class AuthService {
       throw new UnauthorizedException('No organization membership');
     }
 
-    // Generate tokens
-    const accessToken = this.generateToken(user, membership, membership.orgId);
+    // Generate tokens with extended expiration for OAuth logins
+    const accessToken = this.generateToken(user, membership, membership.orgId, true);
     const refreshToken = await this.generateRefreshToken(user.id, {
       deviceType: 'mobile',
       deviceName: 'Discord OAuth',
+      isOAuthLogin: true, // Extended 2-year refresh token
     });
 
     return {
