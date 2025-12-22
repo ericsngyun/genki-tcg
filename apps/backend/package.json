@@ -22,7 +22,11 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "db:reset": "prisma migrate reset",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "tournament:complete": "ts-node -r tsconfig-paths/register complete-tournament.ts",
+    "tournament:force-complete-round": "ts-node -r tsconfig-paths/register force-complete-round.ts",
+    "tournament:sync-standings": "ts-node -r tsconfig-paths/register sync-standings.ts",
+    "ratings:process-azuki": "ts-node -r tsconfig-paths/register process-azuki-ratings.ts"
   },
   "dependencies": {
     "@genki-tcg/shared-types": "*",
