@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Tournament Ratings - Admin Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .rating-change {
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .player-name {
+            font-weight: 600;
+        }
+        .rating-info {
+            font-size: 14px;
+            color: #666;
+        }
+        .change-positive {
+            color: #28a745;
+            font-weight: 600;
+        }
+        .change-negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Process Tournament Ratings</h1>
+        <p class="subtitle">Admin tool to process player ratings for completed tournaments</p>
+
+        <div class="input-group">
+            <label for="backendUrl">Backend URL</label>
+            <input type="text" id="backendUrl" placeholder="https://your-backend.railway.app" value="">
+            <div class="help-text">Your Railway backend URL (without trailing slash)</div>
+        </div>
+
+        <div class="input-group">
+            <label for="jwtToken">Admin JWT Token</label>
+            <input type="password" id="jwtToken" placeholder="Paste your JWT token here">
+            <div class="help-text">Get this from your browser's localStorage after logging into admin panel</div>
+        </div>
+
+        <div class="input-group">
+            <label for="gameType">Game Type</label>
+            <select id="gameType">
+                <option value="AZUKI_TCG">Azuki TCG</option>
+                <option value="ONE_PIECE_TCG">One Piece TCG</option>
+                <option value="RIFTBOUND">Riftbound</option>
+            </select>
+        </div>
+
+        <button id="checkBtn" onclick="checkUnprocessed()">1️⃣ Check Unprocessed Tournaments</button>
+        <button id="processBtn" onclick="processRatings()">2️⃣ Process Latest Tournament</button>
+
+        <div id="status" class="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        // Auto-fill backend URL if on same domain
+        const backendUrlInput = document.getElementById('backendUrl');
+        if (window.location.hostname.includes('railway.app')) {
+            backendUrlInput.value = window.location.origin.replace('-admin', '');
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+        }
+
+        function getConfig() {
+            const backendUrl = document.getElementById('backendUrl').value.trim();
+            const jwtToken = document.getElementById('jwtToken').value.trim();
+
+            if (!backendUrl) {
+                showStatus('Please enter your backend URL', 'error');
+                return null;
+            }
+
+            if (!jwtToken) {
+                showStatus('Please enter your JWT token', 'error');
+                return null;
+            }
+
+            return { backendUrl, jwtToken };
+        }
+
+        async function checkUnprocessed() {
+            const config = getConfig();
+            if (!config) return;
+
+            showStatus('🔍 Checking for unprocessed tournaments...', 'loading');
+            document.getElementById('results').innerHTML = '';
+
+            try {
+                const response = await fetch(`${config.backendUrl}/ratings/unprocessed-tournaments`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.jwtToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+
+                const data = await response.json();
+
+                if (data.count === 0) {
+                    showStatus('✅ No unprocessed tournaments found!', 'success');
+                    return;
+                }
+
+                showStatus(`Found ${data.count} tournament(s) that need rating processing`, 'success');
+
+                const resultsHtml = data.tournaments.map(t => `
+                    <div class="rating-change">
+                        <div>
+                            <div class="player-name">${t.name}</div>
+                            <div class="rating-info">${t.game} • ${t.playerCount} players • ${new Date(t.completedAt).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('results').innerHTML = `
+                    <h3>Tournaments Pending Rating Processing:</h3>
+                    ${resultsHtml}
+                `;
+
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function processRatings() {
+            const config = getConfig();
+            if (!config) return;
+
+            const gameType = document.getElementById('gameType').value;
+
+            if (!confirm(`Process ratings for the latest ${gameType} tournament?`)) {
+                return;
+            }
+
+            showStatus('🎲 Processing tournament ratings...', 'loading');
+            document.getElementById('results').innerHTML = '';
+
+            try {
+                const response = await fetch(`${config.backendUrl}/ratings/process-latest/${gameType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.jwtToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                showStatus(`✅ Successfully processed ${data.tournament.name}! (${data.totalPlayersProcessed} players)`, 'success');
+
+                const resultsHtml = data.topRatingChanges.map(change => {
+                    const changeClass = change.change >= 0 ? 'change-positive' : 'change-negative';
+                    const changeText = change.change >= 0 ? `+${change.change}` : change.change;
+
+                    return `
+                        <div class="rating-change">
+                            <div>
+                                <div class="player-name">${change.playerName}</div>
+                                <div class="rating-info">
+                                    ${change.ratingBefore} → ${change.ratingAfter}
+                                    <span class="${changeClass}">${changeText}</span>
+                                    [${change.tierBefore} → ${change.tierAfter}]
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('results').innerHTML = `
+                    <h3>Top Rating Changes:</h3>
+                    ${resultsHtml}
+                    <p style="margin-top: 20px; color: #666; text-align: center;">
+                        🏆 All ${data.totalPlayersProcessed} players' ratings have been updated!
+                    </p>
+                `;
+
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
