@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload.type';
 import type { EventStatus } from '@prisma/client';
 import { EventsService } from './events.service';
@@ -131,5 +131,12 @@ export class EventsController {
   @Roles('OWNER', 'STAFF')
   async finalizePlacements(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string) {
     return this.eventsService.finalizePlacements(eventId, user.id, user.orgId);
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  async deleteEvent(@CurrentUser() user: AuthenticatedUser, @Param('id') eventId: string) {
+    return this.eventsService.deleteEvent(eventId, user.orgId);
   }
 }

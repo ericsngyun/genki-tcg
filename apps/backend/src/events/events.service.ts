@@ -1087,6 +1087,74 @@ export class EventsService {
   }
 
   /**
+   * Delete an event and all related data (OWNER only)
+   * Use with caution - this permanently removes all tournament data
+   */
+  async deleteEvent(eventId: string, userOrgId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        _count: {
+          select: { entries: true },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    if (event.orgId !== userOrgId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    // Delete in transaction to ensure data consistency
+    await this.prisma.$transaction(async (tx) => {
+      // Delete rating history entries that reference matches from this event
+      await tx.lifetimeRatingHistory.deleteMany({
+        where: { eventId },
+      });
+
+      // Delete tournament rating updates
+      await tx.tournamentRatingUpdate.deleteMany({
+        where: { tournamentId: eventId },
+      });
+
+      // Delete matches (through rounds)
+      const rounds = await tx.round.findMany({
+        where: { eventId },
+        select: { id: true },
+      });
+      const roundIds = rounds.map(r => r.id);
+
+      if (roundIds.length > 0) {
+        await tx.match.deleteMany({
+          where: { roundId: { in: roundIds } },
+        });
+      }
+
+      // Delete rounds
+      await tx.round.deleteMany({
+        where: { eventId },
+      });
+
+      // Delete entries
+      await tx.entry.deleteMany({
+        where: { eventId },
+      });
+
+      // Delete the event
+      await tx.event.delete({
+        where: { id: eventId },
+      });
+    });
+
+    this.logger.log(`Event ${event.name} (${eventId}) deleted by owner`);
+
+    return { success: true, deletedEvent: event.name };
+  }
+
+  /**
    * Auto-cancel scheduled events that are past their start time
    * Called by scheduled task (daily at 2 AM)
    */
