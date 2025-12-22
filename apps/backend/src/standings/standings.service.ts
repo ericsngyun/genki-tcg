@@ -95,11 +95,25 @@ export class StandingsService {
         .map((e: { userId: string }) => e.userId)
     );
 
+    // Build map of dropped players to the round they dropped after
+    const droppedAfterRound = new Map<string, number>(
+      event.entries
+        .filter((e: { droppedAt: Date | null; droppedAfterRound: number | null }) => e.droppedAt && e.droppedAfterRound !== null)
+        .map((e: { userId: string; droppedAfterRound: number | null }) => [e.userId, e.droppedAfterRound || 0])
+    );
+
+    // Calculate total completed rounds (rounds with status COMPLETED)
+    const totalCompletedRounds = event.rounds.filter(
+      (r: { status: string }) => r.status === 'COMPLETED'
+    ).length;
+
     const standings = calculateStandings({
       playerIds,
       playerNames,
       matches,
       droppedPlayers,
+      totalCompletedRounds,
+      droppedAfterRound,
     });
 
     // Enrich standings with avatar URLs

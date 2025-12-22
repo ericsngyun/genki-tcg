@@ -32,6 +32,10 @@ export interface StandingsInput {
   playerNames: Map<string, string>;
   matches: MatchRecord[];
   droppedPlayers?: Set<string>;
+  /** Total number of completed rounds in the tournament */
+  totalCompletedRounds?: number;
+  /** Map of playerId -> round number after which they dropped */
+  droppedAfterRound?: Map<string, number>;
 }
 
 export interface PlayerStats {
@@ -54,8 +58,14 @@ export interface PlayerStats {
 export function calculateStandings(
   input: StandingsInput
 ): PlayerStanding[] {
-  const { playerIds, playerNames, matches, droppedPlayers = new Set() } =
-    input;
+  const {
+    playerIds,
+    playerNames,
+    matches,
+    droppedPlayers = new Set(),
+    totalCompletedRounds = 0,
+    droppedAfterRound = new Map(),
+  } = input;
 
   // Build player stats
   const playerStatsMap = new Map<string, PlayerStats>();
@@ -138,6 +148,31 @@ export function calculateStandings(
     // null result = not reported yet, no points awarded
   }
 
+  // Add phantom losses for dropped players who missed rounds
+  // A player who drops after round X should get losses for rounds X+1 through totalCompletedRounds
+  if (totalCompletedRounds > 0) {
+    for (const playerId of droppedPlayers) {
+      const player = playerStatsMap.get(playerId);
+      if (!player) continue;
+
+      const droppedAfter = droppedAfterRound.get(playerId) ?? 0;
+
+      // Calculate how many rounds the player actually played
+      // This is the number of matches they have (wins + losses + draws)
+      const roundsPlayed = player.matchWins + player.matchLosses + player.matchDraws;
+
+      // Calculate missed rounds: total rounds minus rounds they played
+      // Use max of droppedAfter and roundsPlayed to handle edge cases
+      const lastRoundPlayed = Math.max(droppedAfter, roundsPlayed);
+      const missedRounds = totalCompletedRounds - lastRoundPlayed;
+
+      // Add a loss for each missed round
+      if (missedRounds > 0) {
+        player.matchLosses += missedRounds;
+      }
+    }
+  }
+
   // Calculate tiebreakers
   const standings: PlayerStanding[] = [];
 
@@ -179,7 +214,7 @@ export function calculateStandings(
     });
   }
 
-  // Sort by tiebreakers
+  // Sort by tiebreakers (deterministic ordering)
   standings.sort((a, b) => {
     // Primary: Points
     if (b.points !== a.points) return b.points - a.points;
@@ -200,7 +235,13 @@ export function calculateStandings(
     }
 
     // Quinary: OOMW%
-    return b.oomwPercent - a.oomwPercent;
+    if (Math.abs(b.oomwPercent - a.oomwPercent) > 0.0001) {
+      return b.oomwPercent - a.oomwPercent;
+    }
+
+    // Final deterministic tiebreaker: alphabetical by userId
+    // This ensures consistent ordering when all stats are equal
+    return a.userId.localeCompare(b.userId);
   });
 
   // Assign ranks

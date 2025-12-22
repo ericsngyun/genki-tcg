@@ -56,6 +56,11 @@ export function calculateRecommendedRounds(playerCount: number): number {
  * 1. All planned rounds have been played, OR
  * 2. The recommended number of rounds has been reached, OR
  * 3. Only 1 active player remains (others dropped)
+ *
+ * EDGE CASES HANDLED:
+ * - Round 0 (before first round): Tournament hasn't started, can't be complete
+ * - All players dropped: Tournament ends due to insufficient players
+ * - Single player tournament: Automatically complete (no opponents)
  */
 export function getTournamentStatus(state: TournamentState): TournamentStatus {
   const {
@@ -76,20 +81,42 @@ export function getTournamentStatus(state: TournamentState): TournamentStatus {
   let isComplete = false;
   let reason: string | undefined;
 
+  // Edge case: Round 0 means tournament hasn't started yet
+  // Can't be complete, but may be able to start first round
+  if (currentRound === 0) {
+    // Tournament not started yet - check if we can start
+    // Must have at least 2 players AND all matches must be reported (if any exist)
+    const canStart = playersRemaining >= 2 && allMatchesReported;
+    return {
+      isComplete: false,
+      canStartNextRound: canStart,
+      recommendedRounds,
+      currentRound: 0,
+      playersRemaining,
+      reason: canStart ? undefined :
+        (playersRemaining < 2 ? 'Need at least 2 players to start' : 'Pending matches must be reported'),
+    };
+  }
+
   // Condition 1: All planned/recommended rounds completed
   if (currentRound >= targetRounds && allMatchesReported) {
     isComplete = true;
     reason = `All ${targetRounds} rounds completed`;
   }
 
-  // Condition 2: Only 1 player remaining
+  // Condition 2: Only 1 player remaining (or 0 if all dropped)
   if (playersRemaining <= 1) {
     isComplete = true;
-    reason = 'Insufficient players remaining';
+    if (playersRemaining === 0) {
+      reason = 'All players dropped';
+    } else {
+      reason = 'Insufficient players remaining';
+    }
   }
 
   // Condition 3: Clear winner (optional - undefeated player in final round)
-  if (currentRound >= recommendedRounds && allMatchesReported) {
+  // Only check if we've played at least the recommended rounds
+  if (currentRound >= recommendedRounds && allMatchesReported && !isComplete) {
     const undefeatedPlayers = standings.filter(
       (s) => !s.isDropped && s.matchLosses === 0
     );

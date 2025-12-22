@@ -44,4 +44,10 @@ export class UpdateEventDto {
   @Min(0, { message: 'Total prize credits cannot be negative' })
   @Max(10000000, { message: 'Total prize credits cannot exceed $100,000' })
   totalPrizeCredits?: number;
+
+  @IsOptional()
+  @IsInt({ message: 'Rounds planned must be an integer' })
+  @Min(1, { message: 'Rounds planned must be at least 1' })
+  @Max(20, { message: 'Rounds planned cannot exceed 20' })
+  roundsPlanned?: number;
 }

@@ -270,6 +270,12 @@ export class MatchesService {
       throw new BadRequestException('Match result has already been confirmed');
     }
 
+    // Prevent duplicate reports from the same player
+    // (Edge case: player tries to report again before confirmation completes)
+    if (match.reportedBy === userId) {
+      throw new BadRequestException('You have already reported a result for this match');
+    }
+
     // Validate match result consistency
     const isBo3 = isBo3Format(match.round.event.game);
     validateMatchResult(dto.result, dto.gamesWonA, dto.gamesWonB, isBo3);

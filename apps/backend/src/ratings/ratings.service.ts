@@ -313,18 +313,42 @@ export class RatingsService {
       }
     }
 
-    // Handle dropped players - add phantom losses for rounds they missed
+    // Handle dropped players AND late additions - add phantom losses for rounds they missed
+    // IMPORTANT: Only add phantom losses for players who:
+    // 1. Actually played at least 1 round (droppedAfterRound >= 1), OR
+    // 2. Have at least one real match (meaning they participated)
+    // Players who drop before round 1 without playing should NOT get phantom losses
+    //
+    // For LATE ADDITIONS (joinedAtRound > 1):
+    // - Add phantom losses for all rounds BEFORE they joined
     const entries = await this.prisma.entry.findMany({
       where: { eventId: tournamentId },
       select: {
         userId: true,
         droppedAfterRound: true,
+        checkedInAt: true,
+        joinedAtRound: true, // Track when late players joined
       },
     });
 
     const totalRounds = tournament.rounds.length;
     for (const entry of entries) {
+      // Skip players who weren't checked in (never participated)
+      if (!entry.checkedInAt) continue;
+
       if (entry.droppedAfterRound !== null && entry.droppedAfterRound < totalRounds) {
+        // Edge case: If droppedAfterRound is 0 (dropped before round 1),
+        // only add phantom losses if they had at least one match (e.g., they were paired but didn't play)
+        const hasRealMatches = playerMatches.has(entry.userId) &&
+          playerMatches.get(entry.userId)!.some(m => m.opponentId !== 'PHANTOM_OPPONENT');
+
+        // If dropped before round 1 and no real matches, skip phantom losses
+        // (They never actually participated in the tournament)
+        if (entry.droppedAfterRound === 0 && !hasRealMatches) {
+          this.logger.log(`Skipping phantom losses for ${entry.userId} - dropped before round 1 with no matches`);
+          continue;
+        }
+
         const missedRounds = totalRounds - entry.droppedAfterRound;
 
         // Initialize player matches array if not exists
@@ -344,6 +368,30 @@ export class RatingsService {
             });
           }
           this.logger.log(`Added ${missedRounds} phantom losses for dropped player ${entry.userId}`);
+        }
+      }
+
+      // Handle LATE ADDITIONS: Add phantom losses for rounds before they joined
+      if (entry.joinedAtRound !== null && entry.joinedAtRound > 1) {
+        const missedRoundsBeforeJoin = entry.joinedAtRound - 1;
+
+        // Initialize player matches array if not exists
+        if (!playerMatches.has(entry.userId)) {
+          playerMatches.set(entry.userId, []);
+        }
+
+        const matches = playerMatches.get(entry.userId);
+        if (matches) {
+          // Add phantom losses for each round before they joined
+          for (let i = 0; i < missedRoundsBeforeJoin; i++) {
+            matches.push({
+              opponentId: 'PHANTOM_OPPONENT',
+              result: 'PLAYER_B_WIN' as MatchResult,
+              matchId: `phantom-late-${entry.userId}-round-${i + 1}`,
+              isPlayerA: true,
+            });
+          }
+          this.logger.log(`Added ${missedRoundsBeforeJoin} phantom losses for late player ${entry.userId} (joined at round ${entry.joinedAtRound})`);
         }
       }
     }

@@ -7,27 +7,20 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { api } from '../lib/api';
-import { theme } from '../lib/theme';
+import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 import { logger } from '../lib/logger';
 
 interface Pairing {
   id: string;
   tableNumber: number;
-  playerA: {
-    id: string;
-    name: string;
-  };
-  playerB?: {
-    id: string;
-    name: string;
-  };
+  playerA: { id: string; name: string };
+  playerB?: { id: string; name: string };
   result?: string;
   gamesWonA?: number;
   gamesWonB?: number;
@@ -49,12 +42,12 @@ interface Event {
 
 export default function PairingsScreen() {
   const params = useLocalSearchParams();
-  const eventId = params.eventId as string;
   const router = useRouter();
+  const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
   const [pairings, setPairings] = useState<Pairing[]>([]);
-  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
+  const [selectedRound, setSelectedRound] = useState<number>(1);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,45 +57,35 @@ export default function PairingsScreen() {
   }, [eventId]);
 
   useEffect(() => {
-    if (selectedRoundId) {
-      loadPairings(selectedRoundId);
+    if (event?.rounds?.length) {
+      loadPairings(selectedRound);
     }
-  }, [selectedRoundId]);
+  }, [selectedRound, event?.rounds]);
 
-  // Real-time updates: Auto-refresh when new rounds are posted
   useRealtimeUpdates({
     eventId,
     onPairingsPosted: useCallback((roundNumber: number) => {
-      logger.debug(`New round ${roundNumber} pairings posted`);
-      // Reload event data to get new round
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       loadData();
-      // Show notification
-      Alert.alert(
-        'New Round!',
-        `Round ${roundNumber} pairings are now available`,
-        [{ text: 'OK' }]
-      );
+      setSelectedRound(roundNumber);
     }, []),
-    onRoundStarted: useCallback((roundNumber: number) => {
-      logger.debug(`Round ${roundNumber} started`);
-      loadPairings(selectedRoundId || '');
-    }, [selectedRoundId]),
+    onMatchResultReported: useCallback(() => {
+      loadPairings(selectedRound);
+    }, [selectedRound]),
   });
 
   const loadData = async () => {
     try {
-      // Load user data
-      const userData = await api.getMe();
+      const [userData, eventData] = await Promise.all([
+        api.getMe(),
+        api.getEvent(eventId),
+      ]);
       setMyUserId(userData.user.id);
-
-      // Load event
-      const eventData = await api.getEvent(eventId);
       setEvent(eventData);
 
-      // Select the latest round
-      if (eventData.rounds.length > 0) {
+      if (eventData.rounds?.length > 0) {
         const latestRound = eventData.rounds[eventData.rounds.length - 1];
-        setSelectedRoundId(latestRound.id);
+        setSelectedRound(latestRound.roundNumber);
       }
     } catch (error) {
       logger.error('Failed to load data:', error);
@@ -112,9 +95,11 @@ export default function PairingsScreen() {
     }
   };
 
-  const loadPairings = async (roundId: string) => {
+  const loadPairings = async (roundNumber: number) => {
+    const round = event?.rounds.find((r) => r.roundNumber === roundNumber);
+    if (!round) return;
     try {
-      const data = await api.getPairings(roundId);
+      const data = await api.getPairings(round.id);
       setPairings(data);
     } catch (error) {
       logger.error('Failed to load pairings:', error);
@@ -122,58 +107,38 @@ export default function PairingsScreen() {
   };
 
   const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     loadData();
   };
 
   const handleBack = () => {
-    // Check if we can dismiss (for modals) or go back
-    // If neither works, navigate to events tab as fallback
-    if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
-      router.dismiss();
-    } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (router.canGoBack()) {
       router.back();
     } else {
-      // No screen to go back to - navigate to events tab
       router.replace('/(tabs)/events');
     }
   };
 
-  const getMyPairing = () => {
-    if (!myUserId) return null;
-    return pairings.find(
-      (p) => p.playerA.id === myUserId || p.playerB?.id === myUserId
-    );
+  const handleReportResult = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({
+      pathname: '/match-details',
+      params: { eventId, eventName: event?.name || '', gameType: event?.game || 'ONE_PIECE_TCG' },
+    });
   };
 
-  const formatResult = (pairing: Pairing) => {
-    if (!pairing.result) return 'In Progress';
-
-    const resultMap: Record<string, string> = {
-      PLAYER_A_WIN: `${pairing.playerA.name} Wins`,
-      PLAYER_B_WIN: `${pairing.playerB?.name || 'Unknown'} Wins`,
-      DRAW: 'Draw',
-      INTENTIONAL_DRAW: 'Intentional Draw',
-    };
-
-    const resultText = resultMap[pairing.result] || pairing.result;
-    const score =
-      pairing.gamesWonA !== undefined
-        ? ` (${pairing.gamesWonA}-${pairing.gamesWonB})`
-        : '';
-
-    return resultText + score;
-  };
+  const myPairing = pairings.find(
+    (p) => myUserId && (p.playerA.id === myUserId || p.playerB?.id === myUserId)
+  );
 
   if (loading) {
     return (
-      <View style={styles.mainContainer}>
-        <LinearGradient
-          colors={[theme.colors.background.primary, '#1a1a2e']}
-          style={StyleSheet.absoluteFill}
-        />
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary.main} />
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={styles.loadingText}>Loading pairings...</Text>
         </View>
       </View>
     );
@@ -182,511 +147,737 @@ export default function PairingsScreen() {
   if (!event) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Event not found</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Error</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.text.tertiary} />
+          <Text style={styles.emptyTitle}>Event not found</Text>
+        </View>
       </View>
     );
   }
 
-  if (event.rounds.length === 0) {
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>{event.name}</Text>
-            <Text style={styles.subtitle}>Pairings</Text>
-          </View>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No rounds posted yet</Text>
-          <Text style={styles.emptySubtext}>
-            Pairings will appear here once the tournament starts
-          </Text>
-        </View>
-      </ScrollView>
-    );
-  }
-
-  const myPairing = getMyPairing();
-  const selectedRound = event.rounds.find((r) => r.id === selectedRoundId);
-
-  const handleReportResult = () => {
-    router.push({
-      pathname: '/match-details',
-      params: {
-        eventId,
-        eventName: event.name,
-        gameType: event.game,
-      },
-    });
-  };
+  const rounds = event.rounds || [];
 
   return (
-    <View style={styles.mainContainer}>
-      <LinearGradient
-        colors={[theme.colors.background.primary, '#1a1a2e']}
-        style={StyleSheet.absoluteFill}
-      />
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary.main} />
-        }
-      >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>{event.name}</Text>
-            <Text style={styles.subtitle}>Round {selectedRound?.roundNumber}</Text>
-          </View>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{event.name}</Text>
+          <Text style={styles.headerSubtitle}>Pairings</Text>
         </View>
+      </View>
 
-        {/* My Pairing Highlight */}
-        {myPairing && (
-          <View style={styles.myPairingCard}>
-            <Text style={styles.myPairingLabel}>Your Match</Text>
-            <View style={styles.myPairingContent}>
-              <View style={styles.tableNumberBadge}>
-                <Text style={styles.tableNumberLabel}>TABLE</Text>
-                <Text style={styles.tableNumber}>{myPairing.tableNumber}</Text>
-              </View>
-              <View style={styles.matchupContainer}>
-                <Text style={styles.playerName}>
-                  {myPairing.playerA.id === myUserId ? (
-                    <Text style={styles.youLabel}>YOU</Text>
-                  ) : (
-                    myPairing.playerA.name
-                  )}
-                </Text>
-                <Text style={styles.vsText}>vs</Text>
-                <Text style={styles.playerName}>
-                  {!myPairing.playerB ? (
-                    <Text style={styles.byeLabel}>— BYE —</Text>
-                  ) : myPairing.playerB.id === myUserId ? (
-                    <Text style={styles.youLabel}>YOU</Text>
-                  ) : (
-                    myPairing.playerB.name
-                  )}
-                </Text>
-              </View>
-              <View style={styles.resultContainer}>
-                <Text
-                  style={[
-                    styles.resultText,
-                    myPairing.result ? styles.resultCompleted : styles.resultPending,
-                  ]}
-                >
-                  {formatResult(myPairing)}
-                </Text>
-              </View>
-
-              {/* Report Result Button - only show for in-progress tournaments */}
-              {!myPairing.result && myPairing.playerB && event.status === 'IN_PROGRESS' && (
-                <TouchableOpacity
-                  style={styles.reportResultButton}
-                  onPress={handleReportResult}
-                >
-                  <Ionicons name="create" size={20} color={theme.colors.primary.foreground} />
-                  <Text style={styles.reportResultButtonText}>Report Result</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+      {/* Round Selector */}
+      {rounds.length > 0 && (
+        <View style={styles.roundSelectorContainer}>
+          <View style={styles.roundSelectorHeader}>
+            <Text style={styles.roundSelectorLabel}>SELECT ROUND</Text>
+            <Text style={styles.roundSelectorCount}>{rounds.length} rounds</Text>
           </View>
-        )}
-
-        {/* Round Selector */}
-        {event.rounds.length > 1 && (
-          <View style={styles.roundSelectorContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {event.rounds.map((round) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.roundSelector}
+            contentContainerStyle={styles.roundSelectorContent}
+          >
+            {rounds.map((round, index) => {
+              const isSelected = round.roundNumber === selectedRound;
+              const isActive = round.status === 'ACTIVE';
+              const isCompleted = round.status === 'COMPLETED';
+              return (
                 <TouchableOpacity
                   key={round.id}
-                  onPress={() => setSelectedRoundId(round.id)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedRound(round.roundNumber);
+                  }}
                   style={[
-                    styles.roundButton,
-                    selectedRoundId === round.id && styles.roundButtonActive,
+                    styles.roundPill,
+                    isSelected && styles.roundPillSelected,
+                    isActive && !isSelected && styles.roundPillActive,
                   ]}
+                  activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.roundButtonText,
-                      selectedRoundId === round.id && styles.roundButtonTextActive,
-                    ]}
-                  >
-                    Round {round.roundNumber}
+                  <Text style={[
+                    styles.roundPillNumber,
+                    isSelected && styles.roundPillNumberSelected,
+                    isActive && !isSelected && styles.roundPillNumberActive,
+                  ]}>
+                    {round.roundNumber}
                   </Text>
+                  {isActive && (
+                    <View style={[styles.roundStatusDot, isSelected && styles.roundStatusDotSelected]} />
+                  )}
+                  {isCompleted && !isSelected && (
+                    <Ionicons name="checkmark" size={10} color={colors.text.tertiary} style={styles.roundCheckmark} />
+                  )}
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* All Pairings */}
-        <View style={styles.allPairingsContainer}>
-          <Text style={styles.sectionTitle}>All Pairings</Text>
-          {pairings.length === 0 ? (
-            <Text style={styles.emptyText}>No pairings yet</Text>
-          ) : (
-            pairings.map((pairing) => (
-              <View
-                key={pairing.id}
-                style={[
-                  styles.pairingCard,
-                  (pairing.playerA.id === myUserId ||
-                    pairing.playerB?.id === myUserId) &&
-                  styles.pairingCardHighlight,
-                ]}
-              >
-                <View style={styles.pairingHeader}>
-                  <Text style={styles.pairingTable}>Table {pairing.tableNumber}</Text>
-                  <Text
-                    style={[
-                      styles.pairingStatus,
-                      pairing.result
-                        ? styles.pairingStatusCompleted
-                        : styles.pairingStatusPending,
-                    ]}
-                  >
-                    {pairing.result ? '✓ Complete' : '⏱ In Progress'}
-                  </Text>
-                </View>
-                <View style={styles.pairingMatchup}>
-                  <Text style={styles.pairingPlayer}>
-                    {pairing.playerA.name}
-                    {pairing.playerA.id === myUserId && (
-                      <Text style={styles.youBadge}> (You)</Text>
-                    )}
-                  </Text>
-                  <Text style={styles.pairingVs}>vs</Text>
-                  <Text style={styles.pairingPlayer}>
-                    {pairing.playerB ? (
-                      <>
-                        {pairing.playerB.name}
-                        {pairing.playerB.id === myUserId && (
-                          <Text style={styles.youBadge}> (You)</Text>
-                        )}
-                      </>
-                    ) : (
-                      <Text style={styles.byeLabel}>— BYE —</Text>
-                    )}
-                  </Text>
-                </View>
-                {pairing.result && (
-                  <Text style={styles.pairingResult}>{formatResult(pairing)}</Text>
-                )}
-              </View>
-            ))
-          )}
+              );
+            })}
+          </ScrollView>
         </View>
+      )}
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary.main}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {pairings.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="people-outline" size={48} color={colors.text.tertiary} />
+            <Text style={styles.emptyTitle}>No pairings yet</Text>
+            <Text style={styles.emptySubtitle}>Pairings will appear once the round is created</Text>
+          </View>
+        ) : (
+          <>
+            {/* My Match Card - Different display for active vs history */}
+            {myPairing && (() => {
+              const currentRound = event?.rounds.find((r) => r.roundNumber === selectedRound);
+              const isHistorical = currentRound?.status === 'COMPLETED' || myPairing.result !== undefined;
+              const isActiveRound = currentRound?.status === 'ACTIVE';
+              const didWin = (myPairing.result === 'PLAYER_A_WIN' && myPairing.playerA.id === myUserId) ||
+                             (myPairing.result === 'PLAYER_B_WIN' && myPairing.playerB?.id === myUserId);
+              const didLose = (myPairing.result === 'PLAYER_A_WIN' && myPairing.playerB?.id === myUserId) ||
+                              (myPairing.result === 'PLAYER_B_WIN' && myPairing.playerA.id === myUserId);
+              const isDraw = myPairing.result === 'DRAW';
+              const opponentName = myPairing.playerB
+                ? (myPairing.playerA.id === myUserId ? myPairing.playerB.name : myPairing.playerA.name)
+                : 'BYE';
+
+              // Calculate game score display (my games - opponent games)
+              const myGames = myPairing.playerA.id === myUserId ? myPairing.gamesWonA : myPairing.gamesWonB;
+              const oppGames = myPairing.playerA.id === myUserId ? myPairing.gamesWonB : myPairing.gamesWonA;
+              const hasGameScore = (myGames !== undefined && myGames > 0) || (oppGames !== undefined && oppGames > 0);
+
+              return isHistorical && myPairing.result ? (
+                // MATCH HISTORY CARD - Completed match, read-only view
+                <View style={styles.historyCard}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.historyLabelContainer}>
+                      <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
+                      <Text style={styles.historyLabel}>ROUND {selectedRound} RESULT</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.historyContent}>
+                    {/* Result Icon & Status */}
+                    <View style={[
+                      styles.historyResultIcon,
+                      didWin && styles.historyResultIconWin,
+                      didLose && styles.historyResultIconLoss,
+                      isDraw && styles.historyResultIconDraw,
+                    ]}>
+                      <Ionicons
+                        name={didWin ? 'trophy' : isDraw ? 'remove' : 'close'}
+                        size={28}
+                        color={didWin ? colors.success.main : isDraw ? colors.warning.main : colors.error.main}
+                      />
+                    </View>
+
+                    {/* Match Details */}
+                    <View style={styles.historyDetails}>
+                      <Text style={[
+                        styles.historyResultText,
+                        didWin && { color: colors.success.main },
+                        didLose && { color: colors.error.main },
+                        isDraw && { color: colors.warning.main },
+                      ]}>
+                        {didWin ? 'Victory' : isDraw ? 'Draw' : 'Defeat'}
+                      </Text>
+                      <Text style={styles.historyOpponent}>vs {opponentName}</Text>
+                      {hasGameScore && (
+                        <Text style={styles.historyScore}>Games: {myGames || 0} - {oppGames || 0}</Text>
+                      )}
+                    </View>
+
+                    {/* Table Badge */}
+                    <View style={styles.historyTableBadge}>
+                      <Text style={styles.historyTableLabel}>TBL</Text>
+                      <Text style={styles.historyTableNumber}>{myPairing.tableNumber}</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                // ACTIVE MATCH CARD - Current match, action required
+                <View style={styles.myMatchCard}>
+                  <View style={styles.myMatchHeader}>
+                    <View style={styles.myMatchLabelContainer}>
+                      {isActiveRound && <View style={styles.liveDot} />}
+                      <Text style={styles.myMatchLabel}>
+                        {isActiveRound ? 'CURRENT MATCH' : 'YOUR MATCH'}
+                      </Text>
+                    </View>
+                    {myPairing.result ? (
+                      <View style={[
+                        styles.statusBadge,
+                        didWin ? styles.statusBadgeWin : isDraw ? styles.statusBadgeDraw : styles.statusBadgeLoss
+                      ]}>
+                        <Text style={styles.statusBadgeText}>
+                          {didWin ? 'Won' : isDraw ? 'Draw' : 'Lost'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.statusBadgePending}>
+                        <Text style={styles.statusBadgeTextPending}>Pending</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.myMatchContent}>
+                    <View style={styles.tableSection}>
+                      <Text style={styles.tableLabel}>TABLE</Text>
+                      <View style={styles.tableNumberBox}>
+                        <Text style={styles.tableNumber}>{myPairing.tableNumber}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.matchupSection}>
+                      <Text style={styles.vsLabel}>VS</Text>
+                      <Text style={styles.opponentName}>{opponentName}</Text>
+                    </View>
+                  </View>
+
+                  {!myPairing.result && myPairing.playerB && isActiveRound && (
+                    <TouchableOpacity style={styles.reportButton} onPress={handleReportResult}>
+                      <Ionicons name="create-outline" size={18} color={colors.primary.foreground} />
+                      <Text style={styles.reportButtonText}>Report Result</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {!myPairing.playerB && (
+                    <View style={styles.byeInfo}>
+                      <Ionicons name="information-circle-outline" size={16} color={colors.text.tertiary} />
+                      <Text style={styles.byeInfoText}>You have a bye this round. Automatic win awarded.</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
+
+            {/* All Pairings */}
+            <View style={styles.allPairingsSection}>
+              <Text style={styles.sectionTitle}>All Pairings</Text>
+              <Text style={styles.sectionSubtitle}>{pairings.length} matches</Text>
+
+              <View style={styles.pairingsTable}>
+                <View style={styles.tableHeader}>
+                  <View style={styles.tableCell}><Text style={styles.tableHeaderText}>Table</Text></View>
+                  <View style={styles.playersCell}><Text style={styles.tableHeaderText}>Players</Text></View>
+                  <View style={styles.statusCell}><Text style={styles.tableHeaderText}>Status</Text></View>
+                </View>
+
+                {pairings.map((pairing) => {
+                  const isMyMatch = myUserId && (pairing.playerA.id === myUserId || pairing.playerB?.id === myUserId);
+                  return (
+                    <View key={pairing.id} style={[styles.pairingRow, isMyMatch && styles.pairingRowHighlight]}>
+                      <View style={styles.tableCell}>
+                        <Text style={styles.tableCellText}>{pairing.tableNumber}</Text>
+                      </View>
+                      <View style={styles.playersCell}>
+                        <Text style={[styles.playerName, pairing.playerA.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
+                          {pairing.playerA.name}
+                        </Text>
+                        <Text style={styles.vsText}>vs</Text>
+                        <Text style={[styles.playerName, pairing.playerB?.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
+                          {pairing.playerB?.name || 'BYE'}
+                        </Text>
+                      </View>
+                      <View style={styles.statusCell}>
+                        <View style={[styles.statusDot, { backgroundColor: pairing.result ? colors.success.main : colors.warning.main }]} />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: 'transparent', // Make transparent for gradient
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)', // Subtle border
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  headerTextContainer: {
+  scrollView: {
     flex: 1,
   },
-  title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-    fontWeight: theme.typography.fontWeight.medium,
+  scrollContent: {
+    paddingBottom: spacing['4xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyContainer: {
-    padding: 40,
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: spacing.base,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 300,
+    marginRight: spacing.md,
   },
-  emptyText: {
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.bold,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  errorText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.error.main,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  myPairingCard: {
-    backgroundColor: 'rgba(24, 24, 27, 0.7)', // Glassmorphism
-    borderRadius: theme.borderRadius.xl,
-    margin: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.3)', // Subtle primary border
-    ...theme.shadows.xl,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  myPairingLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
-    letterSpacing: 1.5,
-    marginBottom: 20,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  myPairingContent: {
-    alignItems: 'center',
-  },
-  tableNumberBadge: {
-    backgroundColor: theme.colors.primary.lightest,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.primary.light,
-  },
-  tableNumberLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.dark,
-    textAlign: 'center',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  tableNumber: {
-    fontSize: 40,
-    fontWeight: theme.typography.fontWeight.black,
-    color: theme.colors.primary.main,
-    textAlign: 'center',
-    lineHeight: 48,
-  },
-  matchupContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    width: '100%',
-  },
-  playerName: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginVertical: 4,
-    textAlign: 'center',
-  },
-  vsText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.tertiary,
-    marginVertical: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  youLabel: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
-  },
-  byeLabel: {
-    fontSize: theme.typography.fontSize.lg,
-    fontStyle: 'italic',
-    color: theme.colors.text.tertiary,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  resultContainer: {
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  resultText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.bold,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  resultCompleted: {
-    color: theme.colors.success.main,
-  },
-  resultPending: {
-    color: theme.colors.warning.main,
-  },
-  roundSelectorContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  roundButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.full,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border.main,
-  },
-  roundButtonActive: {
-    backgroundColor: theme.colors.primary.main,
-    borderColor: theme.colors.primary.main,
-    ...theme.shadows.md,
-  },
-  roundButtonText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-  },
-  roundButtonTextActive: {
-    color: theme.colors.primary.foreground,
-    fontWeight: theme.typography.fontWeight.bold,
-  },
-  allPairingsContainer: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 16,
-    marginLeft: 4,
-  },
-  pairingCard: {
-    backgroundColor: 'rgba(24, 24, 27, 0.6)', // Glassmorphism
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    ...theme.shadows.sm,
-  },
-  pairingCardHighlight: {
-    borderWidth: 2,
-    borderColor: theme.colors.primary.main,
-    backgroundColor: theme.colors.primary.lightest + '20', // Very transparent primary bg
-  },
-  pairingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-  },
-  pairingTable: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  pairingStatus: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  pairingStatusCompleted: {
-    color: theme.colors.success.main,
-  },
-  pairingStatusPending: {
-    color: theme.colors.warning.main,
-  },
-  pairingMatchup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  pairingPlayer: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
+  headerTextContainer: {
     flex: 1,
   },
-  pairingVs: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.tertiary,
-    marginHorizontal: 12,
-    fontWeight: theme.typography.fontWeight.bold,
+  headerTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
-  pairingResult: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
-    fontStyle: 'italic',
-    marginTop: 8,
-    textAlign: 'center',
+  headerSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: 2,
   },
-  youBadge: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
+
+  // Round Selector
+  roundSelectorContainer: {
+    paddingTop: spacing.base,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
-  reportResultButton: {
+  roundSelectorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  roundSelectorLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+  roundSelectorCount: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.tertiary,
+  },
+  roundSelector: {
+    flexGrow: 0,
+  },
+  roundSelectorContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    flexDirection: 'row',
+  },
+  roundPill: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    position: 'relative',
+  },
+  roundPillSelected: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.main,
+  },
+  roundPillActive: {
+    borderColor: colors.success.main,
+    backgroundColor: colors.success.main + '15',
+  },
+  roundPillNumber: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.secondary,
+  },
+  roundPillNumberSelected: {
+    color: colors.primary.foreground,
+  },
+  roundPillNumberActive: {
+    color: colors.success.main,
+  },
+  roundStatusDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success.main,
+  },
+  roundStatusDotSelected: {
+    backgroundColor: colors.primary.foreground,
+  },
+  roundCheckmark: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+  },
+
+  // My Match Card (Active)
+  myMatchCard: {
+    margin: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary.dark,
+  },
+  myMatchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.base,
+  },
+  myMatchLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.success.main,
+  },
+  myMatchLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.light,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+
+  // History Card (Completed Match)
+  historyCard: {
+    margin: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  historyHeader: {
+    marginBottom: spacing.base,
+  },
+  historyLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  historyLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+  historyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.base,
+  },
+  historyResultIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.elevated,
+  },
+  historyResultIconWin: {
+    backgroundColor: colors.success.main + '15',
+  },
+  historyResultIconLoss: {
+    backgroundColor: colors.error.main + '15',
+  },
+  historyResultIconDraw: {
+    backgroundColor: colors.warning.main + '15',
+  },
+  historyDetails: {
+    flex: 1,
+  },
+  historyResultText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  historyOpponent: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  historyScore: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.tertiary,
+    marginTop: 4,
+  },
+  historyTableBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background.elevated,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  historyTableLabel: {
+    fontSize: typography.fontSize['2xs'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+  historyTableNumber: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.xs,
+  },
+  statusBadgeWin: {
+    backgroundColor: colors.success.main + '20',
+  },
+  statusBadgeLoss: {
+    backgroundColor: colors.error.main + '20',
+  },
+  statusBadgeDraw: {
+    backgroundColor: colors.warning.main + '20',
+  },
+  statusBadgeText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  statusBadgePending: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.xs,
+    backgroundColor: colors.warning.main + '20',
+  },
+  statusBadgeTextPending: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.warning.light,
+  },
+  myMatchContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xl,
+  },
+  tableSection: {
+    alignItems: 'center',
+  },
+  tableLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.wider,
+    marginBottom: spacing.xs,
+  },
+  tableNumberBox: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tableNumber: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.black,
+    color: colors.primary.foreground,
+  },
+  matchupSection: {
+    flex: 1,
+  },
+  vsLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    marginBottom: spacing.xs,
+  },
+  opponentName: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  reportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: theme.borderRadius.full,
-    marginTop: 24,
-    width: '100%',
-    ...theme.shadows.md,
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
   },
-  reportResultButtonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.foreground,
+  reportButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.foreground,
+  },
+  byeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.base,
+    padding: spacing.md,
+    backgroundColor: colors.background.elevated,
+    borderRadius: borderRadius.md,
+  },
+  byeInfoText: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+
+  // All Pairings
+  allPairingsSection: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  sectionSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.tertiary,
+    marginBottom: spacing.md,
+  },
+  pairingsTable: {
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.background.elevated,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  tableHeaderText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: typography.letterSpacing.wide,
+  },
+  pairingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  pairingRowHighlight: {
+    backgroundColor: colors.primary.main + '10',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.main,
+  },
+  tableCell: {
+    width: 50,
+    alignItems: 'center',
+  },
+  tableCellText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  playersCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  playerName: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+  },
+  playerNameMe: {
+    color: colors.primary.light,
+    fontWeight: typography.fontWeight.bold,
+  },
+  vsText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
+  statusCell: {
+    width: 40,
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // Empty
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['4xl'],
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  emptySubtitle: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
 });

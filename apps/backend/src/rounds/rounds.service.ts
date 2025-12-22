@@ -28,7 +28,7 @@ export class RoundsService {
   /**
    * Generate next round with Swiss pairings using actual standings
    */
-  async createNextRound(eventId: string, userOrgId: string) {
+  async createNextRound(eventId: string, userOrgId: string, userId?: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -80,6 +80,14 @@ export class RoundsService {
     // Check if tournament should be complete
     const recommendedRounds = calculateRecommendedRounds(playerCount);
     const totalRoundsPlanned = event.roundsPlanned ?? recommendedRounds;
+
+    // Hard limit: Maximum 20 rounds for any tournament (prevents abuse/infinite loops)
+    const MAX_ROUNDS = 20;
+    if (nextRoundNumber > MAX_ROUNDS) {
+      throw new BadRequestException(
+        `Cannot create more than ${MAX_ROUNDS} rounds. Tournament has reached maximum limit.`
+      );
+    }
 
     if (nextRoundNumber > totalRoundsPlanned) {
       throw new BadRequestException(
@@ -140,6 +148,9 @@ export class RoundsService {
           roundNumber: nextRoundNumber,
           status: 'PENDING',
           timerSeconds: 3000, // 50 minutes
+          // Audit trail for pairings
+          pairingsCreatedBy: userId,
+          pairingsCreatedAt: new Date(),
         },
       });
 
@@ -599,7 +610,7 @@ export class RoundsService {
    * This allows admins to drop no-show players and re-pair
    * Only works for PENDING rounds (before round has started)
    */
-  async regeneratePendingRound(roundId: string, userOrgId: string) {
+  async regeneratePendingRound(roundId: string, userOrgId: string, userId?: string) {
     // Get round with event and all data
     const round = await this.prisma.round.findUnique({
       where: { id: roundId },
@@ -697,12 +708,19 @@ export class RoundsService {
       });
 
       // Create new round with updated pairings
+      // Preserve original creator info, add regeneration audit trail
       const newRound = await tx.round.create({
         data: {
           eventId,
           roundNumber,
           status: 'PENDING',
           timerSeconds: 3000, // 50 minutes
+          // Preserve original creation audit
+          pairingsCreatedBy: round.pairingsCreatedBy,
+          pairingsCreatedAt: round.pairingsCreatedAt,
+          // Track regeneration
+          pairingsRegeneratedBy: userId,
+          pairingsRegeneratedAt: new Date(),
         },
       });
 

@@ -13,13 +13,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Image, ImageBackground } from 'react-native';
+import { ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../../lib/api';
 import { formatGameName, formatEventFormat, getGameImagePath } from '../../lib/formatters';
-import { theme } from '../../lib/theme';
+import { colors, spacing, typography, borderRadius } from '../../lib/theme';
 import { usePressAnimation } from '../../lib/animations';
 import { EventActionSheet } from '../../components/EventActionSheet';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
@@ -85,7 +84,7 @@ export default function EventsScreen() {
     loadData();
   }, []);
 
-  // Real-time updates: Subscribe to events for all tournaments user is in
+  // Real-time updates
   const { isConnected, joinEvent, leaveEvent, onPairingsPosted, onRoundStarted } = useSocket();
 
   const loadDataCallback = useCallback(() => {
@@ -95,7 +94,6 @@ export default function EventsScreen() {
   useEffect(() => {
     if (!isConnected || !myUserId || events.length === 0) return;
 
-    // Join event rooms for all tournaments user is registered for
     const myEventIds = events
       .filter((e) => {
         const entry = e.entries?.find((entry) => entry.userId === myUserId);
@@ -107,17 +105,14 @@ export default function EventsScreen() {
       joinEvent(eventId);
     });
 
-    // Subscribe to pairings and round updates
     const unsubscribePairings = onPairingsPosted((data) => {
       logger.debug(`Pairings posted for event ${data.eventId}, round ${data.roundNumber}`);
-      // Reload events to reflect tournament started and new rounds
-      setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
+      setTimeout(() => loadData(), 100);
     });
 
     const unsubscribeRoundStarted = onRoundStarted((data) => {
       logger.debug(`Round ${data.roundNumber} started for event ${data.eventId}`);
-      // Reload events to reflect status changes
-      setTimeout(() => loadData(), 100); // Small delay to ensure backend has updated
+      setTimeout(() => loadData(), 100);
     });
 
     return () => {
@@ -133,16 +128,14 @@ export default function EventsScreen() {
     try {
       const userData = await api.getMe();
       setMyUserId(userData.user.id);
-      // Set organization name from response (if available)
       if (userData.organization?.name) {
         setOrgName(userData.organization.name);
       }
 
-      // Load all event statuses
       const [scheduledEvents, inProgressEvents, completedEvents] = await Promise.all([
         api.getEvents('SCHEDULED'),
         api.getEvents('IN_PROGRESS'),
-        api.getEvents('COMPLETED').catch(() => []), // Gracefully handle if COMPLETED not supported
+        api.getEvents('COMPLETED').catch(() => []),
       ]);
 
       setEvents([...inProgressEvents, ...scheduledEvents, ...completedEvents]);
@@ -155,12 +148,12 @@ export default function EventsScreen() {
   };
 
   const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     loadData();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // Categorize events based on status, date, and user participation
+  // Categorize events
   const categorizedEvents = useMemo((): CategorizedEvents => {
     const now = new Date();
 
@@ -174,47 +167,32 @@ export default function EventsScreen() {
       return entry !== null && !entry.droppedAt;
     };
 
-    const isCheckedIn = (event: Event) => {
-      const entry = getMyEntry(event);
-      return entry?.checkedInAt !== undefined && entry?.checkedInAt !== null;
-    };
-
-    // My tournaments (registered)
     const myTournaments = events.filter((e) => {
       if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return false;
-
-      // Exclude SCHEDULED events that are more than 24 hours past their start time
       if (e.status === 'SCHEDULED') {
         const startTime = new Date(e.startAt);
         const hoursPassed = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
         if (hoursPassed > 24) return false;
       }
-
       return isParticipating(e);
     });
 
-    // Active tournaments (IN_PROGRESS, excluding ones user is in)
     const activeTournaments = events.filter((e) => {
       if (e.status !== 'IN_PROGRESS') return false;
       if (myTournaments.some((mt) => mt.id === e.id)) return false;
       return true;
     });
 
-    // Upcoming events (SCHEDULED and start time is in the future)
     const upcomingEvents = events.filter((e) => {
       if (e.status !== 'SCHEDULED') return false;
       const startTime = new Date(e.startAt);
-      // Only show as upcoming if start time is in the future
       return startTime > now;
     }).filter((e) => {
-      // Exclude events user is already registered for (they go to myTournaments)
       return !myTournaments.some((mt) => mt.id === e.id);
     }).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
-    // Past events (COMPLETED or CANCELLED, or SCHEDULED but start time was > 24h ago)
     const pastEvents = events.filter((e) => {
       if (e.status === 'COMPLETED' || e.status === 'CANCELLED') return true;
-      // If SCHEDULED but start time was more than 24 hours ago, consider it past/missed
       if (e.status === 'SCHEDULED') {
         const startTime = new Date(e.startAt);
         const hoursPassed = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
@@ -248,41 +226,24 @@ export default function EventsScreen() {
     setTimeout(() => setSelectedEvent(null), 300);
   };
 
-
-  // Action handlers with confirmation modals
   const handleApply = (eventId: string) => {
     const event = events.find((e) => e.id === eventId);
     if (event) {
-      setConfirmModal({
-        visible: true,
-        type: 'apply',
-        event,
-        loading: false,
-      });
+      setConfirmModal({ visible: true, type: 'apply', event, loading: false });
     }
   };
 
   const handleCheckIn = (eventId: string) => {
     const event = events.find((e) => e.id === eventId);
     if (event) {
-      setConfirmModal({
-        visible: true,
-        type: 'checkIn',
-        event,
-        loading: false,
-      });
+      setConfirmModal({ visible: true, type: 'checkIn', event, loading: false });
     }
   };
 
   const handleDrop = (eventId: string) => {
     const event = events.find((e) => e.id === eventId);
     if (event) {
-      setConfirmModal({
-        visible: true,
-        type: 'drop',
-        event,
-        loading: false,
-      });
+      setConfirmModal({ visible: true, type: 'drop', event, loading: false });
     }
   };
 
@@ -295,88 +256,59 @@ export default function EventsScreen() {
       switch (confirmModal.type) {
         case 'apply':
           await api.registerForEvent(confirmModal.event.id);
-          if (Platform.OS === 'ios' || Platform.OS === 'android') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           break;
         case 'checkIn':
           await api.selfCheckIn(confirmModal.event.id);
-          if (Platform.OS === 'ios' || Platform.OS === 'android') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           break;
         case 'drop':
           await api.dropFromEvent(confirmModal.event.id);
-          if (Platform.OS === 'ios' || Platform.OS === 'android') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          }
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           break;
       }
       setConfirmModal({ visible: false, type: null, event: null, loading: false });
       loadData();
     } catch (error: any) {
-      if (Platform.OS === 'ios' || Platform.OS === 'android') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alert(error.response?.data?.message || 'Action failed. Please try again.');
       setConfirmModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
   const handleViewPairings = (eventId: string) => {
-    router.push({
-      pathname: '/pairings',
-      params: { eventId },
-    });
+    router.push({ pathname: '/pairings', params: { eventId } });
   };
 
   const handleViewStandings = (eventId: string) => {
-    router.push({
-      pathname: '/standings',
-      params: { eventId },
-    });
+    router.push({ pathname: '/standings', params: { eventId } });
   };
 
   const handleViewMatch = (event: Event) => {
     router.push({
       pathname: '/match-details',
-      params: {
-        eventId: event.id,
-        eventName: event.name,
-        gameType: event.game,
-      },
+      params: { eventId: event.id, eventName: event.name, gameType: event.game },
     });
   };
 
-  // Helper functions
   const getMyEntry = (event: Event) => {
     if (!myUserId || !event.entries) return null;
     return event.entries.find((entry) => entry.userId === myUserId);
   };
 
   const hasEntry = (event: Event) => getMyEntry(event) !== null;
-
-  const isPaid = (event: Event) => {
-    const entry = getMyEntry(event);
-    return entry?.paidAt !== undefined && entry?.paidAt !== null;
-  };
-
   const isCheckedIn = (event: Event) => {
     const entry = getMyEntry(event);
     return entry?.checkedInAt !== undefined && entry?.checkedInAt !== null;
   };
-
   const isDropped = (event: Event) => {
     const entry = getMyEntry(event);
     return entry?.droppedAt !== undefined && entry?.droppedAt !== null;
   };
-
-  // Legacy function for backward compatibility
   const isRegistered = (event: Event) => hasEntry(event);
 
   const getConfirmModalConfig = () => {
     if (!confirmModal.event || !confirmModal.type) return null;
-
     const event = confirmModal.event;
 
     switch (confirmModal.type) {
@@ -391,9 +323,7 @@ export default function EventsScreen() {
             { label: 'Event', value: event.name },
             { label: 'Date', value: new Date(event.startAt).toLocaleDateString() },
             { label: 'Format', value: formatEventFormat(event.format) },
-            ...(event.entryFeeCents
-              ? [{ label: 'Entry Fee', value: `$${(event.entryFeeCents / 100).toFixed(2)}` }]
-              : []),
+            ...(event.entryFeeCents ? [{ label: 'Entry Fee', value: `$${(event.entryFeeCents / 100).toFixed(2)}` }] : []),
           ],
         };
       case 'checkIn':
@@ -409,7 +339,6 @@ export default function EventsScreen() {
           ],
         };
       case 'drop':
-        // Different messaging for SCHEDULED (withdraw) vs IN_PROGRESS (drop)
         const isWithdraw = event.status === 'SCHEDULED';
         return {
           title: isWithdraw ? 'Withdraw Application' : 'Drop from Tournament',
@@ -428,9 +357,11 @@ export default function EventsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary.main} />
-        <Text style={styles.loadingText}>Loading events...</Text>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={styles.loadingText}>Loading events...</Text>
+        </View>
       </View>
     );
   }
@@ -447,9 +378,11 @@ export default function EventsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary.main}
+            tintColor={colors.primary.main}
+            colors={[colors.primary.main]}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <AppHeader
@@ -461,11 +394,7 @@ export default function EventsScreen() {
         {/* My Tournaments */}
         {myTournaments.length > 0 && (
           <View style={styles.section}>
-            <SectionHeader
-              title="My Tournaments"
-              icon="person"
-              count={myTournaments.length}
-            />
+            <SectionHeader title="My Tournaments" icon="person" count={myTournaments.length} />
             <View style={styles.cardList}>
               {myTournaments.map((event) => (
                 <EventCard
@@ -486,12 +415,7 @@ export default function EventsScreen() {
         {/* Active Tournaments */}
         {activeTournaments.length > 0 && (
           <View style={styles.section}>
-            <SectionHeader
-              title="Live Now"
-              icon="pulse"
-              count={activeTournaments.length}
-              accentColor={theme.colors.success.main}
-            />
+            <SectionHeader title="Live Now" icon="pulse" count={activeTournaments.length} accentColor={colors.success.main} />
             <View style={styles.cardList}>
               {activeTournaments.map((event) => (
                 <EventCard
@@ -512,11 +436,7 @@ export default function EventsScreen() {
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
           <View style={styles.section}>
-            <SectionHeader
-              title="Upcoming Events"
-              icon="calendar"
-              count={upcomingEvents.length}
-            />
+            <SectionHeader title="Upcoming Events" icon="calendar" count={upcomingEvents.length} />
             <View style={styles.cardList}>
               {upcomingEvents.map((event) => (
                 <EventCard
@@ -537,7 +457,9 @@ export default function EventsScreen() {
         {/* Empty State */}
         {hasNoEvents && (
           <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={theme.colors.text.tertiary} />
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="calendar-outline" size={48} color={colors.text.tertiary} />
+            </View>
             <Text style={styles.emptyTitle}>No Events Available</Text>
             <Text style={styles.emptyText}>Check back later for upcoming tournaments</Text>
           </View>
@@ -556,7 +478,7 @@ export default function EventsScreen() {
             >
               <View style={styles.sectionHeaderContent}>
                 <View style={styles.sectionHeaderLeft}>
-                  <Ionicons name="time" size={18} color={theme.colors.text.tertiary} />
+                  <Ionicons name="time" size={18} color={colors.text.tertiary} />
                   <Text style={styles.sectionTitleMuted}>Past Events</Text>
                 </View>
                 <View style={styles.sectionHeaderRight}>
@@ -564,7 +486,7 @@ export default function EventsScreen() {
                   <Ionicons
                     name={showPastEvents ? 'chevron-up' : 'chevron-down'}
                     size={20}
-                    color={theme.colors.text.tertiary}
+                    color={colors.text.tertiary}
                   />
                 </View>
               </View>
@@ -586,9 +508,7 @@ export default function EventsScreen() {
                   />
                 ))}
                 {pastEvents.length > 10 && (
-                  <Text style={styles.moreText}>
-                    + {pastEvents.length - 10} more past events
-                  </Text>
+                  <Text style={styles.moreText}>+ {pastEvents.length - 10} more past events</Text>
                 )}
               </View>
             )}
@@ -635,7 +555,9 @@ interface SectionHeaderProps {
 const SectionHeader: React.FC<SectionHeaderProps> = ({ title, icon, count, accentColor }) => (
   <View style={styles.sectionHeader}>
     <View style={styles.sectionHeaderLeft}>
-      <Ionicons name={icon} size={18} color={accentColor || theme.colors.text.secondary} />
+      <View style={[styles.sectionIconContainer, accentColor && { backgroundColor: accentColor + '20' }]}>
+        <Ionicons name={icon} size={16} color={accentColor || colors.text.secondary} />
+      </View>
       <Text style={[styles.sectionTitle, accentColor && { color: accentColor }]}>{title}</Text>
     </View>
     {count !== undefined && (
@@ -673,10 +595,8 @@ const EventCard: React.FC<EventCardProps> = ({
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
   const isLive = event.status === 'IN_PROGRESS';
 
-  // Determine if event is past based on status AND time
   const isPast = (() => {
     if (event.status === 'COMPLETED' || event.status === 'CANCELLED') return true;
-    // SCHEDULED events more than 24 hours past their start time are considered past
     if (event.status === 'SCHEDULED') {
       const now = new Date();
       const startTime = new Date(event.startAt);
@@ -686,7 +606,6 @@ const EventCard: React.FC<EventCardProps> = ({
     return false;
   })();
 
-  // Determine if event has started (time passed but within 24h)
   const isStartingSoon = (() => {
     if (event.status === 'SCHEDULED') {
       const now = new Date();
@@ -697,7 +616,6 @@ const EventCard: React.FC<EventCardProps> = ({
     return false;
   })();
 
-  // Helper to get user's entry from event
   const getMyEntry = () => {
     if (!myUserId || !event.entries) return null;
     return event.entries.find((entry) => entry.userId === myUserId) || null;
@@ -705,47 +623,24 @@ const EventCard: React.FC<EventCardProps> = ({
 
   const getPlayerStatusBadge = () => {
     if (isDropped) {
-      return { text: 'Dropped', bg: 'rgba(239, 68, 68, 0.2)', color: theme.colors.error.light };
+      return { text: 'Dropped', bg: colors.error.main + '20', color: colors.error.light };
     }
     if (isCheckedIn) {
-      return { text: 'Checked In', bg: 'rgba(16, 185, 129, 0.2)', color: theme.colors.success.light };
+      return { text: 'Checked In', bg: colors.success.main + '20', color: colors.success.light };
     }
-    // Check if they have an entry (applied/registered)
     const entry = getMyEntry();
     if (entry) {
-      // If paid, show "Registered", otherwise show "Applied"
       if (entry.paidAt) {
-        return { text: 'Registered', bg: 'rgba(59, 130, 246, 0.2)', color: theme.colors.info.light };
+        return { text: 'Registered', bg: colors.info.main + '20', color: colors.info.light };
       } else {
-        return { text: 'Applied', bg: 'rgba(139, 92, 246, 0.2)', color: '#A78BFA' }; // Purple for "Applied"
+        return { text: 'Applied', bg: 'rgba(139, 92, 246, 0.2)', color: '#A78BFA' };
       }
     }
     return null;
   };
 
   const playerStatus = getPlayerStatusBadge();
-
   const gameImage = getGameImagePath(event.game);
-  const cardBgColor = muted
-    ? theme.colors.background.secondary
-    : isLive
-      ? theme.colors.background.card
-      : theme.colors.background.card;
-
-  // Convert hex color to rgba for gradient
-  const hexToRgba = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  const gradientColors = [
-    cardBgColor,
-    hexToRgba(cardBgColor, 0.6),
-    hexToRgba(cardBgColor, 0.2),
-    'transparent'
-  ] as const;
 
   return (
     <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
@@ -758,20 +653,10 @@ const EventCard: React.FC<EventCardProps> = ({
           compact && styles.eventCardCompact,
         ]}
       >
-        {/* Game Image Background with Gradient Overlay */}
+        {/* Game Image Background */}
         <View style={styles.cardImageContainer}>
-          <ImageBackground
-            source={gameImage}
-            style={styles.cardImage}
-            resizeMode="cover"
-          >
-            <LinearGradient
-              colors={gradientColors}
-              locations={[0, 0.3, 0.6, 1]}  // Adjusted to fade later, showing more image
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.cardImageGradient}
-            />
+          <ImageBackground source={gameImage} style={styles.cardImage} resizeMode="cover">
+            <View style={styles.cardImageOverlay} />
           </ImageBackground>
         </View>
 
@@ -788,23 +673,21 @@ const EventCard: React.FC<EventCardProps> = ({
           {/* Event Header */}
           <View style={styles.eventHeader}>
             <View style={styles.eventTitleContainer}>
-              {isLive && compact && (
-                <View style={styles.liveDotSmall} />
-              )}
+              {isLive && compact && <View style={styles.liveDotSmall} />}
               <Text style={[styles.eventName, muted && styles.eventNameMuted]} numberOfLines={compact ? 1 : 2}>
                 {event.name}
               </Text>
             </View>
             <View style={[
               styles.statusBadge,
-              isPast ? { backgroundColor: theme.colors.background.elevated } :
-                isStartingSoon ? { backgroundColor: 'rgba(245, 158, 11, 0.2)' } :
+              isPast ? { backgroundColor: colors.background.elevated } :
+                isStartingSoon ? { backgroundColor: colors.warning.main + '20' } :
                   getStatusStyle(event.status)
             ]}>
               <Text style={[
                 styles.statusText,
-                isPast ? { color: theme.colors.text.tertiary } :
-                  isStartingSoon ? { color: theme.colors.warning.light } :
+                isPast ? { color: colors.text.tertiary } :
+                  isStartingSoon ? { color: colors.warning.light } :
                     getStatusTextStyle(event.status)
               ]}>
                 {isPast ? 'Past' : isStartingSoon ? 'Starting Soon' : formatStatus(event.status)}
@@ -815,11 +698,11 @@ const EventCard: React.FC<EventCardProps> = ({
           {/* Event Details */}
           <View style={styles.eventDetails}>
             <View style={styles.detailRow}>
-              <Ionicons name="game-controller-outline" size={14} color={theme.colors.text.secondary} />
+              <Ionicons name="game-controller-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.detailText}>{formatGameName(event.game)}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
+              <Ionicons name="calendar-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.detailText}>
                 {new Date(event.startAt).toLocaleDateString('en-US', {
                   month: 'short',
@@ -830,7 +713,7 @@ const EventCard: React.FC<EventCardProps> = ({
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="people-outline" size={14} color={theme.colors.text.secondary} />
+              <Ionicons name="people-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.detailText}>
                 {event._count.entries}
                 {event.maxPlayers ? `/${event.maxPlayers}` : ''} players
@@ -856,30 +739,30 @@ const EventCard: React.FC<EventCardProps> = ({
 const getStatusStyle = (status: string) => {
   switch (status) {
     case 'IN_PROGRESS':
-      return { backgroundColor: 'rgba(16, 185, 129, 0.2)' };
+      return { backgroundColor: colors.success.main + '20' };
     case 'SCHEDULED':
-      return { backgroundColor: 'rgba(59, 130, 246, 0.2)' };
+      return { backgroundColor: colors.info.main + '20' };
     case 'COMPLETED':
-      return { backgroundColor: theme.colors.background.elevated };
+      return { backgroundColor: colors.background.elevated };
     case 'CANCELLED':
-      return { backgroundColor: 'rgba(239, 68, 68, 0.2)' };
+      return { backgroundColor: colors.error.main + '20' };
     default:
-      return { backgroundColor: theme.colors.background.elevated };
+      return { backgroundColor: colors.background.elevated };
   }
 };
 
 const getStatusTextStyle = (status: string) => {
   switch (status) {
     case 'IN_PROGRESS':
-      return { color: theme.colors.success.light };
+      return { color: colors.success.light };
     case 'SCHEDULED':
-      return { color: theme.colors.info.light };
+      return { color: colors.info.light };
     case 'COMPLETED':
-      return { color: theme.colors.text.tertiary };
+      return { color: colors.text.tertiary };
     case 'CANCELLED':
-      return { color: theme.colors.error.light };
+      return { color: colors.error.light };
     default:
-      return { color: theme.colors.text.tertiary };
+      return { color: colors.text.tertiary };
   }
 };
 
@@ -901,33 +784,34 @@ const formatStatus = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
   },
   loadingText: {
-    marginTop: 12,
-    color: theme.colors.text.secondary,
-    fontSize: 16,
+    marginTop: spacing.md,
+    color: colors.text.secondary,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.medium,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: spacing['3xl'],
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: spacing.base,
   },
   sectionHeaderContent: {
     flexDirection: 'row',
@@ -938,53 +822,60 @@ const styles = StyleSheet.create({
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   sectionHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
+  },
+  sectionIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginLeft: 8,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.tight,
   },
   sectionTitleMuted: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text.tertiary,
-    marginLeft: 8,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.tertiary,
   },
   countBadge: {
-    backgroundColor: theme.colors.background.elevated,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
+    backgroundColor: colors.background.elevated,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
   countBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.secondary,
   },
   countBadgeMuted: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text.tertiary,
-    backgroundColor: theme.colors.background.tertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    backgroundColor: colors.background.highlight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
   cardList: {
-    gap: 12,
+    gap: spacing.md,
   },
   eventCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: 16,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
+    borderColor: colors.border.light,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -993,150 +884,152 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    width: '60%',  // Increased from 40% to show more of the image
+    width: '60%',
     zIndex: 0,
   },
   cardImage: {
     width: '100%',
     height: '100%',
   },
-  cardImageGradient: {
-    width: '100%',
-    height: '100%',
+  cardImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background.card,
+    opacity: 0.7,
   },
   cardContent: {
-    padding: 16,
+    padding: spacing.base,
     position: 'relative',
     zIndex: 1,
     backgroundColor: 'transparent',
   },
-  cardContentCompact: {
-    padding: 12,
-  },
   eventCardLive: {
-    borderColor: theme.colors.success.light,
-    borderWidth: 1,
-    shadowColor: theme.colors.success.main,
-    shadowOpacity: 0.1,
+    borderColor: colors.success.main + '60',
+    borderWidth: 1.5,
   },
-  eventCardCompact: {
-    // Padding handled by cardContent
-  },
+  eventCardCompact: {},
   eventCardMuted: {
     opacity: 0.7,
-    backgroundColor: theme.colors.background.secondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border.main,
+    borderColor: colors.border.subtle,
   },
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.success.main,
-    marginRight: 6,
+    backgroundColor: colors.success.main,
+    marginRight: spacing.xs,
   },
   liveDotSmall: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.success.main,
-    marginRight: 6,
+    backgroundColor: colors.success.main,
+    marginRight: spacing.xs,
   },
   liveText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.success.main,
-    letterSpacing: 0.5,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.success.main,
+    letterSpacing: typography.letterSpacing.wide,
   },
   eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   eventTitleContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   eventName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
     lineHeight: 22,
   },
   eventNameMuted: {
-    color: theme.colors.text.secondary,
+    color: colors.text.secondary,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: typography.fontSize['2xs'],
+    fontWeight: typography.fontWeight.bold,
     textTransform: 'uppercase',
+    letterSpacing: typography.letterSpacing.wide,
   },
   eventDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.md,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   detailText: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginLeft: 4,
-    fontWeight: '500',
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginLeft: spacing.xs,
+    fontWeight: typography.fontWeight.medium,
   },
   playerStatusBadge: {
-    marginTop: 12,
+    marginTop: spacing.md,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
   playerStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
-    marginTop: 20,
+    padding: spacing['3xl'],
+    marginTop: spacing.lg,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   emptyText: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   collapsibleHeader: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   moreText: {
     textAlign: 'center',
-    color: theme.colors.text.tertiary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 8,
+    color: colors.text.tertiary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    marginTop: spacing.sm,
   },
-
 });

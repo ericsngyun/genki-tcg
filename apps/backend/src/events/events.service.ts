@@ -538,6 +538,12 @@ export class EventsService {
   async addLatePlayer(eventId: string, userId: string, userOrgId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
+      include: {
+        rounds: {
+          orderBy: { roundNumber: 'desc' },
+          take: 1,
+        },
+      },
     });
 
     if (!event) {
@@ -561,14 +567,30 @@ export class EventsService {
       throw new BadRequestException('Player already registered');
     }
 
+    // Determine how many rounds the player has missed
+    // Late player joins with phantom losses for all missed rounds
+    const currentRoundNumber = event.rounds[0]?.roundNumber ?? 0;
+    const missedRounds = currentRoundNumber > 0 ? currentRoundNumber : 0;
+
     // Create entry and auto-check-in
-    return this.prisma.entry.create({
+    // Track joinedAtRound so ratings can calculate phantom losses
+    const entry = await this.prisma.entry.create({
       data: {
         eventId,
         userId,
         checkedInAt: new Date(), // Auto check-in for late adds
+        joinedAtRound: currentRoundNumber + 1, // Will join in next round
       },
     });
+
+    if (missedRounds > 0) {
+      this.logger.log(
+        `Late player ${userId} added to event ${eventId} at round ${currentRoundNumber + 1}. ` +
+        `They missed ${missedRounds} round(s) and will receive phantom losses for ratings.`
+      );
+    }
+
+    return entry;
   }
 
   async selfCheckIn(eventId: string, userId: string, userOrgId: string) {
@@ -584,6 +606,34 @@ export class EventsService {
     // Validate organization
     if (event.orgId !== userOrgId) {
       throw new ForbiddenException('Cannot check in to events in other organizations');
+    }
+
+    // Validate event status - can only check in to SCHEDULED events
+    // Once tournament is IN_PROGRESS, check-in is closed
+    if (event.status !== 'SCHEDULED') {
+      if (event.status === 'IN_PROGRESS') {
+        throw new BadRequestException('Check-in is closed - tournament has already started');
+      } else if (event.status === 'COMPLETED') {
+        throw new BadRequestException('Cannot check in - tournament has ended');
+      } else if (event.status === 'CANCELLED') {
+        throw new BadRequestException('Cannot check in - event has been cancelled');
+      } else {
+        throw new BadRequestException('Cannot check in at this time');
+      }
+    }
+
+    // Validate check-in time window
+    // Check-in opens 2 hours before event start time
+    const now = new Date();
+    const checkInWindowHours = 2;
+    const checkInOpensAt = new Date(event.startAt.getTime() - checkInWindowHours * 60 * 60 * 1000);
+
+    if (now < checkInOpensAt) {
+      const minutesUntilOpen = Math.ceil((checkInOpensAt.getTime() - now.getTime()) / (60 * 1000));
+      throw new BadRequestException(
+        `Check-in opens ${checkInWindowHours} hours before the event starts. ` +
+        `Please try again in ${minutesUntilOpen} minute(s).`
+      );
     }
 
     // Find the user's entry
@@ -1110,6 +1160,11 @@ export class EventsService {
 
     // Delete in transaction to ensure data consistency
     await this.prisma.$transaction(async (tx) => {
+      // Delete credit ledger entries (prize distributions) for this event
+      await tx.creditLedgerEntry.deleteMany({
+        where: { relatedEventId: eventId },
+      });
+
       // Delete rating history entries that reference matches from this event
       await tx.lifetimeRatingHistory.deleteMany({
         where: { eventId },
@@ -1118,6 +1173,11 @@ export class EventsService {
       // Delete tournament rating updates
       await tx.tournamentRatingUpdate.deleteMany({
         where: { tournamentId: eventId },
+      });
+
+      // Delete standing snapshots
+      await tx.standingSnapshot.deleteMany({
+        where: { eventId },
       });
 
       // Delete matches (through rounds)
@@ -1308,6 +1368,7 @@ export class EventsService {
     const playerNames = new Map<string, string>();
     const playerIds: string[] = [];
     const droppedPlayers = new Set<string>();
+    const droppedAfterRound = new Map<string, number>();
 
     for (const entry of event.entries) {
       playerIds.push(entry.userId);
@@ -1315,8 +1376,14 @@ export class EventsService {
 
       if (entry.droppedAt) {
         droppedPlayers.add(entry.userId);
+        if (entry.droppedAfterRound !== null) {
+          droppedAfterRound.set(entry.userId, entry.droppedAfterRound);
+        }
       }
     }
+
+    // Calculate total completed rounds
+    const totalCompletedRounds = event.rounds.filter(r => r.status === 'COMPLETED').length;
 
     // Validate we have matches
     if (allMatches.length === 0) {
@@ -1345,6 +1412,8 @@ export class EventsService {
         gamesWonB: m.gamesWonB || 0,
       })),
       droppedPlayers,
+      totalCompletedRounds,
+      droppedAfterRound,
     });
 
     // Edge case: Handle tied placements

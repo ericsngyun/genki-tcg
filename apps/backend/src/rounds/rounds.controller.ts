@@ -15,7 +15,7 @@ export class RoundsController {
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
   async createNextRound(@CurrentUser() user: AuthenticatedUser, @Param('eventId') eventId: string) {
-    return this.roundsService.createNextRound(eventId, user.orgId);
+    return this.roundsService.createNextRound(eventId, user.orgId, user.id);
   }
 
   @Get(':roundId/pairings')
@@ -69,6 +69,6 @@ export class RoundsController {
   @UseGuards(RolesGuard)
   @Roles('OWNER', 'STAFF')
   async regeneratePendingRound(@CurrentUser() user: AuthenticatedUser, @Param('roundId') roundId: string) {
-    return this.roundsService.regeneratePendingRound(roundId, user.orgId);
+    return this.roundsService.regeneratePendingRound(roundId, user.orgId, user.id);
   }
 }

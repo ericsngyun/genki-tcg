@@ -323,6 +323,7 @@ model Entry {
   checkedInAt       DateTime?
   droppedAt         DateTime?
   droppedAfterRound Int?
+  joinedAtRound     Int? // For late additions: which round they joined (receives phantom losses for earlier rounds)
 
   // Payment tracking
   paidAt     DateTime?
@@ -385,6 +386,12 @@ model Round {
   startAt      DateTime?
   endAt        DateTime?
   timerSeconds Int?      @default(3000) // 50 minutes default
+
+  // Audit trail for pairings
+  pairingsCreatedBy     String? // Staff user ID who created pairings
+  pairingsCreatedAt     DateTime? // When pairings were created
+  pairingsRegeneratedBy String? // Staff user ID who regenerated pairings (if any)
+  pairingsRegeneratedAt DateTime? // When pairings were regenerated (if any)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

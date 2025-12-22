@@ -102,31 +102,54 @@ function bucketPlayersByPoints(
 
 /**
  * Select bye player: lowest points, then lowest OMW%, who hasn't received bye
+ *
+ * IMPORTANT: Fair bye distribution ensures no player gets excessive byes.
+ * If all players have received a bye, we give priority to:
+ * 1. Players with lowest points (worst standing)
+ * 2. Players with lowest OMW% (weakest tiebreaker)
+ * 3. Alphabetical by userId (deterministic fallback)
  */
 function selectByePlayer(
   buckets: Map<number, PlayerRecord[]>
 ): PlayerRecord {
-  // Get point buckets in ascending order
+  // Get point buckets in ascending order (lowest points first)
   const pointValues = Array.from(buckets.keys()).sort((a, b) => a - b);
 
+  // First pass: Find eligible players who haven't received a bye
   for (const points of pointValues) {
     const bucket = buckets.get(points)!;
 
-    // Find players who haven't received a bye, sorted by OMW% ascending
+    // Find players who haven't received a bye, sorted by OMW% ascending, then by userId for determinism
     const eligiblePlayers = bucket
       .filter((p) => !p.receivedBye)
-      .sort((a, b) => a.omwPercent - b.omwPercent);
+      .sort((a, b) => {
+        // Primary: lowest OMW% first
+        if (Math.abs(a.omwPercent - b.omwPercent) > 0.0001) {
+          return a.omwPercent - b.omwPercent;
+        }
+        // Deterministic tiebreaker: alphabetical by userId
+        return a.userId.localeCompare(b.userId);
+      });
 
     if (eligiblePlayers.length > 0) {
       return eligiblePlayers[0];
     }
   }
 
-  // Fallback: if all players have received bye, give to lowest-ranked
+  // Fallback: If ALL players have received a bye (rare in long tournaments),
+  // give bye to the player with lowest standing (lowest points, then lowest OMW%)
+  // This ensures fairness when everyone has already had a bye
   for (const points of pointValues) {
     const bucket = buckets.get(points)!;
     if (bucket.length > 0) {
-      return bucket[bucket.length - 1];
+      // Sort by OMW% ascending, then userId for determinism
+      const sorted = [...bucket].sort((a, b) => {
+        if (Math.abs(a.omwPercent - b.omwPercent) > 0.0001) {
+          return a.omwPercent - b.omwPercent;
+        }
+        return a.userId.localeCompare(b.userId);
+      });
+      return sorted[0];
     }
   }
 

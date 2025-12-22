@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { api } from '../lib/api';
-import { theme } from '../lib/theme';
+import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
-
 import { logger } from '../lib/logger';
+
 interface Standing {
   userId: string;
   userName: string;
@@ -53,35 +54,24 @@ export default function StandingsScreen() {
     loadData();
   }, [eventId]);
 
-  // Real-time updates with optimized performance
   useRealtimeUpdates({
     eventId,
     onStandingsUpdated: useCallback(() => {
-      logger.debug('Standings updated - refreshing');
       loadData();
     }, []),
     onTournamentCompleted: useCallback(() => {
-      logger.debug('Tournament completed');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       loadData();
-      Alert.alert(
-        'Tournament Complete! 🏆',
-        'The tournament has finished. Check the final standings below.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Tournament Complete!', 'The tournament has finished. Check the final standings below.');
     }, []),
   });
 
   const loadData = async () => {
     try {
-      // Load user data
       const userData = await api.getMe();
       setMyUserId(userData.user.id);
-
-      // Load event
       const eventData = await api.getEvent(eventId);
       setEvent(eventData);
-
-      // Load standings
       const standingsData = await api.getStandings(eventId);
       setStandings(standingsData);
     } catch (error) {
@@ -93,39 +83,36 @@ export default function StandingsScreen() {
   };
 
   const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     loadData();
   };
 
   const handleBack = () => {
-    // Check if we can dismiss (for modals) or go back
-    // If neither works, navigate to events tab as fallback
-    if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
-      router.dismiss();
-    } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (router.canGoBack()) {
       router.back();
     } else {
-      // No screen to go back to - navigate to events tab
       router.replace('/(tabs)/events');
     }
   };
 
-  const getMyStanding = () => {
-    if (!myUserId) return null;
-    return standings.find((s) => s.userId === myUserId);
-  };
+  const myStanding = myUserId ? standings.find((s) => s.userId === myUserId) : null;
 
-  const getRankDisplay = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return rank;
+  const getRankColor = (rank: number) => {
+    if (rank === 1) return colors.rank.gold;
+    if (rank === 2) return colors.rank.silver;
+    if (rank === 3) return colors.rank.bronze;
+    return colors.text.secondary;
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary.main} />
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={styles.loadingText}>Loading standings...</Text>
+        </View>
       </View>
     );
   }
@@ -133,428 +120,420 @@ export default function StandingsScreen() {
   if (!event) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Event not found</Text>
-      </View>
-    );
-  }
-
-  if (standings.length === 0) {
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>{event.name}</Text>
-            <Text style={styles.subtitle}>Standings</Text>
-          </View>
+          <Text style={styles.headerTitle}>Error</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No standings yet</Text>
-          <Text style={styles.emptySubtext}>
-            Standings will appear after the first round completes
-          </Text>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.text.tertiary} />
+          <Text style={styles.emptyTitle}>Event not found</Text>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
-  const myStanding = getMyStanding();
-
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>{event.name}</Text>
-          <Text style={styles.subtitle}>Standings</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{event.name}</Text>
+          <Text style={styles.headerSubtitle}>Standings</Text>
         </View>
       </View>
 
-      {/* My Standing Highlight */}
-      {myStanding && (
-        <View style={styles.myStandingCard}>
-          <Text style={styles.myStandingLabel}>Your Standing</Text>
-          <View style={styles.myStandingContent}>
-            <View style={styles.rankBadge}>
-              <Text style={styles.rankLabel}>RANK</Text>
-              <Text style={styles.rankNumber}>
-                {typeof getRankDisplay(myStanding.rank) === 'string' &&
-                  String(getRankDisplay(myStanding.rank)).includes('🥇') ? (
-                  <Text style={{ fontSize: 48 }}>
-                    {getRankDisplay(myStanding.rank)}
-                  </Text>
-                ) : (
-                  getRankDisplay(myStanding.rank)
-                )}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary.main} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {standings.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="trophy-outline" size={48} color={colors.text.tertiary} />
+            <Text style={styles.emptyTitle}>No standings yet</Text>
+            <Text style={styles.emptySubtitle}>Standings will appear after the first round completes</Text>
+          </View>
+        ) : (
+          <>
+            {/* My Standing Card */}
+            {myStanding && (
+              <View style={styles.myStandingCard}>
+                <View style={styles.myStandingHeader}>
+                  <Text style={styles.myStandingLabel}>YOUR STANDING</Text>
+                </View>
+                <View style={styles.myStandingContent}>
+                  <View style={styles.rankSection}>
+                    <Text style={styles.rankLabel}>RANK</Text>
+                    <View style={[styles.rankBox, { borderColor: getRankColor(myStanding.rank) }]}>
+                      <Text style={[styles.rankNumber, { color: getRankColor(myStanding.rank) }]}>
+                        {myStanding.rank}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.statsSection}>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statValue}>{myStanding.points}</Text>
+                      <Text style={styles.statLabel}>Points</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statValue}>{myStanding.matchWins}-{myStanding.matchLosses}-{myStanding.matchDraws}</Text>
+                      <Text style={styles.statLabel}>Record</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statValue}>{(myStanding.omwPercent * 100).toFixed(1)}%</Text>
+                      <Text style={styles.statLabel}>OMW%</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Standings Table */}
+            <View style={styles.standingsSection}>
+              <Text style={styles.sectionTitle}>All Players</Text>
+              <Text style={styles.sectionSubtitle}>{standings.length} participants</Text>
+
+              <View style={styles.table}>
+                <View style={styles.tableHeader}>
+                  <View style={styles.rankCell}><Text style={styles.tableHeaderText}>#</Text></View>
+                  <View style={styles.playerCell}><Text style={styles.tableHeaderText}>Player</Text></View>
+                  <View style={styles.ptsCell}><Text style={styles.tableHeaderText}>Pts</Text></View>
+                  <View style={styles.recordCell}><Text style={styles.tableHeaderText}>Record</Text></View>
+                  <View style={styles.tieCell}><Text style={styles.tableHeaderText}>OMW%</Text></View>
+                </View>
+
+                {standings.map((standing) => {
+                  const isMe = standing.userId === myUserId;
+                  const isTop3 = standing.rank <= 3;
+                  return (
+                    <View
+                      key={standing.userId}
+                      style={[
+                        styles.tableRow,
+                        isMe && styles.tableRowMe,
+                        standing.isDropped && styles.tableRowDropped,
+                      ]}
+                    >
+                      <View style={styles.rankCell}>
+                        <Text style={[styles.rankText, isTop3 && { color: getRankColor(standing.rank) }]}>
+                          {standing.rank}
+                        </Text>
+                      </View>
+                      <View style={styles.playerCell}>
+                        <Text style={[styles.playerName, isMe && styles.playerNameMe, standing.isDropped && styles.playerNameDropped]} numberOfLines={1}>
+                          {standing.userName}
+                          {isMe && <Text style={styles.youTag}> (You)</Text>}
+                        </Text>
+                        {standing.isDropped && <Text style={styles.droppedTag}>Dropped</Text>}
+                      </View>
+                      <View style={styles.ptsCell}>
+                        <Text style={styles.ptsValue}>{standing.points}</Text>
+                      </View>
+                      <View style={styles.recordCell}>
+                        <Text style={styles.recordValue}>{standing.matchWins}-{standing.matchLosses}-{standing.matchDraws}</Text>
+                      </View>
+                      <View style={styles.tieCell}>
+                        <Text style={styles.tieValue}>{(standing.omwPercent * 100).toFixed(1)}%</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.text.tertiary} />
+              <Text style={styles.footerText}>
+                Win=3pts, Draw=1pt, Loss=0pts. Tiebreakers: OMW% → GW% → OGW%
               </Text>
             </View>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{myStanding.points}</Text>
-                <Text style={styles.statLabel}>Points</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {myStanding.matchWins}-{myStanding.matchLosses}-
-                  {myStanding.matchDraws}
-                </Text>
-                <Text style={styles.statLabel}>Record</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {(myStanding.omwPercent * 100).toFixed(1)}%
-                </Text>
-                <Text style={styles.statLabel}>OMW%</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {(myStanding.gwPercent * 100).toFixed(1)}%
-                </Text>
-                <Text style={styles.statLabel}>GW%</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {(myStanding.oomwPercent * 100).toFixed(1)}%
-                </Text>
-                <Text style={styles.statLabel}>OOMW%</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* All Standings */}
-      <View style={styles.standingsContainer}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.rankCell]}>Rank</Text>
-          <Text style={[styles.headerCell, styles.playerCell]}>Player</Text>
-          <Text style={[styles.headerCell, styles.pointsCell]}>Pts</Text>
-          <Text style={[styles.headerCell, styles.recordCell]}>Record</Text>
-          <Text style={[styles.headerCell, styles.tieCell]}>OMW%</Text>
-        </View>
-        {standings.map((standing) => (
-          <View
-            key={standing.userId}
-            style={[
-              styles.tableRow,
-              standing.userId === myUserId && styles.tableRowHighlight,
-              standing.isDropped && styles.tableRowDropped,
-            ]}
-          >
-            <Text style={[styles.cell, styles.rankCell, styles.rankText]}>
-              {getRankDisplay(standing.rank)}
-            </Text>
-            <View style={styles.playerCell}>
-              <Text
-                style={[
-                  styles.cell,
-                  styles.playerText,
-                  standing.userId === myUserId && styles.playerTextMe,
-                ]}
-                numberOfLines={1}
-              >
-                {standing.userName}
-                {standing.userId === myUserId && (
-                  <Text style={styles.youBadge}> (You)</Text>
-                )}
-              </Text>
-              {standing.isDropped && (
-                <Text style={styles.droppedBadge}>Dropped</Text>
-              )}
-            </View>
-            <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>
-              {standing.points}
-            </Text>
-            <Text style={[styles.cell, styles.recordCell, styles.recordText]}>
-              {standing.matchWins}-{standing.matchLosses}-{standing.matchDraws}
-            </Text>
-            <Text style={[styles.cell, styles.tieCell, styles.tieText]}>
-              {(standing.omwPercent * 100).toFixed(1)}%
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Standings are calculated using Swiss pairing tiebreakers
-        </Text>
-        <Text style={styles.footerSubtext}>
-          Points: Win=3, Draw=1, Loss=0 • Tiebreakers: OMW%, GW%, OGW%, OOMW%
-        </Text>
-      </View>
-    </ScrollView>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: colors.background.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  headerTextContainer: {
+  scrollView: {
     flex: 1,
   },
-  title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-    fontWeight: theme.typography.fontWeight.medium,
+  scrollContent: {
+    paddingBottom: spacing['4xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
   },
-  emptyContainer: {
-    padding: 40,
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: spacing.base,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 300,
+    marginRight: spacing.md,
   },
-  emptyText: {
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.bold,
-    marginBottom: 8,
+  headerTextContainer: {
+    flex: 1,
   },
-  emptySubtext: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 24,
+  headerTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
-  errorText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.error.main,
-    textAlign: 'center',
-    marginTop: 20,
+  headerSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: 2,
   },
+
+  // My Standing Card
   myStandingCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.xl,
-    margin: 16,
-    padding: 24,
+    margin: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.primary.main + '40',
-    ...theme.shadows.xl,
-    position: 'relative',
-    overflow: 'hidden',
+    borderColor: colors.primary.dark,
+  },
+  myStandingHeader: {
+    marginBottom: spacing.base,
   },
   myStandingLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
-    letterSpacing: 1.5,
-    marginBottom: 20,
-    textTransform: 'uppercase',
-    textAlign: 'center',
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.light,
+    letterSpacing: typography.letterSpacing.wider,
   },
   myStandingContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xl,
   },
-  rankBadge: {
-    backgroundColor: theme.colors.primary.lightest,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.primary.light,
-    minWidth: 120,
+  rankSection: {
     alignItems: 'center',
   },
   rankLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.dark,
-    textAlign: 'center',
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.wider,
+    marginBottom: spacing.xs,
+  },
+  rankBox: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rankNumber: {
-    fontSize: 40,
-    fontWeight: theme.typography.fontWeight.black,
-    color: theme.colors.primary.main,
-    textAlign: 'center',
-    lineHeight: 48,
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.black,
   },
-  statsGrid: {
+  statsSection: {
+    flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-    gap: 12,
+    justifyContent: 'space-around',
   },
   statItem: {
     alignItems: 'center',
-    width: '48%', // 2 columns
-    backgroundColor: theme.colors.background.elevated,
-    padding: 12,
-    borderRadius: theme.borderRadius.md,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 4,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
   statLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+    marginTop: 2,
   },
-  standingsContainer: {
-    backgroundColor: theme.colors.background.card,
-    margin: 16,
-    borderRadius: theme.borderRadius.lg,
-    overflow: 'hidden',
+
+  // Standings Section
+  standingsSection: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  sectionSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.tertiary,
+    marginBottom: spacing.md,
+  },
+
+  // Table
+  table: {
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...theme.shadows.sm,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.background.elevated,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.background.elevated,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.main,
+    borderBottomColor: colors.border.light,
   },
-  headerCell: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.secondary,
+  tableHeaderText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: typography.letterSpacing.wide,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
+    borderBottomColor: colors.border.subtle,
   },
-  tableRowHighlight: {
-    backgroundColor: theme.colors.primary.lightest + '10',
+  tableRowMe: {
+    backgroundColor: colors.primary.main + '10',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.main,
   },
   tableRowDropped: {
     opacity: 0.5,
-    backgroundColor: theme.colors.background.primary,
-  },
-  cell: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.primary,
   },
   rankCell: {
-    width: 40,
-    textAlign: 'center',
+    width: 36,
+    alignItems: 'center',
   },
   rankText: {
-    fontWeight: theme.typography.fontWeight.bold,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.secondary,
   },
   playerCell: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
-  playerText: {
-    fontWeight: theme.typography.fontWeight.semibold,
-    fontSize: theme.typography.fontSize.base,
+  playerName: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
   },
-  playerTextMe: {
-    color: theme.colors.primary.main,
-    fontWeight: theme.typography.fontWeight.bold,
+  playerNameMe: {
+    color: colors.primary.light,
+    fontWeight: typography.fontWeight.bold,
   },
-  pointsCell: {
-    width: 40,
-    textAlign: 'center',
+  playerNameDropped: {
+    color: colors.text.tertiary,
   },
-  pointsText: {
-    fontWeight: theme.typography.fontWeight.bold,
+  youTag: {
+    fontSize: typography.fontSize.xs,
+    color: colors.primary.main,
+  },
+  droppedTag: {
+    fontSize: typography.fontSize.xs,
+    color: colors.error.light,
+    marginTop: 2,
+  },
+  ptsCell: {
+    width: 36,
+    alignItems: 'center',
+  },
+  ptsValue: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
   recordCell: {
-    width: 60,
-    textAlign: 'center',
+    width: 55,
+    alignItems: 'center',
   },
-  recordText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
+  recordValue: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
   },
   tieCell: {
     width: 50,
-    textAlign: 'right',
+    alignItems: 'flex-end',
   },
-  tieText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.tertiary,
-    fontVariant: ['tabular-nums'],
+  tieValue: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.tertiary,
   },
-  youBadge: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
-  },
-  droppedBadge: {
-    fontSize: 10,
-    color: theme.colors.error.main,
-    marginTop: 2,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
+
+  // Footer
   footer: {
-    padding: 20,
-    marginBottom: 32,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+    margin: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.background.elevated,
+    borderRadius: borderRadius.md,
   },
   footerText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: 4,
-    fontWeight: theme.typography.fontWeight.medium,
+    flex: 1,
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
   },
-  footerSubtext: {
-    fontSize: 10,
-    color: theme.colors.text.tertiary,
+
+  // Empty
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['4xl'],
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  emptySubtitle: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
     textAlign: 'center',
-    maxWidth: '80%',
   },
 });

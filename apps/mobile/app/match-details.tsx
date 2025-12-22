@@ -7,13 +7,14 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 import { ActiveMatchCard } from '../components';
-import { theme } from '../lib/theme';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 import { logger } from '../lib/logger';
 
@@ -36,6 +37,52 @@ interface ActiveMatch {
   } | null;
 }
 
+// ============================================
+// Sub-components
+// ============================================
+
+interface HeaderProps {
+  title: string;
+  subtitle: string;
+  onBack: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ title, subtitle, onBack }) => (
+  <View style={styles.header}>
+    <TouchableOpacity
+      onPress={onBack}
+      style={styles.backButton}
+      activeOpacity={0.7}
+    >
+      <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+    </TouchableOpacity>
+    <View style={styles.headerTextContainer}>
+      <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+      <Text style={styles.headerSubtitle}>{subtitle}</Text>
+    </View>
+  </View>
+);
+
+interface EmptyStateProps {
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const EmptyState: React.FC<EmptyStateProps> = ({ title, subtitle, icon }) => (
+  <View style={styles.emptyContainer}>
+    <View style={styles.emptyIconContainer}>
+      <Ionicons name={icon} size={48} color={colors.text.tertiary} />
+    </View>
+    <Text style={styles.emptyTitle}>{title}</Text>
+    <Text style={styles.emptySubtitle}>{subtitle}</Text>
+  </View>
+);
+
+// ============================================
+// Main Component
+// ============================================
+
 export default function MatchDetailsScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -46,21 +93,21 @@ export default function MatchDetailsScreen() {
   const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [dropping, setDropping] = useState(false);
 
   useEffect(() => {
     loadActiveMatch();
   }, [eventId]);
 
-  // Real-time updates: Refresh match when opponent reports/confirms
+  // Real-time updates
   useRealtimeUpdates({
     eventId,
     onMatchResultReported: useCallback((matchId: string) => {
-      // Refresh match data when opponent reports result
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       loadActiveMatch();
     }, []),
     onStandingsUpdated: useCallback(() => {
-      // Refresh match data when standings update (match was confirmed)
       loadActiveMatch();
     }, []),
   });
@@ -77,23 +124,34 @@ export default function MatchDetailsScreen() {
       logger.error('Failed to load active match:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    loadActiveMatch();
+  };
+
   const handleBack = () => {
-    // Check if we can dismiss (for modals) or go back
-    // If neither works, navigate to events tab as fallback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
       router.dismiss();
     } else if (typeof (router as any).canGoBack === 'function' && (router as any).canGoBack()) {
       router.back();
     } else {
-      // No screen to go back to - navigate to events tab
       router.replace('/(tabs)/events');
     }
   };
 
+  const handleViewStandings = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({ pathname: '/standings', params: { eventId } });
+  };
+
   const handleDrop = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       'Drop from Tournament',
       'Are you sure you want to drop from this tournament? This action cannot be undone.',
@@ -106,17 +164,14 @@ export default function MatchDetailsScreen() {
             setDropping(true);
             try {
               await api.dropFromEvent(eventId);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
               Alert.alert(
                 'Dropped',
                 'You have been dropped from the tournament.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: handleBack,
-                  },
-                ]
+                [{ text: 'OK', onPress: handleBack }]
               );
             } catch (error: any) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('Error', error.response?.data?.message || 'Failed to drop from tournament');
             } finally {
               setDropping(false);
@@ -130,39 +185,36 @@ export default function MatchDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>{eventName}</Text>
-            <Text style={styles.headerSubtitle}>Match Details</Text>
-          </View>
-        </View>
+        <Header title={eventName || 'Match'} subtitle="Match Details" onBack={handleBack} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary.main} />
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={styles.loadingText}>Loading match...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.mainContainer}>
-      <LinearGradient
-        colors={[theme.colors.background.primary, '#1a1a2e']}
-        style={StyleSheet.absoluteFill}
+    <View style={styles.container}>
+      <Header
+        title={eventName || 'Match'}
+        subtitle="Match Details"
+        onBack={handleBack}
       />
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>{eventName}</Text>
-            <Text style={styles.headerSubtitle}>Match Details</Text>
-          </View>
-        </View>
 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary.main}
+            colors={[colors.primary.main]}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
         {activeMatch?.match ? (
           <>
             <ActiveMatchCard
@@ -177,173 +229,244 @@ export default function MatchDetailsScreen() {
             <View style={styles.actionsContainer}>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() =>
-                  router.push({
-                    pathname: '/standings',
-                    params: { eventId },
-                  })
-                }
+                onPress={handleViewStandings}
+                activeOpacity={0.8}
               >
-                <Ionicons name="trophy" size={20} color={theme.colors.text.primary} />
-                <Text style={styles.actionButtonText}>View Standings</Text>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="trophy" size={20} color={colors.primary.main} />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionButtonText}>View Standings</Text>
+                  <Text style={styles.actionSubtext}>See current rankings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.dropButton]}
                 onPress={handleDrop}
                 disabled={dropping}
+                activeOpacity={0.8}
               >
                 {dropping ? (
-                  <ActivityIndicator color={theme.colors.error.main} />
+                  <ActivityIndicator color={colors.error.main} />
                 ) : (
                   <>
-                    <Ionicons name="exit" size={20} color={theme.colors.error.main} />
-                    <Text style={[styles.actionButtonText, { color: theme.colors.error.main }]}>
-                      Drop from Tournament
-                    </Text>
+                    <View style={[styles.actionIconContainer, styles.dropIconContainer]}>
+                      <Ionicons name="exit-outline" size={20} color={colors.error.main} />
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text style={[styles.actionButtonText, { color: colors.error.light }]}>
+                        Drop from Tournament
+                      </Text>
+                      <Text style={styles.actionSubtext}>Cannot be undone</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
                   </>
                 )}
               </TouchableOpacity>
             </View>
           </>
         ) : (
-          <View style={styles.noMatchContainer}>
-            <Ionicons name="information-circle" size={64} color={theme.colors.text.tertiary} />
-            <Text style={styles.noMatchTitle}>No Active Match</Text>
-            <Text style={styles.noMatchText}>
-              You don't have an active match right now. Check back when the next round starts.
-            </Text>
+          <>
+            <EmptyState
+              icon="hourglass-outline"
+              title="No Active Match"
+              subtitle="You don't have an active match right now. Check back when the next round starts."
+            />
 
+            {/* Actions when no match */}
             <View style={styles.actionsContainer}>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() =>
-                  router.push({
-                    pathname: '/standings',
-                    params: { eventId },
-                  })
-                }
+                onPress={handleViewStandings}
+                activeOpacity={0.8}
               >
-                <Ionicons name="trophy" size={20} color={theme.colors.text.primary} />
-                <Text style={styles.actionButtonText}>View Standings</Text>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="trophy" size={20} color={colors.primary.main} />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionButtonText}>View Standings</Text>
+                  <Text style={styles.actionSubtext}>See current rankings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.dropButton]}
                 onPress={handleDrop}
                 disabled={dropping}
+                activeOpacity={0.8}
               >
                 {dropping ? (
-                  <ActivityIndicator color={theme.colors.error.main} />
+                  <ActivityIndicator color={colors.error.main} />
                 ) : (
                   <>
-                    <Ionicons name="exit" size={20} color={theme.colors.error.main} />
-                    <Text style={[styles.actionButtonText, { color: theme.colors.error.main }]}>
-                      Drop from Tournament
-                    </Text>
+                    <View style={[styles.actionIconContainer, styles.dropIconContainer]}>
+                      <Ionicons name="exit-outline" size={20} color={colors.error.main} />
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text style={[styles.actionButtonText, { color: colors.error.light }]}>
+                        Drop from Tournament
+                      </Text>
+                      <Text style={styles.actionSubtext}>Cannot be undone</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
                   </>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
+          </>
         )}
       </ScrollView>
     </View>
   );
 }
 
+// ============================================
+// Styles
+// ============================================
+
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background.primary,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing['4xl'],
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: 'transparent',
+    paddingBottom: spacing.base,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: colors.border.light,
   },
   backButton: {
-    padding: 8,
-    marginRight: 12,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background.elevated,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
   },
   headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.tight,
   },
   headerSubtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
     marginTop: 2,
-    fontWeight: theme.typography.fontWeight.medium,
   },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
   },
-  noMatchContainer: {
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+
+  // Empty State
+  emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 32,
-    flex: 1,
     justifyContent: 'center',
+    paddingVertical: spacing['4xl'],
+    paddingHorizontal: spacing.xl,
   },
-  noMatchTitle: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginTop: 24,
-    marginBottom: 12,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-  noMatchText: {
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.text.secondary,
+  emptyTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 40,
   },
+  emptySubtitle: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: '85%',
+  },
+
+  // Actions
   actionsContainer: {
-    padding: 24,
-    gap: 16,
-    width: '100%',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: theme.colors.background.card,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: theme.borderRadius.xl,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    ...theme.shadows.sm,
+    borderColor: colors.border.light,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+    gap: spacing.md,
+  },
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary.dark,
+  },
+  dropIconContainer: {
+    borderColor: colors.error.main + '30',
+    backgroundColor: colors.error.main + '10',
+  },
+  actionTextContainer: {
+    flex: 1,
   },
   actionButtonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  actionSubtext: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+    marginTop: 2,
   },
   dropButton: {
-    borderColor: theme.colors.error.light,
-    backgroundColor: theme.colors.error.lightest + '40',
-    marginTop: 20,
+    borderColor: colors.error.main + '30',
+    marginTop: spacing.md,
   },
 });

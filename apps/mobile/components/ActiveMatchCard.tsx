@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { theme } from '../lib/theme';
+import * as Haptics from 'expo-haptics';
+import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { api } from '../lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
@@ -42,20 +43,18 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   const [confirming, setConfirming] = useState(false);
 
   // Real-time updates: Refresh match when opponent reports result
-  // This allows the opponent to see the report and confirm it
   useRealtimeUpdates({
     eventId,
     onMatchResultReported: useCallback((matchId: string) => {
-      // Only refresh if this is our match
       if (matchId === match.id) {
-        onMatchUpdate(); // Refresh to show opponent's reported result
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onMatchUpdate();
       }
     }, [match.id, onMatchUpdate]),
   });
 
   const isBo3 = gameType === 'RIFTBOUND';
   const iReported = match.reportedBy !== null;
-  // Check if opponent reported (not me)
   const iAmTheReporter = match.reportedBy === myUserId;
   const opponentReported = iReported && !iAmTheReporter;
   const waitingForConfirmation = iReported && !match.confirmedBy;
@@ -63,26 +62,21 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
 
   // Bo3 score validation helper
   const validateBo3Score = (myGames: number, oppGames: number, isWin: boolean): string | null => {
-    // Check for negative numbers
     if (myGames < 0 || oppGames < 0) {
       return 'Game scores cannot be negative';
     }
-    // Check max games in Bo3 (first to 2)
     if (myGames > 2 || oppGames > 2) {
       return 'Maximum games in Bo3 is 2';
     }
-    // Check for impossible scores like 2-2
     if (myGames === 2 && oppGames === 2) {
       return 'Invalid score: both players cannot win 2 games in Bo3';
     }
-    // Check that winner has 2 wins
     if (isWin && myGames !== 2) {
       return 'You must have won 2 games to report a win';
     }
     if (!isWin && oppGames !== 2) {
       return 'Opponent must have won 2 games to report a loss';
     }
-    // Total games should be valid (2, 3)
     const totalGames = myGames + oppGames;
     if (totalGames < 2 || totalGames > 3) {
       return 'Invalid score: total games must be 2 or 3';
@@ -91,8 +85,8 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   };
 
   const handleReportWin = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (isBo3) {
-      // For Bo3, show game entry UI
       Alert.prompt(
         'Report Games Won',
         'Enter games won (e.g., "2-1" or "2-0" for your victory)',
@@ -115,7 +109,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
                 return;
               }
 
-              // Validate Bo3 score
               const validationError = validateBo3Score(myGames, oppGames, true);
               if (validationError) {
                 Alert.alert('Invalid Score', validationError);
@@ -133,7 +126,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
         'plain-text'
       );
     } else {
-      // For 1v1, simple win
       await reportResult(
         match.iAmPlayerA ? 'PLAYER_A_WIN' : 'PLAYER_B_WIN',
         match.iAmPlayerA ? 1 : 0,
@@ -143,6 +135,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   };
 
   const handleReportLoss = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (isBo3) {
       Alert.prompt(
         'Report Games Won',
@@ -166,7 +159,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
                 return;
               }
 
-              // Validate Bo3 score for a loss
               const validationError = validateBo3Score(myGames, oppGames, false);
               if (validationError) {
                 Alert.alert('Invalid Score', validationError);
@@ -184,7 +176,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
         'plain-text'
       );
     } else {
-      // For 1v1, simple loss
       await reportResult(
         match.iAmPlayerA ? 'PLAYER_B_WIN' : 'PLAYER_A_WIN',
         match.iAmPlayerA ? 0 : 1,
@@ -194,6 +185,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   };
 
   const handleReportDraw = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await reportResult('DRAW', 0, 0);
   };
 
@@ -201,9 +193,11 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
     setReporting(true);
     try {
       await api.reportMatchResult(match.id, result, gamesWonA, gamesWonB);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Match result submitted! Your opponent can dispute if they disagree.');
       onMatchUpdate();
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to report result');
     } finally {
       setReporting(false);
@@ -211,12 +205,15 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   };
 
   const handleConfirm = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setConfirming(true);
     try {
       await api.confirmMatchResult(match.id, true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Match result confirmed!');
       onMatchUpdate();
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to confirm result');
     } finally {
       setConfirming(false);
@@ -224,6 +221,7 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
   };
 
   const handleDispute = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       'Dispute Result',
       'Do you want to submit a different result?',
@@ -232,7 +230,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
         {
           text: 'Submit Different Result',
           onPress: () => {
-            // This will show the same UI as reporting
             Alert.alert(
               'Report Correct Result',
               'Please report the correct match result',
@@ -244,7 +241,6 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
     );
   };
 
-  // Determine what to show
   const getResultDisplay = () => {
     if (!match.result) return null;
 
@@ -261,30 +257,62 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
     return resultMap[match.result] + score;
   };
 
-  // Check if this is a bye (no opponent)
+  const getResultIcon = () => {
+    if (!match.result) return null;
+    const isWin = (match.result === 'PLAYER_A_WIN' && match.iAmPlayerA) ||
+                  (match.result === 'PLAYER_B_WIN' && !match.iAmPlayerA);
+    const isDraw = match.result === 'DRAW';
+
+    if (isDraw) return 'remove-circle';
+    return isWin ? 'trophy' : 'close-circle';
+  };
+
+  const getResultColor = () => {
+    if (!match.result) return colors.text.primary;
+    const isWin = (match.result === 'PLAYER_A_WIN' && match.iAmPlayerA) ||
+                  (match.result === 'PLAYER_B_WIN' && !match.iAmPlayerA);
+    const isDraw = match.result === 'DRAW';
+
+    if (isDraw) return colors.warning.main;
+    return isWin ? colors.success.main : colors.error.main;
+  };
+
   const isBye = !match.opponent;
 
   return (
     <View style={styles.card}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="trophy" size={24} color={theme.colors.primary.main} />
-          <Text style={styles.headerTitle}>Active Match</Text>
+          <View style={styles.headerIconContainer}>
+            <Ionicons name="game-controller" size={18} color={colors.primary.main} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Active Match</Text>
+            <Text style={styles.headerSubtitle}>Round {match.roundNumber}</Text>
+          </View>
         </View>
-        <View style={styles.roundBadge}>
-          <Text style={styles.roundText}>Round {match.roundNumber}</Text>
+        <View style={styles.liveIndicator}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>LIVE</Text>
         </View>
       </View>
 
       {/* Table Number */}
       <View style={styles.tableContainer}>
         <Text style={styles.tableLabel}>TABLE</Text>
-        <Text style={styles.tableNumber}>{match.tableNumber}</Text>
+        <View style={styles.tableNumberContainer}>
+          <Text style={styles.tableNumber}>{match.tableNumber}</Text>
+        </View>
       </View>
 
       {/* Opponent */}
       <View style={styles.opponentContainer}>
-        <Text style={styles.vsLabel}>vs</Text>
+        <View style={styles.vsContainer}>
+          <View style={styles.vsLine} />
+          <Text style={styles.vsLabel}>VS</Text>
+          <View style={styles.vsLine} />
+        </View>
         <Text style={styles.opponentName}>
           {match.opponent ? match.opponent.name : '— BYE —'}
         </Text>
@@ -292,95 +320,108 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
 
       {/* Match Status & Actions */}
       {isBye ? (
-        // Bye Round - Show info message
         <View style={styles.byeContainer}>
-          <Ionicons name="information-circle" size={48} color={theme.colors.primary.main} />
+          <View style={styles.byeIconContainer}>
+            <Ionicons name="cafe-outline" size={32} color={colors.primary.main} />
+          </View>
           <Text style={styles.byeTitle}>Bye Round</Text>
           <Text style={styles.byeText}>
             You received a bye this round. This counts as an automatic win with 2 match points.
           </Text>
           <Text style={styles.byeSubtext}>
-            You can take a break or watch other matches. The next round will start when all matches are complete.
+            Take a break or watch other matches. The next round will start when all matches are complete.
           </Text>
         </View>
       ) : matchConfirmed ? (
         <View style={styles.confirmedContainer}>
-          <Ionicons name="checkmark-circle" size={48} color={theme.colors.success.main} />
+          <View style={styles.confirmedIconContainer}>
+            <Ionicons name="checkmark-circle" size={40} color={colors.success.main} />
+          </View>
           <Text style={styles.confirmedText}>Match Confirmed</Text>
-          <Text style={styles.resultText}>{getResultDisplay()}</Text>
+          <View style={styles.resultContainer}>
+            <Ionicons name={getResultIcon() || 'help'} size={24} color={getResultColor()} />
+            <Text style={[styles.resultText, { color: getResultColor() }]}>{getResultDisplay()}</Text>
+          </View>
         </View>
       ) : waitingForConfirmation ? (
         opponentReported ? (
-          // Opponent reported, result shown - can dispute if wrong
           <View style={styles.confirmationContainer}>
             <View style={styles.pendingBadge}>
-              <Ionicons name="information-circle" size={20} color={theme.colors.primary.main} />
-              <Text style={styles.pendingText}>Result Submitted by Opponent</Text>
+              <View style={styles.pendingDot} />
+              <Text style={styles.pendingText}>Opponent Submitted Result</Text>
             </View>
-            <Text style={styles.reportedResult}>{getResultDisplay()}</Text>
+
+            <View style={styles.reportedResultContainer}>
+              <Ionicons name={getResultIcon() || 'help'} size={28} color={getResultColor()} />
+              <Text style={[styles.reportedResult, { color: getResultColor() }]}>{getResultDisplay()}</Text>
+            </View>
 
             <View style={styles.confirmButtons}>
               <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={() => {
-                  Alert.alert('Result Accepted', 'The match result has been recorded.');
-                  onMatchUpdate();
-                }}
+                style={styles.confirmButton}
+                onPress={handleConfirm}
+                activeOpacity={0.8}
+                disabled={confirming}
               >
-                <Ionicons name="checkmark" size={20} color="#fff" />
-                <Text style={styles.buttonText}>Accept</Text>
+                {confirming ? (
+                  <ActivityIndicator color={colors.neutral.white} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color={colors.neutral.white} />
+                    <Text style={styles.confirmButtonText}>Accept</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.disputeButton]}
+                style={styles.disputeButton}
                 onPress={handleDispute}
+                activeOpacity={0.8}
               >
-                <Ionicons name="flag" size={20} color={theme.colors.error.main} />
-                <Text style={[styles.buttonText, { color: theme.colors.error.main }]}>
-                  Dispute
-                </Text>
+                <Ionicons name="flag" size={18} color={colors.error.main} />
+                <Text style={styles.disputeButtonText}>Dispute</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          // Result submitted, refreshing data
           <View style={styles.waitingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            <ActivityIndicator size="large" color={colors.primary.main} />
             <Text style={styles.waitingText}>Submitting result...</Text>
-            <Text style={styles.reportedResult}>{getResultDisplay()}</Text>
+            <Text style={styles.reportedResultSmall}>{getResultDisplay()}</Text>
           </View>
         )
       ) : (
-        // No result reported yet - show report buttons
         <View style={styles.actionsContainer}>
-          <Text style={styles.actionLabel}>Report Match Result:</Text>
+          <Text style={styles.actionLabel}>Report Match Result</Text>
 
           <View style={styles.reportButtons}>
             <TouchableOpacity
-              style={[styles.reportButton, styles.winButton]}
+              style={styles.winButton}
               onPress={handleReportWin}
               disabled={reporting}
+              activeOpacity={0.8}
             >
               {reporting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.neutral.white} />
               ) : (
                 <>
-                  <Ionicons name="trophy" size={24} color="#fff" />
+                  <Ionicons name="trophy" size={28} color={colors.neutral.white} />
                   <Text style={styles.reportButtonText}>I Won</Text>
                 </>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.reportButton, styles.lossButton]}
+              style={styles.lossButton}
               onPress={handleReportLoss}
               disabled={reporting}
+              activeOpacity={0.8}
             >
               {reporting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.neutral.white} />
               ) : (
                 <>
-                  <Ionicons name="close-circle" size={24} color="#fff" />
+                  <Ionicons name="close-circle" size={28} color={colors.neutral.white} />
                   <Text style={styles.reportButtonText}>I Lost</Text>
                 </>
               )}
@@ -388,20 +429,22 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
           </View>
 
           <TouchableOpacity
-            style={[styles.reportButton, styles.drawButton]}
+            style={styles.drawButton}
             onPress={handleReportDraw}
             disabled={reporting}
+            activeOpacity={0.7}
           >
-            <Ionicons name="remove-circle" size={20} color={theme.colors.text.primary} />
-            <Text style={[styles.reportButtonText, { color: theme.colors.text.primary }]}>
-              Draw
-            </Text>
+            <Ionicons name="remove-circle-outline" size={18} color={colors.text.secondary} />
+            <Text style={styles.drawButtonText}>Draw</Text>
           </TouchableOpacity>
 
           {isBo3 && (
-            <Text style={styles.hintText}>
-              You'll enter game scores after selecting win/loss
-            </Text>
+            <View style={styles.hintContainer}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.text.tertiary} />
+              <Text style={styles.hintText}>
+                You'll enter game scores after selecting win/loss
+              </Text>
+            </View>
           )}
         </View>
       )}
@@ -411,261 +454,379 @@ export function ActiveMatchCard({ eventId, match, onMatchUpdate, gameType, myUse
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(24, 24, 27, 0.7)', // Glassmorphism
-    borderRadius: theme.borderRadius.xl,
-    padding: 24,
-    marginHorizontal: 16,
-    marginVertical: 16,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.base,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.3)',
-    ...theme.shadows.xl,
+    borderColor: colors.primary.dark,
+    padding: spacing.lg,
+    overflow: 'hidden',
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: colors.border.light,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
+  },
+  headerIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary.dark,
   },
   headerTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.tight,
   },
-  roundBadge: {
-    backgroundColor: theme.colors.primary.lightest,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.primary.light,
+  headerSubtitle: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+    marginTop: 1,
   },
-  roundText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.dark,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success.main + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success.main,
+  },
+  liveText: {
+    fontSize: typography.fontSize['2xs'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.success.main,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+
+  // Table
   tableContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    paddingVertical: 16,
-    borderRadius: theme.borderRadius.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.background.elevated,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   tableLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.secondary,
-    letterSpacing: 2,
-    marginBottom: 4,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: typography.letterSpacing.widest,
+    marginBottom: spacing.sm,
     textTransform: 'uppercase',
+  },
+  tableNumberContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tableNumber: {
-    fontSize: 56,
-    fontWeight: theme.typography.fontWeight.black,
-    color: theme.colors.primary.main,
-    lineHeight: 64,
+    fontSize: typography.fontSize['4xl'],
+    fontWeight: typography.fontWeight.black,
+    color: colors.neutral.white,
   },
+
+  // Opponent
   opponentContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xl,
+  },
+  vsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    width: '100%',
+  },
+  vsLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border.light,
   },
   vsLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.tertiary,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    paddingHorizontal: spacing.base,
+    letterSpacing: typography.letterSpacing.wider,
   },
   opponentName: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
     textAlign: 'center',
   },
+
+  // Actions
   actionsContainer: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   actionLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: 16,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.secondary,
+    marginBottom: spacing.base,
     textAlign: 'center',
+    letterSpacing: typography.letterSpacing.wide,
+    textTransform: 'uppercase',
   },
   reportButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  reportButton: {
+  winButton: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 20,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    ...theme.shadows.sm,
-  },
-  winButton: {
-    backgroundColor: theme.colors.success.main,
-    borderColor: theme.colors.success.dark,
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.success.dark,
+    borderRadius: borderRadius.lg,
   },
   lossButton: {
-    backgroundColor: theme.colors.error.main,
-    borderColor: theme.colors.error.dark,
-  },
-  drawButton: {
-    backgroundColor: theme.colors.background.elevated,
-    borderWidth: 1,
-    borderColor: theme.colors.border.main,
-    flexDirection: 'row',
-    paddingVertical: 16,
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.error.dark,
+    borderRadius: borderRadius.lg,
   },
   reportButtonText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.foreground,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.neutral.white,
+  },
+  drawButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background.elevated,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  drawButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.secondary,
+  },
+  hintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
   },
   hintText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: 12,
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
     fontStyle: 'italic',
   },
+
+  // Confirmation
   confirmationContainer: {
     alignItems: 'center',
-    backgroundColor: theme.colors.background.elevated,
-    padding: 20,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: colors.background.elevated,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   pendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.warning.lightest,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: theme.borderRadius.full,
-    marginBottom: 16,
+    gap: spacing.sm,
+    backgroundColor: colors.warning.main + '20',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.base,
+  },
+  pendingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.warning.main,
   },
   pendingText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.warning.dark,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.warning.main,
+    letterSpacing: typography.letterSpacing.wide,
+  },
+  reportedResultContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   reportedResult: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 24,
-    textAlign: 'center',
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+  },
+  reportedResultSmall: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
   },
   confirmButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
     width: '100%',
   },
-  button: {
+  confirmButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: theme.borderRadius.lg,
+    gap: spacing.sm,
+    paddingVertical: spacing.base,
+    backgroundColor: colors.success.dark,
+    borderRadius: borderRadius.lg,
   },
-  confirmButton: {
-    backgroundColor: theme.colors.success.main,
-    ...theme.shadows.md,
+  confirmButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.neutral.white,
   },
   disputeButton: {
-    backgroundColor: theme.colors.background.card,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.base,
+    backgroundColor: colors.background.highlight,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.error.main,
+    borderColor: colors.error.main + '40',
   },
-  buttonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.foreground,
+  disputeButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.error.main,
   },
+
+  // Waiting
   waitingContainer: {
     alignItems: 'center',
-    paddingVertical: 32,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.lg,
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.background.elevated,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   waitingText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    marginTop: 16,
-    marginBottom: 8,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: spacing.base,
+    fontWeight: typography.fontWeight.medium,
   },
+
+  // Confirmed
   confirmedContainer: {
     alignItems: 'center',
-    paddingVertical: 32,
-    backgroundColor: theme.colors.success.lightest + '10',
-    borderRadius: theme.borderRadius.lg,
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.success.main + '10',
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.success.main + '20',
+    borderColor: colors.success.main + '30',
+  },
+  confirmedIconContainer: {
+    marginBottom: spacing.md,
   },
   confirmedText: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.success.main,
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.success.main,
+    marginBottom: spacing.sm,
+  },
+  resultContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   resultText: {
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
   },
+
+  // Bye
   byeContainer: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    backgroundColor: theme.colors.primary.lightest + '20',
-    borderRadius: theme.borderRadius.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.primary.main + '10',
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.primary.main + '30',
+    borderColor: colors.primary.main + '30',
+  },
+  byeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.base,
+    borderWidth: 1,
+    borderColor: colors.primary.dark,
   },
   byeTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary.main,
-    marginTop: 16,
-    marginBottom: 12,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.main,
+    marginBottom: spacing.sm,
   },
   byeText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.primary,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 12,
-    fontWeight: theme.typography.fontWeight.medium,
+    lineHeight: 22,
+    marginBottom: spacing.sm,
   },
   byeSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
+    fontSize: typography.fontSize.xs,
+    color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     fontStyle: 'italic',
   },
 });
