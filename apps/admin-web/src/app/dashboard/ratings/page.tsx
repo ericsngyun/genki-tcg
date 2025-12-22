@@ -61,7 +61,17 @@ export default function RatingsPage() {
       // Refresh unprocessed list
       checkUnprocessed();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to process ratings');
+      console.error('Rating processing error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to process ratings';
+
+      // Provide more helpful error messages
+      if (errorMessage.includes('No unprocessed')) {
+        setError(`✅ No unprocessed ${gameType} tournaments found. All ratings are up to date!`);
+      } else if (errorMessage.includes('already processed')) {
+        setError(`✅ This tournament's ratings have already been processed.`);
+      } else {
+        setError(`Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
