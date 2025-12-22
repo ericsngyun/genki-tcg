@@ -130,11 +130,25 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 1.2 }}
-              className="mt-4 text-center sm:text-left"
+              className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2"
             >
               <span className="text-[10px] tracking-[0.3em] text-red-500/30 uppercase">
                 Est. 2024
               </span>
+              <div className="flex gap-4">
+                <Link
+                  href="/privacy"
+                  className="text-[10px] tracking-[0.2em] text-white/20 hover:text-white/40 transition-colors duration-300 uppercase"
+                >
+                  Privacy
+                </Link>
+                <Link
+                  href="/terms"
+                  className="text-[10px] tracking-[0.2em] text-white/20 hover:text-white/40 transition-colors duration-300 uppercase"
+                >
+                  Terms
+                </Link>
+              </div>
             </motion.div>
           </motion.div>
         )}
