@@ -375,13 +375,18 @@ export class RoundsService {
       }).catch(err => this.logger.error('Failed to send tournament completed notification:', err));
 
       // Auto-process ratings for the tournament (non-blocking)
-      this.ratingsService.processTournamentRatings(round.eventId)
-        .then(() => {
-          this.logger.log(`Ratings processed successfully for tournament ${round.eventId}`);
-        })
-        .catch(err => {
-          this.logger.error(`Failed to process ratings for tournament ${round.eventId}:`, err);
-        });
+      // Check if ratings were already processed to avoid duplicate processing
+      if (!result.event.ratingsProcessed) {
+        this.ratingsService.processTournamentRatings(round.eventId)
+          .then(() => {
+            this.logger.log(`✅ Ratings processed successfully for tournament ${round.eventId} (${round.event.name})`);
+          })
+          .catch(err => {
+            this.logger.error(`❌ Failed to process ratings for tournament ${round.eventId}:`, err.message);
+          });
+      } else {
+        this.logger.log(`Ratings already processed for tournament ${round.eventId}, skipping`);
+      }
     }
 
     return result;
