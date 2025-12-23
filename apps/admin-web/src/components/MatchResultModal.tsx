@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,102 +24,133 @@ interface MatchResultModalProps {
   gameType?: string;
 }
 
+type GameWinner = 'A' | 'B' | null;
+
 export function MatchResultModal({ isOpen, onClose, onSubmit, match, gameType }: MatchResultModalProps) {
-  const [result, setResult] = useState<string>('');
-  const [gamesWonA, setGamesWonA] = useState<number>(0);
-  const [gamesWonB, setGamesWonB] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useManualEntry, setUseManualEntry] = useState(false);
 
-  // Determine if this is a Best of 3 match (Riftbound)
-  const isBo3 = gameType === 'RIFTBOUND';
-  const maxGames = isBo3 ? 2 : 9;
+  // Bo3 game-by-game selection
+  const [gameWinners, setGameWinners] = useState<[GameWinner, GameWinner, GameWinner]>([null, null, null]);
+
+  // Manual entry fields
+  const [manualResult, setManualResult] = useState<string>('');
+  const [manualGamesA, setManualGamesA] = useState<number>(0);
+  const [manualGamesB, setManualGamesB] = useState<number>(0);
+
+  // Riftbound always uses Bo3 selector
+  const isRiftbound = gameType === 'RIFTBOUND';
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setResult('');
-      setGamesWonA(0);
-      setGamesWonB(0);
+      setGameWinners([null, null, null]);
+      setManualResult('');
+      setManualGamesA(0);
+      setManualGamesB(0);
       setError(null);
+      setUseManualEntry(false);
     }
   }, [isOpen]);
 
-  // Auto-set scores based on result for non-Bo3 when user selects result
-  useEffect(() => {
-    if (!isBo3 && result) {
-      if (result === 'PLAYER_A_WIN' && gamesWonA === 0 && gamesWonB === 0) {
-        setGamesWonA(1);
-        setGamesWonB(0);
-      } else if (result === 'PLAYER_B_WIN' && gamesWonA === 0 && gamesWonB === 0) {
-        setGamesWonA(0);
-        setGamesWonB(1);
-      }
-    }
-  }, [result, isBo3, gamesWonA, gamesWonB]);
+  // Calculate result from game selections
+  const calculatedResult = useMemo(() => {
+    const winsA = gameWinners.filter(w => w === 'A').length;
+    const winsB = gameWinners.filter(w => w === 'B').length;
 
-  const validateBo3Score = (): string | null => {
-    if (!isBo3) return null;
-
-    if (gamesWonA > 2 || gamesWonB > 2) {
-      return 'Maximum 2 game wins per player in Best of 3';
+    let result: string | null = null;
+    if (winsA >= 2) result = 'PLAYER_A_WIN';
+    else if (winsB >= 2) result = 'PLAYER_B_WIN';
+    else if (winsA === 1 && winsB === 1 && gameWinners[2] === null) {
+      // 1-1 with no game 3 selected - incomplete
+      result = null;
     }
 
-    if (gamesWonA === 2 && gamesWonB === 2) {
-      return 'Invalid: Both players cannot win 2 games in Best of 3';
+    return {
+      result,
+      gamesWonA: winsA,
+      gamesWonB: winsB,
+      isComplete: result !== null,
+      gamesPlayed: gameWinners.filter(w => w !== null).length,
+    };
+  }, [gameWinners]);
+
+  const handleGameWinnerSelect = (gameIndex: number, winner: GameWinner) => {
+    const newWinners = [...gameWinners] as [GameWinner, GameWinner, GameWinner];
+
+    // Toggle off if clicking the same selection
+    if (newWinners[gameIndex] === winner) {
+      newWinners[gameIndex] = null;
+    } else {
+      newWinners[gameIndex] = winner;
     }
 
-    const totalGames = gamesWonA + gamesWonB;
-    if (totalGames < 2 || totalGames > 3) {
-      return 'Total games must be 2 or 3 in Best of 3';
+    // Clear later games if match is already decided
+    const winsA = newWinners.filter(w => w === 'A').length;
+    const winsB = newWinners.filter(w => w === 'B').length;
+
+    // If someone has won 2, clear game 3 unless we're toggling it
+    if (gameIndex < 2 && (winsA >= 2 || winsB >= 2)) {
+      newWinners[2] = null;
     }
 
-    if (result === 'PLAYER_A_WIN' && gamesWonA !== 2) {
-      return 'Player A must have 2 game wins to win the match';
-    }
-
-    if (result === 'PLAYER_B_WIN' && gamesWonB !== 2) {
-      return 'Player B must have 2 game wins to win the match';
-    }
-
-    if (result === 'DRAW' && gamesWonA !== gamesWonB) {
-      return 'Draw requires equal game wins';
-    }
-
-    return null;
+    setGameWinners(newWinners);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!result) {
-      setError('Please select a result');
-      return;
-    }
+    let finalResult: string;
+    let finalGamesA: number;
+    let finalGamesB: number;
 
-    // Bo3 validation
-    const bo3Error = validateBo3Score();
-    if (bo3Error) {
-      setError(bo3Error);
-      return;
-    }
-
-    // General validation for non-Bo3
-    if (!isBo3) {
-      if (result === 'PLAYER_A_WIN' && gamesWonA <= gamesWonB && gamesWonA > 0) {
-        setError('Player A wins should have more game wins than Player B');
+    if (useManualEntry || !isRiftbound) {
+      // Manual entry validation
+      if (!manualResult) {
+        setError('Please select a result');
         return;
       }
-      if (result === 'PLAYER_B_WIN' && gamesWonB <= gamesWonA && gamesWonB > 0) {
-        setError('Player B wins should have more game wins than Player A');
+
+      finalResult = manualResult;
+      finalGamesA = manualGamesA;
+      finalGamesB = manualGamesB;
+
+      // Validate manual entry
+      if (isRiftbound) {
+        if (finalGamesA > 2 || finalGamesB > 2) {
+          setError('Maximum 2 game wins per player in Best of 3');
+          return;
+        }
+        if (finalGamesA === 2 && finalGamesB === 2) {
+          setError('Invalid: Both players cannot win 2 games');
+          return;
+        }
+        if (finalResult === 'PLAYER_A_WIN' && finalGamesA !== 2) {
+          setError('Winner must have exactly 2 game wins');
+          return;
+        }
+        if (finalResult === 'PLAYER_B_WIN' && finalGamesB !== 2) {
+          setError('Winner must have exactly 2 game wins');
+          return;
+        }
+      }
+    } else {
+      // Game-by-game selection validation
+      if (!calculatedResult.isComplete) {
+        setError('Please select the winner for each game played');
         return;
       }
+
+      finalResult = calculatedResult.result!;
+      finalGamesA = calculatedResult.gamesWonA;
+      finalGamesB = calculatedResult.gamesWonB;
     }
 
     setSubmitting(true);
     try {
-      await onSubmit(result, gamesWonA, gamesWonB);
+      await onSubmit(finalResult, finalGamesA, finalGamesB);
       onClose();
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to report result');
@@ -130,74 +161,274 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match, gameType }:
 
   const handleClose = () => {
     if (!submitting) {
-      setResult('');
-      setGamesWonA(0);
-      setGamesWonB(0);
-      setError(null);
       onClose();
     }
   };
 
-  // Quick score buttons for Bo3
-  const Bo3QuickScores = () => {
-    if (!isBo3) return null;
+  // Get display names (truncated if too long)
+  const playerAName = match.playerA.name.length > 12
+    ? match.playerA.name.substring(0, 12) + '...'
+    : match.playerA.name;
+  const playerBName = match.playerB
+    ? (match.playerB.name.length > 12 ? match.playerB.name.substring(0, 12) + '...' : match.playerB.name)
+    : 'BYE';
 
-    const scores = [
-      { a: 2, b: 0, label: '2-0', winner: 'A' },
-      { a: 2, b: 1, label: '2-1', winner: 'A' },
-      { a: 1, b: 2, label: '1-2', winner: 'B' },
-      { a: 0, b: 2, label: '0-2', winner: 'B' },
+  // Bo3 Game Selector Component
+  const Bo3GameSelector = () => {
+    const games = [
+      { index: 0, label: 'Game 1' },
+      { index: 1, label: 'Game 2' },
+      { index: 2, label: 'Game 3' },
     ];
 
+    // Check if game 3 is needed (only if 1-1 after games 1 and 2)
+    const winsAfterTwo = {
+      A: gameWinners.slice(0, 2).filter(w => w === 'A').length,
+      B: gameWinners.slice(0, 2).filter(w => w === 'B').length,
+    };
+    const needsGame3 = winsAfterTwo.A === 1 && winsAfterTwo.B === 1;
+    const matchDecided = calculatedResult.gamesWonA >= 2 || calculatedResult.gamesWonB >= 2;
+
     return (
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Quick Score Selection
-        </label>
-        <div className="grid grid-cols-4 gap-2">
-          {scores.map((score) => {
-            const isSelected = gamesWonA === score.a && gamesWonB === score.b;
-            const expectedResult = score.winner === 'A' ? 'PLAYER_A_WIN' : 'PLAYER_B_WIN';
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-foreground">
+            Select Game Winners
+          </label>
+          <button
+            type="button"
+            onClick={() => setUseManualEntry(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Enter manually
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {games.map(({ index, label }) => {
+            const isGame3 = index === 2;
+            const isDisabled = isGame3 && !needsGame3 && !gameWinners[2];
+            const isGreyedOut = isGame3 && matchDecided && !gameWinners[2];
+            const winner = gameWinners[index];
+
             return (
-              <button
-                key={score.label}
-                type="button"
-                onClick={() => {
-                  setGamesWonA(score.a);
-                  setGamesWonB(score.b);
-                  setResult(expectedResult);
-                }}
-                className={`py-2.5 px-3 rounded-lg border-2 font-medium text-sm transition-all ${
-                  isSelected
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-muted/50 text-muted-foreground hover:border-primary/50 hover:bg-muted'
+              <div
+                key={index}
+                className={`relative rounded-lg border transition-all ${
+                  isGreyedOut
+                    ? 'border-border/50 bg-muted/30 opacity-50'
+                    : winner
+                    ? 'border-primary/30 bg-primary/5'
+                    : 'border-border bg-background hover:border-border/80'
                 }`}
               >
-                {score.label}
-              </button>
+                {/* Game Label */}
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground w-14">
+                  {label}
+                </div>
+
+                {/* Player Buttons */}
+                <div className="flex ml-16 mr-1 my-1 gap-1">
+                  <button
+                    type="button"
+                    disabled={isDisabled || submitting}
+                    onClick={() => handleGameWinnerSelect(index, 'A')}
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
+                      winner === 'A'
+                        ? 'bg-emerald-500 text-white shadow-sm'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    {playerAName}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDisabled || submitting || !match.playerB}
+                    onClick={() => handleGameWinnerSelect(index, 'B')}
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
+                      winner === 'B'
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    {playerBName}
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
+
+        {/* Result Preview */}
+        {calculatedResult.gamesPlayed > 0 && (
+          <div className={`mt-4 p-3 rounded-lg border text-center ${
+            calculatedResult.isComplete
+              ? 'bg-emerald-500/10 border-emerald-500/20'
+              : 'bg-amber-500/10 border-amber-500/20'
+          }`}>
+            <div className="text-sm font-medium">
+              {calculatedResult.isComplete ? (
+                <span className="text-emerald-400">
+                  {calculatedResult.result === 'PLAYER_A_WIN' ? match.playerA.name : match.playerB?.name} wins{' '}
+                  <span className="font-bold">{calculatedResult.gamesWonA}-{calculatedResult.gamesWonB}</span>
+                </span>
+              ) : (
+                <span className="text-amber-400">
+                  Score: {calculatedResult.gamesWonA}-{calculatedResult.gamesWonB}
+                  {needsGame3 && !gameWinners[2] && ' — Select Game 3 winner'}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
+  // Manual Entry Component (for non-Riftbound or when toggled)
+  const ManualEntry = () => (
+    <div className="space-y-6">
+      {isRiftbound && (
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-foreground">Manual Score Entry</label>
+          <button
+            type="button"
+            onClick={() => setUseManualEntry(false)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Use game selector
+          </button>
+        </div>
+      )}
+
+      {/* Result Selection */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-3">
+          Match Result *
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+            <input
+              type="radio"
+              name="result"
+              value="PLAYER_A_WIN"
+              checked={manualResult === 'PLAYER_A_WIN'}
+              onChange={(e) => setManualResult(e.target.value)}
+              className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
+              disabled={submitting}
+            />
+            <span className="ml-3 font-medium text-foreground">
+              {match.playerA.name} Wins
+            </span>
+          </label>
+          <label className={`flex items-center p-3 border-2 border-border rounded-lg transition-all ${
+            match.playerB
+              ? 'cursor-pointer hover:bg-muted hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5'
+              : 'opacity-50 cursor-not-allowed'
+          }`}>
+            <input
+              type="radio"
+              name="result"
+              value="PLAYER_B_WIN"
+              checked={manualResult === 'PLAYER_B_WIN'}
+              onChange={(e) => setManualResult(e.target.value)}
+              disabled={!match.playerB || submitting}
+              className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+            <span className="ml-3 font-medium text-foreground">
+              {match.playerB ? match.playerB.name : 'N/A'} Wins
+            </span>
+          </label>
+          <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+            <input
+              type="radio"
+              name="result"
+              value="DRAW"
+              checked={manualResult === 'DRAW'}
+              onChange={(e) => setManualResult(e.target.value)}
+              className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
+              disabled={submitting}
+            />
+            <span className="ml-3 font-medium text-foreground">Draw</span>
+          </label>
+          {!isRiftbound && (
+            <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <input
+                type="radio"
+                name="result"
+                value="INTENTIONAL_DRAW"
+                checked={manualResult === 'INTENTIONAL_DRAW'}
+                onChange={(e) => setManualResult(e.target.value)}
+                className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
+                disabled={submitting}
+              />
+              <span className="ml-3 font-medium text-foreground">Intentional Draw</span>
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* Game Scores */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-3">
+          Game Wins {isRiftbound ? '(required)' : '(optional)'}
+        </label>
+        <div className="flex items-center space-x-4">
+          <div className="flex-1">
+            <label className="block text-xs text-muted-foreground mb-1">
+              {match.playerA.name}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max={isRiftbound ? 2 : 9}
+              value={manualGamesA}
+              onChange={(e) => setManualGamesA(Math.min(parseInt(e.target.value) || 0, isRiftbound ? 2 : 9))}
+              disabled={submitting}
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:opacity-50 transition-all text-center text-lg font-bold"
+            />
+          </div>
+          <div className="text-muted-foreground font-bold text-lg pt-5">-</div>
+          <div className="flex-1">
+            <label className="block text-xs text-muted-foreground mb-1">
+              {match.playerB ? match.playerB.name : 'N/A'}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max={isRiftbound ? 2 : 9}
+              value={manualGamesB}
+              onChange={(e) => setManualGamesB(Math.min(parseInt(e.target.value) || 0, isRiftbound ? 2 : 9))}
+              disabled={!match.playerB || submitting}
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:bg-muted disabled:cursor-not-allowed transition-all text-center text-lg font-bold"
+            />
+          </div>
+        </div>
+        {isRiftbound && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Valid scores: 2-0, 2-1, 1-2, 0-2
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Report Match Result - Table {match.tableNumber}
-            {isBo3 && (
+            Report Result — Table {match.tableNumber}
+            {isRiftbound && (
               <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-xs font-medium">
-                Best of 3
+                Bo3
               </span>
             )}
           </DialogTitle>
           <DialogDescription>
-            {isBo3
-              ? 'Select the match result and enter the game score (e.g., 2-1 or 2-0)'
-              : 'Select the match result and optionally enter game scores'}
+            {isRiftbound && !useManualEntry
+              ? 'Select the winner of each game'
+              : 'Enter the match result'}
           </DialogDescription>
         </DialogHeader>
 
@@ -209,143 +440,30 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match, gameType }:
             </div>
           )}
 
-          {/* Match Info */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between bg-muted rounded-lg p-4">
+          {/* Match Info Header */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
               <div className="text-center flex-1">
-                <div className="font-bold text-foreground">{match.playerA.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">Player A</div>
+                <div className="font-semibold text-foreground text-sm">{match.playerA.name}</div>
               </div>
-              <div className="text-muted-foreground font-bold text-lg px-4">vs</div>
+              <div className="text-muted-foreground font-medium text-xs px-3">vs</div>
               <div className="text-center flex-1">
-                <div className="font-bold text-foreground">
+                <div className="font-semibold text-foreground text-sm">
                   {match.playerB ? match.playerB.name : '— BYE —'}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">Player B</div>
               </div>
             </div>
           </div>
 
-          {/* Bo3 Quick Score Selection */}
-          <Bo3QuickScores />
-
-          {/* Result Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground mb-3">
-              Match Result *
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <input
-                  type="radio"
-                  name="result"
-                  value="PLAYER_A_WIN"
-                  checked={result === 'PLAYER_A_WIN'}
-                  onChange={(e) => setResult(e.target.value)}
-                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
-                  disabled={submitting}
-                />
-                <span className="ml-3 font-medium text-foreground">
-                  {match.playerA.name} Wins
-                </span>
-              </label>
-              <label className={`flex items-center p-3 border-2 border-border rounded-lg transition-all ${
-                match.playerB
-                  ? 'cursor-pointer hover:bg-muted hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5'
-                  : 'opacity-50 cursor-not-allowed'
-              }`}>
-                <input
-                  type="radio"
-                  name="result"
-                  value="PLAYER_B_WIN"
-                  checked={result === 'PLAYER_B_WIN'}
-                  onChange={(e) => setResult(e.target.value)}
-                  disabled={!match.playerB || submitting}
-                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
-                />
-                <span className="ml-3 font-medium text-foreground">
-                  {match.playerB ? match.playerB.name : 'N/A'} Wins
-                </span>
-              </label>
-              <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <input
-                  type="radio"
-                  name="result"
-                  value="DRAW"
-                  checked={result === 'DRAW'}
-                  onChange={(e) => setResult(e.target.value)}
-                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
-                  disabled={submitting}
-                />
-                <span className="ml-3 font-medium text-foreground">Draw</span>
-              </label>
-              {!isBo3 && (
-                <label className="flex items-center p-3 border-2 border-border rounded-lg cursor-pointer hover:bg-muted hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                  <input
-                    type="radio"
-                    name="result"
-                    value="INTENTIONAL_DRAW"
-                    checked={result === 'INTENTIONAL_DRAW'}
-                    onChange={(e) => setResult(e.target.value)}
-                    className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary"
-                    disabled={submitting}
-                  />
-                  <span className="ml-3 font-medium text-foreground">Intentional Draw</span>
-                </label>
-              )}
-            </div>
-          </div>
-
-          {/* Game Scores */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground mb-3">
-              Game Wins {isBo3 ? '*' : '(optional)'}
-              {isBo3 && (
-                <span className="text-xs text-muted-foreground font-normal ml-2">
-                  Max 2 games each
-                </span>
-              )}
-            </label>
-            <div className="flex items-center space-x-4">
-              <div className="flex-1">
-                <label className="block text-xs text-muted-foreground mb-1">
-                  {match.playerA.name}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={maxGames}
-                  value={gamesWonA}
-                  onChange={(e) => setGamesWonA(Math.min(parseInt(e.target.value) || 0, maxGames))}
-                  disabled={submitting}
-                  className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:opacity-50 transition-all text-center text-lg font-bold"
-                />
-              </div>
-              <div className="text-muted-foreground font-bold text-lg pt-5">-</div>
-              <div className="flex-1">
-                <label className="block text-xs text-muted-foreground mb-1">
-                  {match.playerB ? match.playerB.name : 'N/A'}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={maxGames}
-                  value={gamesWonB}
-                  onChange={(e) => setGamesWonB(Math.min(parseInt(e.target.value) || 0, maxGames))}
-                  disabled={!match.playerB || submitting}
-                  className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:bg-muted disabled:cursor-not-allowed transition-all text-center text-lg font-bold"
-                />
-              </div>
-            </div>
-            {isBo3 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Winner must have exactly 2 game wins. Valid scores: 2-0, 2-1, 1-2, 0-2
-              </p>
-            )}
-          </div>
+          {/* Main Content */}
+          {isRiftbound && !useManualEntry ? (
+            <Bo3GameSelector />
+          ) : (
+            <ManualEntry />
+          )}
 
           {/* Actions */}
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               type="button"
               variant="outline"
@@ -356,7 +474,7 @@ export function MatchResultModal({ isOpen, onClose, onSubmit, match, gameType }:
             </Button>
             <Button
               type="submit"
-              disabled={submitting || !result}
+              disabled={submitting || (isRiftbound && !useManualEntry && !calculatedResult.isComplete) || (!isRiftbound && !manualResult) || (useManualEntry && !manualResult)}
             >
               {submitting ? 'Reporting...' : 'Report Result'}
             </Button>
