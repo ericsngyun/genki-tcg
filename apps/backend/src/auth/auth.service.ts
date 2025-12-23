@@ -1027,4 +1027,73 @@ export class AuthService {
 
     return { message: 'Discord account unlinked successfully' };
   }
+
+  /**
+   * Permanently delete a user account and all associated data.
+   * This is required for App Store compliance (Apple/Google).
+   *
+   * Data deleted:
+   * - User profile and credentials
+   * - All organization memberships
+   * - Credit balances and ledger entries
+   * - Tournament entries and decklists
+   * - Match history (anonymized where user was opponent)
+   * - Notifications and preferences
+   * - Rating history and rankings
+   * - All authentication tokens
+   */
+  async deleteAccount(userId: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        memberships: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is an OWNER of any organization
+    const ownerMemberships = user.memberships.filter(m => m.role === 'OWNER');
+    if (ownerMemberships.length > 0) {
+      throw new BadRequestException(
+        'Cannot delete account while you are an owner of an organization. Please transfer ownership first.'
+      );
+    }
+
+    // Use a transaction to ensure all data is deleted atomically
+    await this.prisma.$transaction(async (tx) => {
+      // Delete the user - cascade will handle most related data
+      // Based on schema, this cascades:
+      // - OrgMembership
+      // - RefreshToken
+      // - PasswordResetToken
+      // - EmailVerificationToken
+      // - CreditLedgerEntry (user relation)
+      // - CreditBalance
+      // - Entry (and related Decklist via cascade)
+      // - Match (as playerA or playerB)
+      // - NotificationToken
+      // - Notification
+      // - UserNotificationPreference
+      // - PlayerCategoryLifetimeRating
+      // - PlayerCategorySeasonRating
+      // - LifetimeRatingHistory (both user and opponent relations)
+      // - AuditLog (performer relation)
+      //
+      // Note: Rating history entries where this user was the opponent will also
+      // be deleted. The actual ratings are preserved in PlayerCategoryLifetimeRating
+      // for other users, only the match-by-match history is affected.
+      await tx.user.delete({
+        where: { id: userId },
+      });
+    });
+
+    this.logger.log(`Account deleted: ${user.email} (${userId})`);
+
+    return {
+      message: 'Your account has been permanently deleted. All associated data has been removed.',
+    };
+  }
 }

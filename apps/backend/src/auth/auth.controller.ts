@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query, Logger, Res, Headers } from '@nestjs/common';
+import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -79,6 +80,26 @@ export class AuthController {
     return this.authService.revokeAllRefreshTokens(user.id);
   }
 
+  /**
+   * Permanently delete the authenticated user's account.
+   * Required for App Store compliance (Apple/Google).
+   *
+   * This action is irreversible and will delete:
+   * - User profile and credentials
+   * - All organization memberships
+   * - Credit balances and history
+   * - Tournament entries and decklists
+   * - Match history
+   * - Notifications and preferences
+   * - Rating history and rankings
+   */
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 1, ttl: 60000 } }) // 1 deletion per minute (prevent accidents)
+  async deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.deleteAccount(user.id);
+  }
+
   @Get('sessions')
   @UseGuards(JwtAuthGuard)
   async getSessions(@CurrentUser() user: User) {
@@ -151,26 +172,29 @@ export class AuthController {
   async discordMobileCallback(
     @Query('code') code: string,
     @Query('state') state: string,
-    @Query('error') error?: string,
+    @Query('error') error: string | undefined,
+    @Headers('user-agent') userAgent: string,
+    @Res() res: Response,
   ) {
     this.logger.log('=== Discord Mobile Callback Received ===');
     this.logger.log('Has code:', !!code);
     this.logger.log('Has state:', !!state);
     this.logger.log('Error:', error);
 
+    // Detect if this is a mobile device based on user agent
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(userAgent || '');
+    this.logger.log('Is mobile device:', isMobileDevice);
+
     // Handle OAuth errors (user cancelled, etc.)
     if (error) {
       this.logger.log('OAuth error, redirecting with error:', error);
-      return this.generateDeepLinkRedirect({
-        error: error === 'access_denied' ? 'Discord login cancelled' : error,
-      });
+      const errorMessage = error === 'access_denied' ? 'Discord login cancelled' : error;
+      return this.handleMobileRedirect(res, { error: errorMessage }, isMobileDevice);
     }
 
     if (!code || !state) {
       this.logger.error('Missing code or state in callback');
-      return this.generateDeepLinkRedirect({
-        error: 'Invalid callback - missing code or state',
-      });
+      return this.handleMobileRedirect(res, { error: 'Invalid callback - missing code or state' }, isMobileDevice);
     }
 
     try {
@@ -180,19 +204,41 @@ export class AuthController {
 
       const result = await this.authService.handleDiscordCallback(code, state, redirectUri);
 
-      this.logger.log('Token exchange successful, generating deep link redirect');
+      this.logger.log('Token exchange successful, redirecting to app');
       this.logger.log('User:', result.user.email);
 
-      // Return HTML that opens deep link with tokens
-      return this.generateDeepLinkRedirect({
+      // Redirect to app with tokens
+      return this.handleMobileRedirect(res, {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
-      });
+      }, isMobileDevice);
     } catch (err: any) {
       this.logger.error('Mobile Discord callback error:', err);
-      return this.generateDeepLinkRedirect({
-        error: err.message || 'Discord login failed',
-      });
+      return this.handleMobileRedirect(res, { error: err.message || 'Discord login failed' }, isMobileDevice);
+    }
+  }
+
+  // Handle mobile redirect - use HTTP 302 for mobile, HTML for web
+  private handleMobileRedirect(
+    res: Response,
+    params: { accessToken?: string; refreshToken?: string; error?: string },
+    isMobileDevice: boolean,
+  ) {
+    const deepLinkParams = new URLSearchParams();
+    if (params.accessToken) deepLinkParams.set('accessToken', params.accessToken);
+    if (params.refreshToken) deepLinkParams.set('refreshToken', params.refreshToken);
+    if (params.error) deepLinkParams.set('error', params.error);
+
+    const deepLink = `genki-tcg://auth/callback?${deepLinkParams.toString()}`;
+
+    if (isMobileDevice) {
+      // MOBILE: Use HTTP 302 redirect to deep link
+      // This works better with in-app browsers than JavaScript redirects
+      this.logger.log('Using HTTP 302 redirect to:', deepLink);
+      return res.redirect(302, deepLink);
+    } else {
+      // WEB: Return HTML that posts message to opener window
+      return res.send(this.generateDeepLinkRedirect(params));
     }
   }
 

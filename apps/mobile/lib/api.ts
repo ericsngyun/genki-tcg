@@ -171,6 +171,17 @@ class ApiClient {
     }
   }
 
+  /**
+   * Permanently delete the user's account and all associated data.
+   * This action is irreversible.
+   */
+  async deleteAccount(): Promise<{ message: string }> {
+    const { data } = await this.client.delete('/auth/me');
+    // Clear all tokens after successful deletion
+    await secureStorage.multiRemove(['access_token', 'refresh_token', 'auth_token']);
+    return data;
+  }
+
   // Events
   async getEvents(status?: string) {
     const { data } = await this.client.get('/events', {
