@@ -64,13 +64,13 @@ const GAME_TYPES = Object.keys(GAME_CONFIG) as (keyof typeof GAME_CONFIG)[];
 function getGameImagePath(gameType: string) {
   switch (gameType) {
     case 'ONE_PIECE_TCG':
-      return require('../../assets/game-cards/one-piece-tcg.png');
+      return require('../../assets/images/optcg.jpg');
     case 'AZUKI_TCG':
-      return require('../../assets/game-cards/azuki-tcg.png');
+      return require('../../assets/images/azukitcg.jpg');
     case 'RIFTBOUND':
-      return require('../../assets/game-cards/riftbound.png');
+      return require('../../assets/images/riftboundtcg.jpg');
     default:
-      return require('../../assets/game-cards/one-piece-tcg.png');
+      return require('../../assets/images/optcg.jpg');
   }
 }
 
