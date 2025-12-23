@@ -71,10 +71,10 @@ const GAME_TYPE_LABELS: Record<string, string> = {
   RIFTBOUND: 'Riftbound',
 };
 
-const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string]; icon: string }> = {
-  ONE_PIECE_TCG: { gradient: ['#DC2626', '#B91C1C'] as const, icon: '🏴‍☠️' },
-  AZUKI_TCG: { gradient: ['#8B5CF6', '#7C3AED'] as const, icon: '🎴' },
-  RIFTBOUND: { gradient: ['#3B82F6', '#2563EB'] as const, icon: '⚔️' },
+const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string] }> = {
+  ONE_PIECE_TCG: { gradient: ['#DC2626', '#B91C1C'] as const },
+  AZUKI_TCG: { gradient: ['#8B5CF6', '#7C3AED'] as const },
+  RIFTBOUND: { gradient: ['#3B82F6', '#2563EB'] as const },
 };
 
 // Player Tier type
@@ -88,28 +88,60 @@ type PlayerTier =
   | 'GENKI'
   | 'UNRANKED';
 
-// Map rating to tier
+// Tier thresholds (synced with backend)
+const TIER_THRESHOLDS = {
+  SPROUT: { min: 0, max: 1299 },
+  BRONZE: { min: 1300, max: 1449 },
+  SILVER: { min: 1450, max: 1599 },
+  GOLD: { min: 1600, max: 1749 },
+  PLATINUM: { min: 1750, max: 1899 },
+  DIAMOND: { min: 1900, max: 2099 },
+  GENKI: { min: 2100, max: Infinity },
+} as const;
+
+// Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2200) return 'GENKI';
-  if (rating >= 2000) return 'DIAMOND';
-  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 2100) return 'GENKI';
+  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 1750) return 'PLATINUM';
   if (rating >= 1600) return 'GOLD';
-  if (rating >= 1400) return 'SILVER';
-  if (rating >= 1200) return 'BRONZE';
-  if (rating >= 800) return 'SPROUT';
+  if (rating >= 1450) return 'SILVER';
+  if (rating >= 1300) return 'BRONZE';
+  if (rating >= 0) return 'SPROUT';
   return 'UNRANKED';
 }
 
-// Tier configuration for display
-const TIER_DISPLAY: Record<PlayerTier, { label: string; icon: string }> = {
-  GENKI: { label: 'GENKI', icon: '🔥' },
-  DIAMOND: { label: 'Diamond', icon: '💎' },
-  PLATINUM: { label: 'Platinum', icon: '💎' },
-  GOLD: { label: 'Gold', icon: '👑' },
-  SILVER: { label: 'Silver', icon: '🛡️' },
-  BRONZE: { label: 'Bronze', icon: '🛡️' },
-  SPROUT: { label: 'Sprout', icon: '🌱' },
-  UNRANKED: { label: 'Unranked', icon: '' },
+// Get progress to next tier (0-100)
+function getTierProgress(rating: number): { progress: number; nextTier: PlayerTier | null; pointsToNext: number } {
+  const tier = mapRatingToTier(rating);
+  const threshold = TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS];
+
+  if (!threshold || tier === 'GENKI') {
+    return { progress: 100, nextTier: null, pointsToNext: 0 };
+  }
+
+  const tierRange = threshold.max - threshold.min + 1;
+  const currentProgress = rating - threshold.min;
+  const progress = Math.min(100, Math.max(0, (currentProgress / tierRange) * 100));
+
+  const tierOrder: PlayerTier[] = ['SPROUT', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'GENKI'];
+  const currentIndex = tierOrder.indexOf(tier);
+  const nextTier = currentIndex < tierOrder.length - 1 ? tierOrder[currentIndex + 1] : null;
+  const pointsToNext = threshold.max - rating + 1;
+
+  return { progress, nextTier, pointsToNext };
+}
+
+// Tier configuration for display (no emojis - clean design)
+const TIER_DISPLAY: Record<PlayerTier, { label: string }> = {
+  GENKI: { label: 'Genki' },
+  DIAMOND: { label: 'Diamond' },
+  PLATINUM: { label: 'Platinum' },
+  GOLD: { label: 'Gold' },
+  SILVER: { label: 'Silver' },
+  BRONZE: { label: 'Bronze' },
+  SPROUT: { label: 'Sprout' },
+  UNRANKED: { label: 'Unranked' },
 };
 
 export default function ProfileScreen() {
@@ -121,7 +153,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'ratings' | 'history'>('ratings');
-  const [ratingView, setRatingView] = useState<'seasonal' | 'lifetime'>('seasonal');
+  const [ratingView, setRatingView] = useState<'seasonal' | 'lifetime'>('lifetime');
 
   // Wallet state
   const [balance, setBalance] = useState<number | null>(null);
@@ -153,8 +185,6 @@ export default function ProfileScreen() {
 
   const loadProfileData = async () => {
     try {
-      console.log('🔄 Loading profile data...');
-
       const [userResponse, ranksResponse, lifetimeResponse, walletResponse] = await Promise.all([
         api.getMe().catch(err => {
           logger.error('Failed to load user profile:', err);
@@ -174,10 +204,6 @@ export default function ProfileScreen() {
         }),
       ]);
 
-      console.log('👤 User Response:', JSON.stringify(userResponse, null, 2));
-      console.log('🏆 Ranks Response:', JSON.stringify(ranksResponse, null, 2));
-      console.log('🌟 Lifetime Response:', JSON.stringify(lifetimeResponse, null, 2));
-
       if (userResponse) {
         setUser(userResponse.user || userResponse);
       }
@@ -190,7 +216,6 @@ export default function ProfileScreen() {
           losses: r.matchLosses,
           draws: r.matchDraws,
         })) || [];
-        console.log('✅ Mapped Seasonal Ranks:', mappedRanks.length);
         setRanks(mappedRanks);
       } else if (ranksResponse?.ranks) {
         // Fallback if I'm wrong and it is ranks
@@ -205,7 +230,6 @@ export default function ProfileScreen() {
           losses: r.matchLosses,
           draws: r.matchDraws,
         })) || [];
-        console.log('✅ Mapped Lifetime Ranks:', mappedLifetime.length);
         setLifetimeRanks(mappedLifetime);
       }
 
@@ -245,6 +269,23 @@ export default function ProfileScreen() {
     const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
     return { totalMatches, totalWins, winRate, eventsPlayed: tournaments.length };
   }, [ranks, tournaments]);
+
+  // Calculate highest rank with associated game (use lifetime ranks for consistency)
+  const highestRankInfo = useMemo(() => {
+    const ranksToUse = lifetimeRanks.length > 0 ? lifetimeRanks : ranks;
+    if (ranksToUse.length === 0) return null;
+
+    const highestRank = ranksToUse.reduce((highest, current) =>
+      current.rating > highest.rating ? current : highest
+    );
+
+    return {
+      tier: mapRatingToTier(highestRank.rating),
+      gameType: highestRank.gameType,
+      gameName: GAME_TYPE_LABELS[highestRank.gameType] || highestRank.gameType,
+      rating: highestRank.rating,
+    };
+  }, [lifetimeRanks, ranks]);
 
   // Calculate display tier based on preference
   const displayTier = useMemo((): PlayerTier => {
@@ -292,14 +333,11 @@ export default function ProfileScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Compact Header Section */}
-        <LinearGradient
-          colors={['rgba(220, 38, 38, 0.08)', 'transparent']}
-          style={styles.headerGradient}
-        >
+        {/* Clean Header */}
+        <View style={styles.headerSection}>
           <View style={styles.headerContent}>
-            {/* Left: Avatar */}
-            <View style={styles.profileAvatar}>
+            {/* Avatar with Tier Border */}
+            <View style={[styles.profileAvatar, { borderColor: tierColors.primary }]}>
               {user?.avatarUrl ? (
                 <Image source={{ uri: user.avatarUrl }} style={styles.profileAvatarImage} />
               ) : (
@@ -307,19 +345,25 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Right: User Info */}
+            {/* User Info */}
             <View style={styles.headerInfo}>
               <Text style={styles.userName} numberOfLines={1}>
                 {user?.name || 'Unknown Player'}
               </Text>
 
-              {displayTier !== 'UNRANKED' && (
-                <View style={[styles.tierBadge, { backgroundColor: `${tierColors.primary}15` }]}>
-                  <Text style={styles.tierIcon}>{tierDisplay.icon}</Text>
-                  <Text style={[styles.tierLabel, { color: tierColors.primary }]}>
-                    {tierDisplay.label}
-                  </Text>
+              {/* Highest Rank with Game - Clean Design */}
+              {highestRankInfo ? (
+                <View style={styles.rankInfoContainer}>
+                  <View style={[styles.mainTierBadge, { backgroundColor: `${TIER_COLORS[highestRankInfo.tier].primary}15`, borderColor: `${TIER_COLORS[highestRankInfo.tier].primary}30` }]}>
+                    <View style={[styles.tierDot, { backgroundColor: TIER_COLORS[highestRankInfo.tier].primary }]} />
+                    <Text style={[styles.mainTierName, { color: TIER_COLORS[highestRankInfo.tier].primary }]}>
+                      {TIER_DISPLAY[highestRankInfo.tier].label}
+                    </Text>
+                  </View>
+                  <Text style={styles.rankGameName}>{highestRankInfo.gameName}</Text>
                 </View>
+              ) : (
+                <Text style={styles.unrankedText}>Unranked</Text>
               )}
 
               {user?.discordUsername && (
@@ -340,28 +384,21 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.totalWins}</Text>
-              <Text style={styles.statLabel}>Wins</Text>
+          {/* Summary Stats - Only show if user has played */}
+          {ranks.length > 0 && (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{ranks.length}</Text>
+                <Text style={styles.summaryLabel}>{ranks.length === 1 ? 'Game' : 'Games'}</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{tournaments.length}</Text>
+                <Text style={styles.summaryLabel}>Events</Text>
+              </View>
             </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, { color: theme.colors.success.main }]}>
-                {stats.winRate.toFixed(0)}%
-              </Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{tournaments.length}</Text>
-              <Text style={styles.statLabel}>Events</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.totalMatches}</Text>
-              <Text style={styles.statLabel}>Matches</Text>
-            </View>
-          </View>
-        </LinearGradient>
+          )}
+        </View>
 
         {/* Credits Section */}
         <View style={styles.section}>
@@ -529,7 +566,9 @@ export default function ProfileScreen() {
                 (ratingView === 'seasonal' ? ranks : lifetimeRanks).map((rank, index) => {
                   const tier = mapRatingToTier(rank.rating);
                   const tierColor = TIER_COLORS[tier];
-                  const gameConfig = GAME_TYPE_COLORS[rank.gameType] || { gradient: ['#6B7280', '#4B5563'] as const, icon: '🎮' };
+                  const tierInfo = TIER_DISPLAY[tier];
+                  const tierProgress = getTierProgress(rank.rating);
+                  const gameConfig = GAME_TYPE_COLORS[rank.gameType] || { gradient: ['#6B7280', '#4B5563'] as const };
                   const winRate = rank.matchesPlayed > 0 ? (rank.wins / rank.matchesPlayed) * 100 : 0;
                   const gameImage = getGameImagePath(rank.gameType);
 
@@ -543,7 +582,7 @@ export default function ProfileScreen() {
                         blurRadius={0}
                       >
                         <LinearGradient
-                          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
+                          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.9)']}
                           style={styles.gameCardGradient}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 0, y: 1 }}
@@ -556,63 +595,62 @@ export default function ProfileScreen() {
                               </Text>
                               {rank.rank && rank.totalPlayers && (
                                 <Text style={styles.gameRankLight}>
-                                  Ranked #{rank.rank} • {rank.totalPlayers} players
+                                  Leaderboard #{rank.rank} of {rank.totalPlayers}
                                 </Text>
                               )}
                             </View>
-                            <View style={[styles.tierBadgeSmall, { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                              <Text style={[styles.tierBadgeText, { color: tierColor.primary, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 }]}>
-                                {TIER_DISPLAY[tier].icon} {tier}
-                              </Text>
-                            </View>
                           </View>
 
-                          {/* Stats Display - Rating Number Hidden, Rank Shown Instead */}
-                          <View style={styles.ratingRowTransparent}>
-                            {rank.rank && rank.totalPlayers ? (
-                              <View style={styles.ratingMain}>
-                                <Text style={[styles.ratingValue, { color: '#FFFFFF' }]}>
-                                  #{rank.rank}
+                          {/* TIER DISPLAY - Clean Design */}
+                          <View style={[styles.tierDisplayMain, { borderColor: `${tierColor.primary}30` }]}>
+                            <View style={styles.tierDisplayContent}>
+                              <View style={[styles.tierIndicator, { backgroundColor: tierColor.primary }]} />
+                              <View style={styles.tierDisplayTextContainer}>
+                                <Text style={[styles.tierDisplayName, { color: tierColor.primary }]}>
+                                  {tierInfo.label}
                                 </Text>
-                                <Text style={styles.ratingLabelLight}>Rank</Text>
+                                {tier !== 'GENKI' && tierProgress.nextTier && (
+                                  <Text style={styles.tierDisplaySubtext}>
+                                    {tierProgress.pointsToNext} pts to {TIER_DISPLAY[tierProgress.nextTier].label}
+                                  </Text>
+                                )}
                               </View>
-                            ) : (
-                              <View style={styles.ratingMain}>
-                                <Text style={[styles.ratingValue, { color: '#FFFFFF', fontSize: 24 }]}>
-                                  —
-                                </Text>
-                                <Text style={styles.ratingLabelLight}>Unranked</Text>
+                            </View>
+
+                            {/* Tier Progress Bar */}
+                            {tier !== 'GENKI' && tierProgress.nextTier && (
+                              <View style={styles.tierProgressContainer}>
+                                <View style={styles.tierProgressBar}>
+                                  <View style={[styles.tierProgressFillSimple, { width: `${tierProgress.progress}%`, backgroundColor: tierColor.primary }]} />
+                                </View>
                               </View>
                             )}
-                            <View style={styles.ratingDividerLight} />
-                            <View style={styles.ratingStat}>
-                              <Text style={styles.ratingStatValueLight}>{rank.wins}</Text>
-                              <Text style={styles.ratingStatLabelLight}>Wins</Text>
-                            </View>
-                            <View style={styles.ratingStat}>
-                              <Text style={styles.ratingStatValueLight}>{rank.losses}</Text>
-                              <Text style={styles.ratingStatLabelLight}>Losses</Text>
-                            </View>
-                            <View style={styles.ratingStat}>
-                              <Text style={styles.ratingStatValueLight}>{rank.matchesPlayed}</Text>
-                              <Text style={styles.ratingStatLabelLight}>Played</Text>
-                            </View>
                           </View>
 
-                          {/* Win Rate Bar */}
-                          {rank.matchesPlayed > 0 && (
-                            <View style={styles.winRateContainer}>
-                              <View style={styles.winRateHeader}>
-                                <Text style={styles.winRateLabelLight}>Win Rate</Text>
-                                <Text style={[styles.winRateValue, { color: theme.colors.success.main }]}>
-                                  {winRate.toFixed(0)}%
-                                </Text>
-                              </View>
-                              <View style={styles.winRateBarLight}>
-                                <View style={[styles.winRateFill, { width: `${winRate}%` }]} />
-                              </View>
+                          {/* Stats Row */}
+                          <View style={styles.statsRowCompact}>
+                            <View style={styles.statItemCompact}>
+                              <Text style={styles.statValueCompact}>{rank.wins}</Text>
+                              <Text style={styles.statLabelCompact}>W</Text>
                             </View>
-                          )}
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItemCompact}>
+                              <Text style={styles.statValueCompact}>{rank.losses}</Text>
+                              <Text style={styles.statLabelCompact}>L</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItemCompact}>
+                              <Text style={[styles.statValueCompact, { color: theme.colors.success.main }]}>
+                                {winRate.toFixed(0)}%
+                              </Text>
+                              <Text style={styles.statLabelCompact}>Win Rate</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItemCompact}>
+                              <Text style={styles.statValueCompact}>{rank.matchesPlayed}</Text>
+                              <Text style={styles.statLabelCompact}>Games</Text>
+                            </View>
+                          </View>
                         </LinearGradient>
                       </ImageBackground>
                     </View>
@@ -630,55 +668,58 @@ export default function ProfileScreen() {
             <>
               {tournaments.length > 0 ? (
                 tournaments.map((tournament, index) => {
-                  const gameConfig = GAME_TYPE_COLORS[tournament.gameType] || { gradient: ['#6B7280', '#4B5563'] as const, icon: '🎮' };
                   const isTop3 = tournament.placement && tournament.placement <= 3;
+                  const gameImage = getGameImagePath(tournament.gameType);
 
                   return (
-                    <View key={tournament.id} style={styles.tournamentCard}>
-                      <View style={styles.tournamentHeader}>
+                    <View key={tournament.id} style={styles.tournamentCardContainer}>
+                      <ImageBackground
+                        source={gameImage}
+                        style={styles.tournamentCardImage}
+                        imageStyle={styles.tournamentCardImageStyle}
+                        resizeMode="cover"
+                      >
                         <LinearGradient
-                          colors={gameConfig.gradient}
-                          style={styles.tournamentIconBg}
+                          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']}
+                          style={styles.tournamentCardGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 0, y: 1 }}
                         >
-                          <Text style={styles.tournamentIcon}>{gameConfig.icon}</Text>
-                        </LinearGradient>
-                        <View style={styles.tournamentInfo}>
-                          <Text style={styles.tournamentName} numberOfLines={1}>
-                            {tournament.name}
-                          </Text>
-                          <Text style={styles.tournamentDate}>
-                            {new Date(tournament.date).toLocaleDateString()}
-                          </Text>
-                        </View>
-                        {tournament.placement && (
-                          <View style={[
-                            styles.placementBadge,
-                            isTop3 ? { backgroundColor: 'rgba(255, 215, 0, 0.15)' } : undefined
-                          ]}>
-                            {isTop3 && (
-                              <Text style={styles.placementMedal}>
-                                {tournament.placement === 1 ? '🥇' : tournament.placement === 2 ? '🥈' : '🥉'}
+                          <View style={styles.tournamentHeader}>
+                            <View style={styles.tournamentInfo}>
+                              <Text style={styles.tournamentNameLight} numberOfLines={1}>
+                                {tournament.name}
+                              </Text>
+                              <Text style={styles.tournamentDateLight}>
+                                {new Date(tournament.date).toLocaleDateString()} • {GAME_TYPE_LABELS[tournament.gameType]}
+                              </Text>
+                            </View>
+                            {tournament.placement && (
+                              <View style={[
+                                styles.placementBadgeLight,
+                                isTop3 ? styles.placementBadgeTop3Light : null
+                              ]}>
+                                <Text style={[
+                                  styles.placementTextLight,
+                                  isTop3 ? styles.placementTextTop3Light : null
+                                ]}>
+                                  #{tournament.placement}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={styles.tournamentFooterLight}>
+                            <Text style={styles.tournamentRecordLight}>
+                              {tournament.matchRecord}
+                            </Text>
+                            {tournament.totalPlayers && (
+                              <Text style={styles.tournamentPlayersLight}>
+                                {tournament.totalPlayers} players
                               </Text>
                             )}
-                            <Text style={[
-                              styles.placementText,
-                              isTop3 ? { color: '#FFD700' } : undefined
-                            ]}>
-                              #{tournament.placement}
-                            </Text>
                           </View>
-                        )}
-                      </View>
-                      <View style={styles.tournamentFooter}>
-                        <Text style={styles.tournamentRecord}>
-                          Record: {tournament.matchRecord}
-                        </Text>
-                        {tournament.totalPlayers && (
-                          <Text style={styles.tournamentPlayers}>
-                            {tournament.totalPlayers} players
-                          </Text>
-                        )}
-                      </View>
+                        </LinearGradient>
+                      </ImageBackground>
                     </View>
                   );
                 })
@@ -716,15 +757,16 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  headerGradient: {
+  headerSection: {
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    backgroundColor: theme.colors.background.primary,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
   headerInfo: {
     flex: 1,
@@ -741,29 +783,85 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   userName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: theme.colors.text.primary,
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 6,
+    letterSpacing: -0.3,
     marginBottom: 6,
   },
-  tierIcon: {
-    fontSize: 12,
+
+  // Rank Info Container (Header)
+  rankInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
   },
-  tierLabel: {
+  rankGameName: {
     fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.text.tertiary,
+  },
+  unrankedText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.text.tertiary,
+    marginBottom: 6,
+  },
+
+  // Main Tier Badge (Header) - Clean Design
+  mainTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    gap: 6,
+    borderWidth: 1,
+  },
+  tierDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  mainTierName: {
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+
+  // Summary Row
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  summaryItem: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  summaryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.text.tertiary,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginTop: 2,
   },
   discordTag: {
     flexDirection: 'row',
@@ -1174,32 +1272,92 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
 
-  // Tournament Cards
-  tournamentCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: 14,
-    padding: 14,
+  // Tournament Cards with Game Assets
+  tournamentCardContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  tournamentCardImage: {
+    width: '100%',
+    minHeight: 100,
+  },
+  tournamentCardImageStyle: {
+    borderRadius: 12,
+  },
+  tournamentCardGradient: {
+    padding: 14,
+    justifyContent: 'space-between',
   },
   tournamentHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tournamentIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tournamentIcon: {
-    fontSize: 18,
+    alignItems: 'flex-start',
   },
   tournamentInfo: {
     flex: 1,
-    marginLeft: 10,
+  },
+  tournamentNameLight: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  tournamentDateLight: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  placementBadgeLight: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  placementBadgeTop3Light: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  placementTextLight: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  placementTextTop3Light: {
+    color: '#FFD700',
+  },
+  tournamentFooterLight: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tournamentRecordLight: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+  },
+  tournamentPlayersLight: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+
+  // Legacy Tournament Cards (keeping for reference)
+  tournamentCard: {
+    backgroundColor: theme.colors.background.card,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   tournamentName: {
     fontSize: 14,
@@ -1212,21 +1370,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   placementBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
-  placementMedal: {
-    fontSize: 14,
+  placementBadgeTop3: {
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
   },
   placementText: {
     fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.text.primary,
+    color: theme.colors.text.secondary,
+  },
+  placementTextTop3: {
+    color: '#D4AF37',
   },
   tournamentFooter: {
     flexDirection: 'row',
@@ -1289,5 +1447,87 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: theme.colors.text.secondary,
+  },
+
+  // Tier Display - Clean Design on Game Cards
+  tierDisplayMain: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  tierDisplayContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tierIndicator: {
+    width: 4,
+    height: 36,
+    borderRadius: 2,
+  },
+  tierDisplayTextContainer: {
+    flex: 1,
+  },
+  tierDisplayName: {
+    fontSize: 22,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tierDisplaySubtext: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+
+  // Tier Progress Bar
+  tierProgressContainer: {
+    marginTop: 12,
+  },
+  tierProgressBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  tierProgressFillSimple: {
+    height: '100%',
+    borderRadius: 2,
+  },
+
+  // Compact Stats Row
+  statsRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  statItemCompact: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValueCompact: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statLabelCompact: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '500',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
 });

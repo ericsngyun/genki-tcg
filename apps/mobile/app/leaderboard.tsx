@@ -56,49 +56,58 @@ type PlayerTier =
   | 'GENKI'
   | 'UNRANKED';
 
-// Map rating to tier (simplified from removed RankedAvatar component)
+// Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2200) return 'GENKI';
-  if (rating >= 2000) return 'DIAMOND';
-  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 2100) return 'GENKI';
+  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 1750) return 'PLATINUM';
   if (rating >= 1600) return 'GOLD';
-  if (rating >= 1400) return 'SILVER';
-  if (rating >= 1200) return 'BRONZE';
-  if (rating >= 800) return 'SPROUT';
+  if (rating >= 1450) return 'SILVER';
+  if (rating >= 1300) return 'BRONZE';
+  if (rating >= 0) return 'SPROUT';
   return 'UNRANKED';
 }
 
-// Tier configuration with colors
-const TIER_CONFIG: Record<PlayerTier, { color: string; bg: string; icon: string }> = {
-  GENKI: { color: '#FF3D00', bg: 'rgba(255, 61, 0, 0.15)', icon: '🔥' },
-  DIAMOND: { color: '#448AFF', bg: 'rgba(68, 138, 255, 0.15)', icon: '💎' },
-  PLATINUM: { color: '#1DE9B6', bg: 'rgba(29, 233, 182, 0.15)', icon: '💎' },
-  GOLD: { color: '#FFD700', bg: 'rgba(255, 215, 0, 0.15)', icon: '👑' },
-  SILVER: { color: '#C0C0C0', bg: 'rgba(192, 192, 192, 0.15)', icon: '🛡️' },
-  BRONZE: { color: '#CD7F32', bg: 'rgba(205, 127, 50, 0.15)', icon: '🛡️' },
-  SPROUT: { color: '#4CAF50', bg: 'rgba(76, 175, 80, 0.15)', icon: '🌱' },
-  UNRANKED: { color: '#78909C', bg: 'rgba(120, 144, 156, 0.15)', icon: '' },
+// Tier display names
+const TIER_LABELS: Record<PlayerTier, string> = {
+  GENKI: 'Genki',
+  DIAMOND: 'Diamond',
+  PLATINUM: 'Platinum',
+  GOLD: 'Gold',
+  SILVER: 'Silver',
+  BRONZE: 'Bronze',
+  SPROUT: 'Sprout',
+  UNRANKED: 'Unranked',
 };
 
-// Podium colors
+// Tier configuration with colors (no emojis - clean design)
+const TIER_CONFIG: Record<PlayerTier, { color: string; bg: string }> = {
+  GENKI: { color: '#FF3D00', bg: 'rgba(255, 61, 0, 0.15)' },
+  DIAMOND: { color: '#448AFF', bg: 'rgba(68, 138, 255, 0.15)' },
+  PLATINUM: { color: '#00E5FF', bg: 'rgba(0, 229, 255, 0.15)' },
+  GOLD: { color: '#FFD700', bg: 'rgba(255, 215, 0, 0.15)' },
+  SILVER: { color: '#C0C0C0', bg: 'rgba(192, 192, 192, 0.15)' },
+  BRONZE: { color: '#CD7F32', bg: 'rgba(205, 127, 50, 0.15)' },
+  SPROUT: { color: '#4CAF50', bg: 'rgba(76, 175, 80, 0.15)' },
+  UNRANKED: { color: '#78909C', bg: 'rgba(120, 144, 156, 0.15)' },
+};
+
+// Podium colors (no emojis)
 const PODIUM_CONFIG = {
   1: {
     gradient: ['#FFD700', '#FFA500'] as const,
     border: '#B8860B',
     bg: 'rgba(255, 215, 0, 0.1)',
-    icon: '👑',
   },
   2: {
     gradient: ['#E8E8E8', '#C0C0C0'] as const,
     border: '#A8A8A8',
     bg: 'rgba(192, 192, 192, 0.1)',
-    icon: '🥈',
   },
   3: {
     gradient: ['#CD7F32', '#A0522D'] as const,
     border: '#8B4513',
     bg: 'rgba(205, 127, 50, 0.1)',
-    icon: '🥉',
   },
 };
 
@@ -168,7 +177,7 @@ export default function LeaderboardScreen() {
     );
   };
 
-  // Podium Card Component
+  // Podium Card Component - Clean Design
   const PodiumCard = ({ player, position }: { player: any; position: 1 | 2 | 3 }) => {
     const config = PODIUM_CONFIG[position];
     const tier = mapRatingToTier(player.lifetimeRating);
@@ -197,11 +206,6 @@ export default function LeaderboardScreen() {
           </LinearGradient>
         </View>
 
-        {/* Crown for 1st */}
-        {isFirst && (
-          <Text style={styles.crownIcon}>{config.icon}</Text>
-        )}
-
         {/* Avatar */}
         <PlayerAvatar
           avatarUrl={player.avatarUrl}
@@ -214,10 +218,11 @@ export default function LeaderboardScreen() {
           {player.userName}
         </Text>
 
-        {/* Tier Badge - Rating Number Hidden */}
-        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg, marginTop: 8 }]}>
+        {/* Tier Badge - Clean Design */}
+        <View style={[styles.podiumTierBadge, { backgroundColor: tierConfig.bg }]}>
+          <View style={[styles.podiumTierDot, { backgroundColor: tierConfig.color }]} />
           <Text style={[styles.podiumTierText, { color: tierConfig.color }]}>
-            {tierConfig.icon} {tier}
+            {TIER_LABELS[tier]}
           </Text>
         </View>
 
@@ -231,7 +236,7 @@ export default function LeaderboardScreen() {
     );
   };
 
-  // Rank List Item Component
+  // Rank List Item Component - Clean Design
   const RankItem = ({ player, rank, index, isCurrentUser }: { player: any; rank: number; index: number; isCurrentUser?: boolean }) => {
     const tier = mapRatingToTier(player.lifetimeRating);
     const tierConfig = TIER_CONFIG[tier];
@@ -280,17 +285,10 @@ export default function LeaderboardScreen() {
           </View>
           <View style={styles.rankMeta}>
             <View style={[styles.rankTierBadge, { backgroundColor: tierConfig.bg }]}>
-              <Text style={[styles.rankTierText, { color: tierConfig.color }]}>{tier}</Text>
+              <Text style={[styles.rankTierText, { color: tierConfig.color }]}>{TIER_LABELS[tier]}</Text>
             </View>
             <Text style={styles.rankStats}>{player.matchWins}W-{player.matchLosses}L ({winRate}%)</Text>
           </View>
-        </View>
-
-        {/* Tier Icon - Rating Number Hidden */}
-        <View style={styles.rankRatingContainer}>
-          <Text style={[styles.rankTierIcon, { color: tierConfig.color }]}>
-            {tierConfig.icon}
-          </Text>
         </View>
       </AnimatedView>
     );
@@ -612,20 +610,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFF',
   },
-  crownIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  podiumAvatarContainer: {
-    borderRadius: 100,
-    borderWidth: 3,
-    padding: 2,
-    marginBottom: 10,
-  },
   podiumName: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.text.primary,
+    marginTop: 8,
     marginBottom: 4,
     textAlign: 'center',
     maxWidth: '95%',
@@ -635,14 +624,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   podiumTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    marginTop: 6,
     marginBottom: 6,
+    gap: 6,
+  },
+  podiumTierDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   podiumTierText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   podiumStats: {
     marginTop: 2,
@@ -732,24 +732,6 @@ const styles = StyleSheet.create({
   rankStats: {
     fontSize: 11,
     color: theme.colors.text.tertiary,
-  },
-  rankRatingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 40,
-  },
-  rankTierIcon: {
-    fontSize: 24,
-  },
-  rankRating: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  rankRatingLabel: {
-    fontSize: 9,
-    color: theme.colors.text.tertiary,
-    textTransform: 'uppercase',
-    fontWeight: '500',
   },
 
   noMoreRanks: {

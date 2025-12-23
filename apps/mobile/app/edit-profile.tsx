@@ -59,12 +59,12 @@ interface GameRank {
   deviation: number;
 }
 
-// Game options for border selection
+// Game options for border selection (clean design - no emojis)
 const GAME_OPTIONS = [
-  { value: 'HIGHEST', label: 'Highest Tier', icon: '🏆' },
-  { value: 'ONE_PIECE_TCG', label: 'One Piece TCG', icon: '🏴‍☠️' },
-  { value: 'AZUKI_TCG', label: 'Azuki TCG', icon: '🎴' },
-  { value: 'RIFTBOUND', label: 'Riftbound', icon: '⚔️' },
+  { value: 'HIGHEST', label: 'Highest Tier', color: '#FFD700' },
+  { value: 'ONE_PIECE_TCG', label: 'One Piece TCG', color: '#DC2626' },
+  { value: 'AZUKI_TCG', label: 'Azuki TCG', color: '#8B5CF6' },
+  { value: 'RIFTBOUND', label: 'Riftbound', color: '#3B82F6' },
 ];
 
 export default function EditProfileScreen() {
@@ -254,7 +254,7 @@ export default function EditProfileScreen() {
                   ]}
                   onPress={() => saveBorderPreference(option.value)}
                 >
-                  <Text style={styles.borderOptionIcon}>{option.icon}</Text>
+                  <View style={[styles.borderOptionDot, { backgroundColor: option.color }]} />
                   <View style={styles.borderOptionInfo}>
                     <Text style={[
                       styles.borderOptionLabel,
@@ -455,8 +455,10 @@ const styles = StyleSheet.create({
   borderOptionSelected: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
-  borderOptionIcon: {
-    fontSize: 22,
+  borderOptionDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     marginRight: 12,
   },
   borderOptionInfo: {
