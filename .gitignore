@@ -23,6 +23,12 @@ out/
 .env.development
 .env.production
 .env*.local
+
+# Production secrets - NEVER commit these
+production-secrets*.txt
+*-secrets*.txt
+*.secret
+*.secrets
 apps/backend/.env
 apps/backend/.env.local
 apps/backend/.env.development
