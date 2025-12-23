@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '../lib/secure-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../lib/theme';
 
@@ -65,13 +65,15 @@ export default function SplashScreen() {
 
   const checkAuth = async () => {
     try {
-      const accessToken = await AsyncStorage.getItem('access_token');
-      const oldToken = await AsyncStorage.getItem('auth_token');
+      // Use secureStorage (SecureStore on native, AsyncStorage on web) for token persistence
+      const accessToken = await secureStorage.getItem('access_token');
+      const oldToken = await secureStorage.getItem('auth_token');
 
       if (accessToken || oldToken) {
+        // Migrate legacy auth_token to access_token if needed
         if (oldToken && !accessToken) {
-          await AsyncStorage.setItem('access_token', oldToken);
-          await AsyncStorage.removeItem('auth_token');
+          await secureStorage.setItem('access_token', oldToken);
+          await secureStorage.removeItem('auth_token');
         }
         router.replace('/(tabs)/events');
       } else {
