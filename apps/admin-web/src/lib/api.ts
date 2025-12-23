@@ -530,6 +530,24 @@ class ApiClient {
     const { data } = await this.client.post(`/ratings/seasons/${seasonId}/status`, { status });
     return data;
   }
+
+  // Generic fetch method for custom endpoints
+  async fetch(endpoint: string, options?: { method?: string; body?: any }) {
+    const method = options?.method?.toLowerCase() || 'get';
+    if (method === 'post') {
+      const { data } = await this.client.post(endpoint, options?.body);
+      return data;
+    } else if (method === 'patch') {
+      const { data } = await this.client.patch(endpoint, options?.body);
+      return data;
+    } else if (method === 'delete') {
+      const { data } = await this.client.delete(endpoint);
+      return data;
+    } else {
+      const { data } = await this.client.get(endpoint);
+      return data;
+    }
+  }
 }
 
 export const api = new ApiClient();

@@ -20,6 +20,12 @@ interface RatingChange {
   tierAfter: string;
 }
 
+const gameCards = [
+  { game: 'AZUKI_TCG', label: 'Azuki TCG', icon: '🎴' },
+  { game: 'ONE_PIECE_TCG', label: 'One Piece TCG', icon: '🏴‍☠️' },
+  { game: 'RIFTBOUND', label: 'Riftbound', icon: '⚔️' },
+];
+
 export default function RatingsPage() {
   const [loading, setLoading] = useState(false);
   const [unprocessedLoading, setUnprocessedLoading] = useState(false);
@@ -58,17 +64,15 @@ export default function RatingsPage() {
         method: 'POST',
       });
       setResult(response);
-      // Refresh unprocessed list
       checkUnprocessed();
     } catch (err: any) {
       console.error('Rating processing error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to process ratings';
 
-      // Provide more helpful error messages
       if (errorMessage.includes('No unprocessed')) {
-        setError(`✅ No unprocessed ${gameType} tournaments found. All ratings are up to date!`);
+        setError(`No unprocessed ${gameType} tournaments found. All ratings are up to date!`);
       } else if (errorMessage.includes('already processed')) {
-        setError(`✅ This tournament's ratings have already been processed.`);
+        setError(`This tournament's ratings have already been processed.`);
       } else {
         setError(`Error: ${errorMessage}`);
       }
@@ -78,108 +82,73 @@ export default function RatingsPage() {
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground tracking-tight">Rating Management</h1>
-        <p className="text-muted-foreground mt-2 text-lg">
+    <div className="animate-fade-in space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Rating Management</h1>
+        <p className="text-white/40 mt-1">
           Process player ratings for completed tournaments
         </p>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <button
-          onClick={() => processLatest('AZUKI_TCG')}
-          disabled={loading}
-          className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md transition-all hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="text-4xl mb-3">🎴</div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Azuki TCG</h3>
-            <p className="text-sm text-muted-foreground">
-              Process latest completed tournament
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {gameCards.map((card) => (
+          <button
+            key={card.game}
+            onClick={() => processLatest(card.game)}
+            disabled={loading}
+            className="group bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 text-left transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.1] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="text-3xl mb-3">{card.icon}</div>
+            <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-primary transition-colors">
+              {card.label}
+            </h3>
+            <p className="text-sm text-white/40">
+              Process latest tournament
             </p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => processLatest('ONE_PIECE_TCG')}
-          disabled={loading}
-          className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md transition-all hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="text-4xl mb-3">🏴‍☠️</div>
-            <h3 className="text-xl font-bold text-foreground mb-2">One Piece TCG</h3>
-            <p className="text-sm text-muted-foreground">
-              Process latest completed tournament
-            </p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => processLatest('RIFTBOUND')}
-          disabled={loading}
-          className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 backdrop-blur-md transition-all hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="text-4xl mb-3">⚔️</div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Riftbound</h3>
-            <p className="text-sm text-muted-foreground">
-              Process latest completed tournament
-            </p>
-          </div>
-        </button>
+          </button>
+        ))}
       </div>
 
       {/* Check Unprocessed Button */}
-      <div className="mb-6">
-        <button
-          onClick={checkUnprocessed}
-          disabled={unprocessedLoading}
-          className="bg-card border border-border px-6 py-3 rounded-xl font-semibold hover:bg-card/80 transition-all disabled:opacity-50"
-        >
-          {unprocessedLoading ? 'Checking...' : '🔍 Check Unprocessed Tournaments'}
-        </button>
-      </div>
+      <button
+        onClick={checkUnprocessed}
+        disabled={unprocessedLoading}
+        className="px-6 py-3 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm font-medium text-white hover:bg-white/[0.04] transition-all disabled:opacity-50"
+      >
+        {unprocessedLoading ? 'Checking...' : 'Check Unprocessed Tournaments'}
+      </button>
 
       {/* Loading State */}
       {loading && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-8 text-center backdrop-blur-sm mb-6">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-8 text-center">
+          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-blue-400 font-medium">Processing tournament ratings...</p>
-          <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
+          <p className="text-sm text-white/40 mt-1">This may take a few moments</p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 mb-6">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">❌</span>
-            <div>
-              <h3 className="text-lg font-bold text-destructive mb-1">Error</h3>
-              <p className="text-destructive/90">{error}</p>
-            </div>
-          </div>
+        <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
+          <p className="text-red-400">{error}</p>
         </div>
       )}
 
       {/* Unprocessed Tournaments List */}
       {unprocessedTournaments.length > 0 && (
-        <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border p-6 mb-6">
-          <h2 className="text-2xl font-bold text-foreground mb-4">Unprocessed Tournaments</h2>
-          <div className="space-y-3">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-white">Unprocessed Tournaments</h2>
+          <div className="space-y-2">
             {unprocessedTournaments.map((tournament) => (
               <div
                 key={tournament.id}
-                className="bg-background/50 rounded-lg border border-border p-4 flex justify-between items-center"
+                className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-between items-center"
               >
                 <div>
-                  <h3 className="font-bold text-foreground">{tournament.name}</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-medium text-white">{tournament.name}</h3>
+                  <p className="text-sm text-white/40">
                     {tournament.game} • {tournament.playerCount} players
                     {tournament.completedAt && ` • ${new Date(tournament.completedAt).toLocaleDateString()}`}
                   </p>
@@ -187,7 +156,7 @@ export default function RatingsPage() {
                 <button
                   onClick={() => processLatest(tournament.game)}
                   disabled={loading}
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   Process
                 </button>
@@ -197,66 +166,66 @@ export default function RatingsPage() {
         </div>
       )}
 
+      {/* All caught up state */}
       {unprocessedTournaments.length === 0 && !unprocessedLoading && unprocessedTournaments !== null && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-8 text-center backdrop-blur-sm mb-6">
-          <span className="text-4xl mb-3 block">✅</span>
-          <h3 className="text-lg font-bold text-green-400 mb-2">All caught up!</h3>
-          <p className="text-muted-foreground">No tournaments need rating processing</p>
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">✓</span>
+          </div>
+          <h3 className="text-lg font-semibold text-emerald-400 mb-1">All caught up!</h3>
+          <p className="text-white/40 text-sm">No tournaments need rating processing</p>
         </div>
       )}
 
       {/* Success Result */}
       {result && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 backdrop-blur-sm">
-          <div className="flex items-start gap-3 mb-6">
-            <span className="text-3xl">🎉</span>
-            <div>
-              <h3 className="text-xl font-bold text-green-400 mb-1">Ratings Processed Successfully!</h3>
-              <p className="text-foreground">
-                {result.tournament.name} • {result.totalPlayersProcessed} players updated
-              </p>
-            </div>
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold text-emerald-400 mb-1">Ratings Processed Successfully!</h3>
+            <p className="text-white/60">
+              {result.tournament.name} • {result.totalPlayersProcessed} players updated
+            </p>
           </div>
 
           {result.topRatingChanges.length > 0 && (
-            <>
-              <h4 className="text-lg font-bold text-foreground mb-4">Top Rating Changes:</h4>
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white/60 uppercase tracking-wider">Top Rating Changes</h4>
               <div className="space-y-2">
                 {result.topRatingChanges.map((change, index) => (
                   <div
                     key={index}
-                    className="bg-background/30 rounded-lg p-4 flex justify-between items-center"
+                    className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-between items-center"
                   >
                     <div>
-                      <div className="font-bold text-foreground">{change.playerName}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium text-white">{change.playerName}</div>
+                      <div className="text-sm text-white/40">
                         {change.tierBefore} → {change.tierAfter}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-foreground">
+                      <div className="font-medium text-white">
                         {change.ratingBefore} → {change.ratingAfter}
                       </div>
-                      <div className={`text-sm font-bold ${change.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`text-sm font-medium ${change.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {change.change >= 0 ? '+' : ''}{change.change}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
 
       {/* Info Box */}
-      <div className="mt-10 bg-card/30 backdrop-blur-sm rounded-xl border border-border border-dashed p-6">
-        <h3 className="text-lg font-bold text-foreground mb-2">ℹ️ About Rating Processing</h3>
-        <ul className="text-sm text-muted-foreground space-y-2">
+      <div className="bg-white/[0.01] border border-white/[0.04] border-dashed rounded-xl p-6">
+        <h3 className="text-sm font-medium text-white/60 mb-3">About Rating Processing</h3>
+        <ul className="text-sm text-white/40 space-y-1.5">
           <li>• Ratings are calculated using the Glicko-2 algorithm</li>
           <li>• Both lifetime and seasonal ratings are updated</li>
-          <li>• Future tournaments will process ratings automatically when completed</li>
-          <li>• This tool is only needed for tournaments completed before auto-processing was enabled</li>
+          <li>• Future tournaments process ratings automatically</li>
+          <li>• This tool is for tournaments completed before auto-processing</li>
         </ul>
       </div>
     </div>

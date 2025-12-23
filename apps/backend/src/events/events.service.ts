@@ -70,40 +70,50 @@ export class EventsService {
   }
 
   async getEvent(eventId: string, userOrgId: string) {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      include: {
-        entries: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                avatarUrl: true,
-                // Never expose passwordHash or other sensitive fields
+    try {
+      const event = await this.prisma.event.findUnique({
+        where: { id: eventId },
+        include: {
+          entries: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  avatarUrl: true,
+                  // Never expose passwordHash or other sensitive fields
+                },
               },
             },
           },
-        },
-        rounds: {
-          orderBy: {
-            roundNumber: 'asc',
+          rounds: {
+            orderBy: {
+              roundNumber: 'asc',
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!event) {
-      throw new NotFoundException('Event not found');
+      if (!event) {
+        throw new NotFoundException('Event not found');
+      }
+
+      // Validate organization access
+      if (event.orgId !== userOrgId) {
+        throw new ForbiddenException('Access denied to this event');
+      }
+
+      return event;
+    } catch (error: any) {
+      // Re-throw known NestJS exceptions
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      // Log unexpected errors for debugging
+      this.logger.error(`Failed to get event ${eventId}:`, error);
+      throw new BadRequestException(`Failed to load event: ${error?.message || 'Unknown error'}`);
     }
-
-    // Validate organization access
-    if (event.orgId !== userOrgId) {
-      throw new ForbiddenException('Access denied to this event');
-    }
-
-    return event;
   }
 
   async registerForEvent(eventId: string, userId: string, userOrgId: string) {

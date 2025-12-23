@@ -32,37 +32,37 @@
   }
 
   .dark {
-    /* Deep rich black background */
-    --background: 0 0% 4%;
-    /* Soft white text for high readability */
+    /* Pure black background - matching landing page */
+    --background: 0 0% 0%;
+    /* Crisp white text */
     --foreground: 0 0% 98%;
-    /* Dark charcoal cards with subtle elevation */
-    --card: 0 0% 10%;
+    /* Dark cards with minimal elevation */
+    --card: 0 0% 4%;
     --card-foreground: 0 0% 98%;
-    /* Popover with slightly lighter background */
-    --popover: 0 0% 8%;
+    /* Popover slightly elevated */
+    --popover: 0 0% 5%;
     --popover-foreground: 0 0% 98%;
-    /* Vibrant crimson red primary color */
-    --primary: 0 84% 60%;
+    /* Genki red primary */
+    --primary: 0 72% 51%;
     --primary-foreground: 0 0% 98%;
-    /* Secondary dark gray with red undertone */
-    --secondary: 0 5% 15%;
+    /* Secondary dark gray */
+    --secondary: 0 0% 8%;
     --secondary-foreground: 0 0% 98%;
-    /* Muted dark gray for subtle elements */
-    --muted: 0 0% 14%;
+    /* Muted for subtle elements */
+    --muted: 0 0% 10%;
     --muted-foreground: 0 0% 64%;
-    /* Accent red for highlights */
-    --accent: 0 84% 60%;
+    /* Accent same as primary */
+    --accent: 0 0% 8%;
     --accent-foreground: 0 0% 98%;
-    /* Destructive red (same as primary for cohesive design) */
-    --destructive: 0 84% 60%;
+    /* Destructive red */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    /* Subtle border with slight red tint */
-    --border: 0 5% 18%;
-    /* Input background slightly lighter than cards */
-    --input: 0 0% 12%;
+    /* Subtle border */
+    --border: 0 0% 12%;
+    /* Input background */
+    --input: 0 0% 6%;
     /* Red focus ring */
-    --ring: 0 84% 60%;
+    --ring: 0 72% 51%;
   }
 }
 
@@ -73,32 +73,8 @@
 
   body {
     @apply bg-background text-foreground;
-    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
+    background: #000000;
     min-height: 100vh;
-  }
-
-  /* Animated background blob */
-  body::before {
-    content: '';
-    position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at 50% 50%, rgba(76, 29, 149, 0.15), transparent 60%);
-    animation: rotate 20s linear infinite;
-    z-index: -1;
-    pointer-events: none;
-  }
-
-  @keyframes rotate {
-    from {
-      transform: rotate(0deg);
-    }
-
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   /* Custom Scrollbar Styles */
@@ -220,4 +196,20 @@
     outline: none;
     border-radius: 0.25rem;
   }
+}
+
+/* Custom easing for smooth animations */
+.ease-out-expo {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(220, 38, 38, 0.2);
+  color: white;
+}
+
+/* Focus visible for keyboard navigation */
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
 }

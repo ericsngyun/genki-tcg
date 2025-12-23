@@ -71,12 +71,10 @@ export default function CreditsPage() {
         api.getAllUserBalances(),
       ]);
 
-      // Create a map of userId to balance for quick lookup
       const balanceMap = new Map(
         balancesData.map((b: any) => [b.userId, b.balance])
       );
 
-      // Merge balance data with user data
       const usersWithBalances = userData.map((user: any) => ({
         ...user,
         balance: balanceMap.get(user.id) ?? 0,
@@ -98,21 +96,17 @@ export default function CreditsPage() {
         setLoadingMore(true);
       }
 
-      // Get balance
       const balanceData = await api.getUserBalance(userId);
       setBalance(balanceData.balance);
 
-      // Get paginated transaction history
       const historyData = await api.getUserTransactionHistory(userId, {
         limit: 20,
         cursor,
       });
 
       if (cursor) {
-        // Append to existing transactions
         setTransactions((prev) => [...prev, ...historyData.transactions]);
       } else {
-        // Replace transactions
         setTransactions(historyData.transactions);
       }
 
@@ -160,7 +154,6 @@ export default function CreditsPage() {
     try {
       const response = await api.exportUserCreditsHistory(selectedUser.id);
 
-      // Create blob and download
       const blob = new Blob([response.data], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -189,18 +182,18 @@ export default function CreditsPage() {
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
-      {/* Page Header */}
+    <div className="animate-fade-in">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground tracking-tight">Credits Management</h1>
-        <p className="text-muted-foreground mt-2 text-lg">
+        <h1 className="text-3xl font-bold text-white tracking-tight">Credits</h1>
+        <p className="text-white/40 mt-1">
           Manage player credits and transaction history
         </p>
       </div>
 
-      {/* Main Grid Layout */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - User List */}
+        {/* Left - User List */}
         <div className="lg:col-span-4">
           <UserListSection
             users={users}
@@ -212,21 +205,20 @@ export default function CreditsPage() {
           />
         </div>
 
-        {/* Right Column - User Details */}
+        {/* Right - User Details */}
         <div className="lg:col-span-8">
           {!selectedUser ? (
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border border-dashed p-16 text-center animate-in fade-in zoom-in duration-500">
-              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">💳</span>
+            <div className="bg-white/[0.02] border border-white/[0.06] border-dashed rounded-xl p-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">💳</span>
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Select a User</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Choose a user from the list on the left to view their credit balance and transaction history
+              <h3 className="text-lg font-semibold text-white mb-2">Select a User</h3>
+              <p className="text-white/40 text-sm max-w-md mx-auto">
+                Choose a user from the list to view their credit balance and transaction history
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Balance Card */}
               <BalanceCard
                 user={selectedUser}
                 balance={balance}
@@ -236,10 +228,8 @@ export default function CreditsPage() {
                 exporting={exporting}
               />
 
-              {/* Quick Actions */}
               <QuickActions onAction={handleQuickAdjust} />
 
-              {/* Transaction History */}
               <TransactionHistory
                 transactions={transactions}
                 pagination={pagination}
@@ -252,7 +242,7 @@ export default function CreditsPage() {
         </div>
       </div>
 
-      {/* Adjust Credits Modal */}
+      {/* Adjust Modal */}
       {selectedUser && (
         <AdjustCreditsModal
           isOpen={showAdjustModal}

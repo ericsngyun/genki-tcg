@@ -6,7 +6,7 @@ import { formatGameName } from '@/lib/formatters';
 import { LeaderboardPodium } from '@/components/LeaderboardPodium';
 import { LeaderboardTable } from '@/components/LeaderboardTable';
 import { PlayerHistoryModal } from '@/components/PlayerHistoryModal';
-import { Search, Download, RotateCcw, AlertTriangle, Trophy, Calendar, ChevronDown, ChevronUp, Plus, RefreshCw } from 'lucide-react';
+import { Search, Download, RotateCcw, AlertTriangle, Calendar, ChevronDown, ChevronUp, Plus, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +47,6 @@ export default function PlayersPage() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; name: string } | null>(null);
 
-  // Season management
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
   const [activeSeason, setActiveSeason] = useState<Season | null>(null);
@@ -55,34 +54,29 @@ export default function PlayersPage() {
   const [showCreateSeason, setShowCreateSeason] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // New season form
   const [newSeasonName, setNewSeasonName] = useState('');
   const [newSeasonStartDate, setNewSeasonStartDate] = useState('');
   const [newSeasonEndDate, setNewSeasonEndDate] = useState('');
 
-  // Load seasons on mount
   useEffect(() => {
     loadSeasons();
   }, []);
 
-  // Auto-select active season when switching to seasonal view
   useEffect(() => {
     if (viewMode === 'seasonal' && activeSeason && !selectedSeason) {
       setSelectedSeason(activeSeason);
     }
   }, [viewMode, activeSeason, selectedSeason]);
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchDebounce(searchQuery);
-      setCurrentPage(1); // Reset to first page on new search
+      setCurrentPage(1);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load leaderboard when game, view mode, season, or search changes
   useEffect(() => {
     loadLeaderboard(currentPage);
   }, [selectedGame, viewMode, selectedSeason, currentPage, searchDebounce]);
@@ -122,7 +116,6 @@ export default function PlayersPage() {
           limit: pageSize,
           offset,
         });
-        // Transform seasonal data to match lifetime format
         data = {
           ratings: data.entries?.map((entry: any, index: number) => ({
             ...entry,
@@ -241,17 +234,14 @@ export default function PlayersPage() {
   const allEntries = leaderboardData?.ratings || [];
 
   return (
-    <div className="animate-in fade-in duration-700 space-y-6">
+    <div className="animate-fade-in space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-primary" />
-            Player Rankings
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <h1 className="text-3xl font-bold text-white tracking-tight">Player Rankings</h1>
+          <p className="text-white/40 mt-1">
             {viewMode === 'lifetime'
-              ? 'Lifetime ratings and competitive tiers across all games'
+              ? 'Lifetime ratings and competitive tiers'
               : selectedSeason
                 ? `${selectedSeason.name} - Seasonal Rankings`
                 : 'Select a season to view rankings'}
@@ -259,7 +249,7 @@ export default function PlayersPage() {
         </div>
 
         {/* Game Type Tabs */}
-        <div className="bg-muted/30 p-1 rounded-xl inline-flex self-start md:self-center">
+        <div className="flex gap-1 p-1 bg-white/[0.02] border border-white/[0.06] rounded-lg">
           {GAME_TYPES.map((game) => (
             <button
               key={game.value}
@@ -267,10 +257,11 @@ export default function PlayersPage() {
                 setSelectedGame(game.value);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${selectedGame === game.value
-                  ? 'bg-background text-foreground shadow-sm scale-105'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                }`}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                selectedGame === game.value
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/40 hover:text-white/60'
+              }`}
             >
               {game.label}
             </button>
@@ -278,19 +269,19 @@ export default function PlayersPage() {
         </div>
       </div>
 
-      {/* View Mode Toggle & Season Selector */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        {/* Lifetime vs Seasonal Toggle */}
-        <div className="bg-muted/30 p-1 rounded-lg inline-flex">
+      {/* Controls Row */}
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+        {/* View Mode Toggle */}
+        <div className="flex gap-1 p-1 bg-white/[0.02] border border-white/[0.06] rounded-lg">
           <button
             onClick={() => {
               setViewMode('lifetime');
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
               viewMode === 'lifetime'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white/60'
             }`}
           >
             Lifetime
@@ -300,196 +291,170 @@ export default function PlayersPage() {
               setViewMode('seasonal');
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
               viewMode === 'seasonal'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white/60'
             }`}
           >
             Seasonal
           </button>
         </div>
 
-        {/* Season Selector (only show in seasonal mode) */}
+        {/* Season Selector */}
         {viewMode === 'seasonal' && (
-          <div className="flex items-center gap-2 flex-1">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-            <select
-              value={selectedSeason?.id || ''}
-              onChange={(e) => {
-                const season = seasons.find(s => s.id === e.target.value);
-                setSelectedSeason(season || null);
-                setCurrentPage(1);
-              }}
-              className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-            >
-              <option value="">Select a season...</option>
-              {seasons.map((season) => (
-                <option key={season.id} value={season.id}>
-                  {season.name} ({season.status}) - {new Date(season.startDate).toLocaleDateString()} to {new Date(season.endDate).toLocaleDateString()}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedSeason?.id || ''}
+            onChange={(e) => {
+              const season = seasons.find(s => s.id === e.target.value);
+              setSelectedSeason(season || null);
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm text-white focus:outline-none focus:border-white/20"
+          >
+            <option value="">Select a season...</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.name} ({season.status})
+              </option>
+            ))}
+          </select>
         )}
 
-        {/* Season Management Toggle */}
+        <div className="flex-1" />
+
+        {/* Season Management */}
         <button
           onClick={() => setShowSeasonManagement(!showSeasonManagement)}
-          className="px-4 py-2 bg-background border border-border rounded-lg text-sm font-medium hover:bg-muted/50 transition flex items-center gap-2"
+          className="px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/[0.04] transition-all flex items-center gap-2"
         >
           <Calendar className="w-4 h-4" />
-          Manage Seasons
+          Seasons
           {showSeasonManagement ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Season Management Section */}
+      {/* Season Management Panel */}
       {showSeasonManagement && (
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Season Management
-            </CardTitle>
-            <CardDescription>Create and manage ranked seasons</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Active Season Info */}
-            {activeSeason && (
-              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h4 className="font-semibold text-foreground">{activeSeason.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(activeSeason.startDate).toLocaleDateString()} - {new Date(activeSeason.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium">
-                    ACTIVE
-                  </span>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleInitializeSeasonRatings(activeSeason.id)}
-                    disabled={actionLoading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Initialize Ratings
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleUpdateSeasonStatus(activeSeason.id, 'COMPLETED')}
-                    disabled={actionLoading}
-                  >
-                    Complete Season
-                  </Button>
-                </div>
-              </div>
-            )}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-6 animate-slide-down">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">Season Management</h3>
+          </div>
 
-            {/* Create New Season */}
-            {!showCreateSeason ? (
-              <Button onClick={() => setShowCreateSeason(true)} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Season
-              </Button>
-            ) : (
-              <div className="space-y-4 p-4 border border-border rounded-lg">
+          {activeSeason && (
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="font-medium text-white">{activeSeason.name}</h4>
+                  <p className="text-sm text-white/40">
+                    {new Date(activeSeason.startDate).toLocaleDateString()} - {new Date(activeSeason.endDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">
+                  ACTIVE
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleInitializeSeasonRatings(activeSeason.id)}
+                  disabled={actionLoading}
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Init Ratings
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleUpdateSeasonStatus(activeSeason.id, 'COMPLETED')}
+                  disabled={actionLoading}
+                  className="text-xs"
+                >
+                  Complete
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!showCreateSeason ? (
+            <Button onClick={() => setShowCreateSeason(true)} variant="outline" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Season
+            </Button>
+          ) : (
+            <div className="space-y-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg">
+              <div className="space-y-2">
+                <Label htmlFor="seasonName" className="text-white/60">Season Name</Label>
+                <Input
+                  id="seasonName"
+                  placeholder="e.g., Spring 2025"
+                  value={newSeasonName}
+                  onChange={(e) => setNewSeasonName(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="seasonName">Season Name</Label>
+                  <Label htmlFor="startDate" className="text-white/60">Start Date</Label>
                   <Input
-                    id="seasonName"
-                    placeholder="e.g., Spring 2025"
-                    value={newSeasonName}
-                    onChange={(e) => setNewSeasonName(e.target.value)}
+                    id="startDate"
+                    type="date"
+                    value={newSeasonStartDate}
+                    onChange={(e) => setNewSeasonStartDate(e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={newSeasonStartDate}
-                      onChange={(e) => setNewSeasonStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={newSeasonEndDate}
-                      onChange={(e) => setNewSeasonEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleCreateSeason} disabled={actionLoading}>
-                    Create Season
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreateSeason(false)}
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate" className="text-white/60">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={newSeasonEndDate}
+                    onChange={(e) => setNewSeasonEndDate(e.target.value)}
+                  />
                 </div>
               </div>
-            )}
+              <div className="flex gap-2">
+                <Button onClick={handleCreateSeason} disabled={actionLoading}>
+                  Create
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreateSeason(false)} disabled={actionLoading}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
-            {/* All Seasons List */}
+          {seasons.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-medium text-foreground">All Seasons</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <h4 className="text-sm font-medium text-white/60">All Seasons</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {seasons.map((season) => (
                   <div
                     key={season.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border"
+                    className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/[0.04] rounded-lg"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{season.name}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            season.status === 'ACTIVE'
-                              ? 'bg-green-500/10 text-green-400'
-                              : season.status === 'COMPLETED'
-                              ? 'bg-muted text-muted-foreground'
-                              : 'bg-blue-500/10 text-blue-400'
-                          }`}
-                        >
+                        <span className="text-sm text-white">{season.name}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                          season.status === 'ACTIVE'
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : season.status === 'COMPLETED'
+                            ? 'bg-white/5 text-white/40'
+                            : 'bg-blue-500/10 text-blue-400'
+                        }`}>
                           {season.status}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-white/30">
                         {new Date(season.startDate).toLocaleDateString()} - {new Date(season.endDate).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       {season.status === 'UPCOMING' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUpdateSeasonStatus(season.id, 'ACTIVE')}
-                          disabled={actionLoading}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => handleUpdateSeasonStatus(season.id, 'ACTIVE')} disabled={actionLoading} className="text-xs h-7">
                           Activate
-                        </Button>
-                      )}
-                      {season.status === 'ACTIVE' && season.id !== activeSeason?.id && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUpdateSeasonStatus(season.id, 'COMPLETED')}
-                          disabled={actionLoading}
-                        >
-                          Complete
                         </Button>
                       )}
                     </div>
@@ -497,38 +462,34 @@ export default function PlayersPage() {
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       )}
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-card/50 p-4 rounded-xl border border-border/50 backdrop-blur-sm">
-        {/* Search */}
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Search & Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search players by name..."
-            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+            placeholder="Search players..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
 
-        <div className="flex gap-2 w-full sm:w-auto">
-          {/* Export Button */}
+        <div className="flex gap-2">
           <button
             onClick={handleExport}
-            className="px-4 py-2 bg-background border border-border rounded-lg text-sm font-medium hover:bg-muted/50 transition flex items-center justify-center gap-2 flex-1 sm:flex-none"
+            className="px-4 py-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/[0.04] transition-all flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
             Export
           </button>
-
-          {/* Reset Button */}
           <button
             onClick={() => setResetModalOpen(true)}
-            className="px-4 py-2 bg-destructive/5 border border-destructive/20 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition flex items-center justify-center gap-2 flex-1 sm:flex-none"
+            className="px-4 py-2.5 bg-red-500/5 border border-red-500/20 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
@@ -538,8 +499,8 @@ export default function PlayersPage() {
 
       {/* Error State */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center animate-in fade-in slide-in-from-top-2">
-          <p className="text-destructive font-medium flex items-center justify-center gap-2">
+        <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6 text-center">
+          <p className="text-red-400 font-medium flex items-center justify-center gap-2">
             <AlertTriangle className="w-5 h-5" />
             {error}
           </p>
@@ -560,12 +521,12 @@ export default function PlayersPage() {
       {!error && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">
+            <h2 className="text-lg font-semibold text-white">
               {searchQuery ? 'Search Results' : 'All Players'}
             </h2>
-            <div className="text-sm text-muted-foreground">
-              Showing {leaderboardData?.ratings?.length || 0} players
-            </div>
+            <span className="text-sm text-white/40">
+              {leaderboardData?.ratings?.length || 0} players
+            </span>
           </div>
 
           <LeaderboardTable
@@ -581,65 +542,58 @@ export default function PlayersPage() {
 
       {/* Empty State */}
       {!error && !loading && allEntries.length === 0 && (
-        <div className="bg-card/50 border border-border rounded-2xl p-12 text-center mt-8 animate-in fade-in zoom-in">
-          <div className="text-4xl mb-4">🎮</div>
-          <h3 className="text-xl font-bold text-foreground mb-2">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-12 text-center">
+          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🎮</span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">
             {searchQuery ? 'No Players Found' : 'No Rankings Yet'}
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-white/40 text-sm">
             {searchQuery
-              ? `No players match "${searchQuery}" for ${formatGameName(selectedGame)}`
-              : `Complete tournaments for ${formatGameName(selectedGame)} to see rankings appear here.`}
+              ? `No players match "${searchQuery}"`
+              : `Complete tournaments to see rankings`}
           </p>
         </div>
       )}
 
-      {/* Reset Confirmation Modal */}
+      {/* Reset Modal */}
       {resetModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-card rounded-xl p-6 max-w-md w-full border border-destructive/30 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-6 max-w-md w-full animate-scale-in">
             <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-destructive/10 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-destructive" />
+              <div className="p-3 bg-red-500/10 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-foreground mb-2">Reset All Ratings?</h3>
-                <p className="text-muted-foreground text-sm">
-                  This will permanently delete all ratings, history, and statistics for{' '}
-                  <span className="font-semibold text-foreground">
-                    {formatGameName(selectedGame)}
-                  </span>
-                  .
+                <h3 className="text-lg font-semibold text-white mb-1">Reset All Ratings?</h3>
+                <p className="text-white/40 text-sm">
+                  This will permanently delete all ratings for{' '}
+                  <span className="text-white">{formatGameName(selectedGame)}</span>.
                 </p>
               </div>
             </div>
 
-            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-destructive font-medium mb-2">⚠️ This action cannot be undone!</p>
-              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+            <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 mb-6">
+              <ul className="text-xs text-white/40 space-y-1">
                 <li>All player ratings will be deleted</li>
                 <li>All rating history will be lost</li>
-                <li>All seasonal ratings will be removed</li>
-                <li>This does NOT affect event results or standings</li>
+                <li>This cannot be undone</li>
               </ul>
             </div>
-
-            <p className="text-sm text-muted-foreground mb-6">
-              💡 <strong>Tip:</strong> Export the leaderboard to CSV first if you want to keep a backup.
-            </p>
 
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setResetModalOpen(false)}
                 disabled={resetting}
-                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted/50 transition disabled:opacity-50 font-medium"
+                className="px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg text-sm text-white/60 hover:text-white transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResetRatings}
                 disabled={resetting}
-                className="px-4 py-2 bg-destructive text-white rounded-lg hover:bg-destructive/90 transition disabled:opacity-50 flex items-center gap-2 font-medium"
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {resetting ? (
                   <>
@@ -647,10 +601,7 @@ export default function PlayersPage() {
                     Resetting...
                   </>
                 ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4" />
-                    Yes, Reset All Ratings
-                  </>
+                  'Reset Ratings'
                 )}
               </button>
             </div>

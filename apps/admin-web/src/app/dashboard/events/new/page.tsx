@@ -5,19 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { DollarSign, Trophy, Users } from 'lucide-react';
+import { DollarSign, Trophy, Users, Calendar, FileText, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
-
-// --- Schema Definition ---
 
 const eventSchema = z.object({
   name: z.string().min(3, 'Event name must be at least 3 characters').max(100, 'Event name too long'),
@@ -69,7 +61,7 @@ export default function NewEventPage() {
     try {
       const payload = {
         ...data,
-        startAt: data.startAt, // Already a Date object
+        startAt: data.startAt,
         maxPlayers: data.maxPlayers ? parseInt(data.maxPlayers) : undefined,
         entryFeeCents: data.entryFeeCents ? parseInt(data.entryFeeCents) : undefined,
         totalPrizeCredits: data.totalPrizeCredits ? parseInt(data.totalPrizeCredits) : undefined,
@@ -87,77 +79,100 @@ export default function NewEventPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-3xl mx-auto animate-fade-in">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Create Event</h1>
-        <p className="text-muted-foreground mt-2">
-          Schedule and configure a new tournament for your community.
+        <h1 className="text-3xl font-bold text-white tracking-tight">Create Event</h1>
+        <p className="text-white/40 mt-1">
+          Schedule and configure a new tournament
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Event Details */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-white/[0.06]">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-white">Event Details</h2>
+              <p className="text-sm text-white/40">Basic information</p>
+            </div>
+          </div>
 
-        {/* Basic Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Event Details</CardTitle>
-            <CardDescription>Basic information about the tournament.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Event Name <span className="text-destructive">*</span></Label>
-              <Input
-                id="name"
-                placeholder="e.g. Weekly Friday Night Locals"
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">
+                Event Name <span className="text-red-400">*</span>
+              </label>
+              <input
                 {...register('name')}
-                className={errors.name ? 'border-destructive' : ''}
+                placeholder="e.g. Weekly Friday Night Locals"
+                className={`w-full px-4 py-3 bg-white/[0.02] border rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors ${
+                  errors.name ? 'border-red-500/50' : 'border-white/[0.1]'
+                }`}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+              {errors.name && <p className="text-sm text-red-400 mt-1">{errors.name.message}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="game">Game System</Label>
-                <Select id="game" {...register('game')}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-2">Game</label>
+                <select
+                  {...register('game')}
+                  className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white focus:outline-none focus:border-white/20"
+                >
                   <option value="ONE_PIECE_TCG">One Piece TCG</option>
                   <option value="AZUKI_TCG">Azuki TCG</option>
                   <option value="RIFTBOUND">Riftbound</option>
-                </Select>
+                </select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="format">Format</Label>
-                <Select id="format" {...register('format')}>
+              <div>
+                <label className="block text-sm font-medium text-white/60 mb-2">Format</label>
+                <select
+                  {...register('format')}
+                  className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white focus:outline-none focus:border-white/20"
+                >
                   <option value="CONSTRUCTED">Constructed</option>
                   <option value="DRAFT">Draft</option>
                   <option value="SEALED">Sealed</option>
                   <option value="PRE_RELEASE">Pre-Release</option>
                   <option value="SUPER_PRE_RELEASE">Super Pre-Release</option>
-                </Select>
+                </select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter event details, rules, and any other important information..."
-                className="h-32"
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Description</label>
+              <textarea
                 {...register('description')}
+                placeholder="Enter event details, rules, and any other important information..."
+                rows={4}
+                className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20 resize-none"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Schedule & Capacity Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Schedule & Capacity</CardTitle>
-            <CardDescription>When is it happening and who can join?</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="startAt">Start Date & Time <span className="text-destructive">*</span></Label>
+        {/* Schedule & Capacity */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-white/[0.06]">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-white">Schedule & Capacity</h2>
+              <p className="text-sm text-white/40">When and who can join</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">
+                Start Date & Time <span className="text-red-400">*</span>
+              </label>
               <Controller
                 name="startAt"
                 control={control}
@@ -170,106 +185,123 @@ export default function NewEventPage() {
                   />
                 )}
               />
-              {errors.startAt && <p className="text-sm text-destructive">{errors.startAt.message}</p>}
+              {errors.startAt && <p className="text-sm text-red-400 mt-1">{errors.startAt.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="maxPlayers">Max Players</Label>
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Max Players</label>
               <div className="relative">
-                <Input
-                  id="maxPlayers"
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  {...register('maxPlayers')}
                   type="number"
                   placeholder="32"
-                  {...register('maxPlayers')}
-                  className="pl-10"
+                  className="w-full pl-11 pr-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20"
                 />
-                <Users className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground">Leave empty for unlimited cap.</p>
-              {errors.maxPlayers && <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>}
+              <p className="text-xs text-white/30 mt-1">Leave empty for unlimited</p>
+              {errors.maxPlayers && <p className="text-sm text-red-400 mt-1">{errors.maxPlayers.message}</p>}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Financials Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Entry & Prizes</CardTitle>
-            <CardDescription>Set the stakes for the tournament.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="entryFeeCents">Entry Fee (Cents)</Label>
+        {/* Entry & Prizes */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-white/[0.06]">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Trophy className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-white">Entry & Prizes</h2>
+              <p className="text-sm text-white/40">Set the stakes</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Entry Fee (Cents)</label>
               <div className="relative">
-                <Input
-                  id="entryFeeCents"
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  {...register('entryFeeCents')}
                   type="number"
                   placeholder="500"
-                  {...register('entryFeeCents')}
-                  className="pl-10"
+                  className="w-full pl-11 pr-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20"
                 />
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground">500 cents = $5.00</p>
-              {errors.entryFeeCents && <p className="text-sm text-destructive">{errors.entryFeeCents.message}</p>}
+              <p className="text-xs text-white/30 mt-1">500 cents = $5.00</p>
+              {errors.entryFeeCents && <p className="text-sm text-red-400 mt-1">{errors.entryFeeCents.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="totalPrizeCredits">Total Prize Pool (Credits)</Label>
+            <div>
+              <label className="block text-sm font-medium text-white/60 mb-2">Prize Pool (Credits)</label>
               <div className="relative">
-                <Input
-                  id="totalPrizeCredits"
+                <Trophy className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  {...register('totalPrizeCredits')}
                   type="number"
                   placeholder="1000"
-                  {...register('totalPrizeCredits')}
-                  className="pl-10"
+                  className="w-full pl-11 pr-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20"
                 />
-                <Trophy className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground">Store credits distributed independently of entry fees.</p>
-              {errors.totalPrizeCredits && <p className="text-sm text-destructive">{errors.totalPrizeCredits.message}</p>}
+              <p className="text-xs text-white/30 mt-1">Store credits distributed to winners</p>
+              {errors.totalPrizeCredits && <p className="text-sm text-red-400 mt-1">{errors.totalPrizeCredits.message}</p>}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Rules Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Rules & Regulations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2 rounded-md border p-4 bg-muted/20">
-              <input
-                id="requiresDecklist"
-                type="checkbox"
-                {...register('requiresDecklist')}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <div className="space-y-1">
-                <Label htmlFor="requiresDecklist" className="text-base font-medium">Require Decklist Submission</Label>
-                <p className="text-sm text-muted-foreground">
-                  Players must submit a valid decklist before checking in.
-                </p>
-              </div>
+        {/* Rules */}
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-white/[0.06]">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-emerald-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h2 className="font-semibold text-white">Rules & Settings</h2>
+              <p className="text-sm text-white/40">Configure event rules</p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-4 justify-end">
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+          <label className="flex items-start gap-4 p-4 bg-white/[0.02] border border-white/[0.06] rounded-lg cursor-pointer hover:bg-white/[0.04] transition-colors">
+            <input
+              {...register('requiresDecklist')}
+              type="checkbox"
+              className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary focus:ring-offset-0"
+            />
+            <div>
+              <span className="font-medium text-white">Require Decklist Submission</span>
+              <p className="text-sm text-white/40 mt-0.5">
+                Players must submit a valid decklist before checking in
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+          >
             Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-8 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center gap-2"
+          >
             {isSubmitting ? (
               <>
-                <span className="animate-spin mr-2">•</span> Creating...
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Creating...
               </>
             ) : (
               'Create Event'
             )}
-          </Button>
+          </button>
         </div>
-
       </form>
     </div>
   );

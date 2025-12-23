@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useEventSocket } from '@/hooks/useEventSocket';
 import { MatchResultModal } from '@/components/MatchResultModal';
@@ -103,55 +104,32 @@ export default function EventDetailPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
-  // Socket.IO for real-time updates
   useEventSocket(eventId, {
-    onPairingsPosted: (data) => {
-      console.log('Pairings posted:', data);
+    onPairingsPosted: () => {
       loadEvent();
-      if (selectedRound) {
-        loadPairings(selectedRound);
-      }
+      if (selectedRound) loadPairings(selectedRound);
     },
-    onMatchResultReported: (data) => {
-      console.log('Match result reported:', data);
-      if (selectedRound) {
-        loadPairings(selectedRound);
-      }
+    onMatchResultReported: () => {
+      if (selectedRound) loadPairings(selectedRound);
     },
-    onStandingsUpdated: (data) => {
-      console.log('Standings updated:', data);
-      if (activeTab === 'standings') {
-        loadStandings();
-      }
+    onStandingsUpdated: () => {
+      if (activeTab === 'standings') loadStandings();
     },
   });
 
-  useEffect(() => {
-    loadEvent();
-  }, [eventId]);
-
-  useEffect(() => {
-    if (selectedRound) {
-      loadPairings(selectedRound);
-    }
-  }, [selectedRound]);
-
-  useEffect(() => {
-    if (activeTab === 'standings' && event) {
-      loadStandings();
-    }
-  }, [activeTab, event]);
+  useEffect(() => { loadEvent(); }, [eventId]);
+  useEffect(() => { if (selectedRound) loadPairings(selectedRound); }, [selectedRound]);
+  useEffect(() => { if (activeTab === 'standings' && event) loadStandings(); }, [activeTab, event]);
 
   const loadEvent = async () => {
     try {
       const data = await api.getEvent(eventId);
       setEvent(data);
-      if (data.rounds.length > 0) {
-        setSelectedRound(data.rounds[data.rounds.length - 1].id);
-      }
-    } catch (error) {
+      if (data.rounds.length > 0) setSelectedRound(data.rounds[data.rounds.length - 1].id);
+    } catch (error: any) {
       console.error('Failed to load event:', error);
-      setError('Failed to load event');
+      const message = error.response?.data?.message || error.message || 'Failed to load event';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -161,8 +139,11 @@ export default function EventDetailPage() {
     try {
       const data = await api.getPairings(roundId);
       setPairings(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load pairings:', error);
+      toast.error('Failed to load pairings', {
+        description: error.response?.data?.message || error.message,
+      });
     }
   };
 
@@ -170,24 +151,19 @@ export default function EventDetailPage() {
     try {
       const data = await api.getStandings(eventId);
       setStandings(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load standings:', error);
+      toast.error('Failed to load standings', {
+        description: error.response?.data?.message || error.message,
+      });
     }
   };
 
   const handleCreateRound = async () => {
     if (!event) return;
-
     const checkedIn = event.entries.filter((e) => e.checkedInAt && !e.droppedAt).length;
-    if (checkedIn < 2) {
-      alert('Need at least 2 checked-in players to create a round');
-      return;
-    }
-
-    if (!confirm(`Create Round ${(event.rounds.length || 0) + 1} with ${checkedIn} players?`)) {
-      return;
-    }
-
+    if (checkedIn < 2) { alert('Need at least 2 checked-in players'); return; }
+    if (!confirm(`Create Round ${(event.rounds.length || 0) + 1} with ${checkedIn} players?`)) return;
     try {
       await api.createNextRound(eventId);
       await loadEvent();
@@ -203,7 +179,7 @@ export default function EventDetailPage() {
       await api.checkInEntry(entryId);
       await loadEvent();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to check in player');
+      alert(error.response?.data?.message || 'Failed to check in');
     } finally {
       setCheckingIn(null);
     }
@@ -211,89 +187,52 @@ export default function EventDetailPage() {
 
   const handleBulkCheckIn = async () => {
     if (!event) return;
-
-    const uncheckedEntries = event.entries.filter(
-      (e) => !e.checkedInAt && !e.droppedAt
-    );
-
-    if (uncheckedEntries.length === 0) {
-      alert('No players to check in');
-      return;
-    }
-
-    if (!confirm(`Check in ${uncheckedEntries.length} player(s)?`)) {
-      return;
-    }
-
+    const unchecked = event.entries.filter((e) => !e.checkedInAt && !e.droppedAt);
+    if (unchecked.length === 0) { alert('No players to check in'); return; }
+    if (!confirm(`Check in ${unchecked.length} player(s)?`)) return;
     try {
-      await Promise.all(
-        uncheckedEntries.map((entry) => api.checkInEntry(entry.id))
-      );
+      await Promise.all(unchecked.map((entry) => api.checkInEntry(entry.id)));
       await loadEvent();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to check in players');
+      alert(error.response?.data?.message || 'Failed to check in');
     }
   };
 
   const handleDropPlayer = async (entryId: string, playerName: string) => {
     if (!event) return;
-
-    const currentRound = event.rounds.length;
-
-    if (!confirm(`Drop ${playerName} from the tournament? This will remove them from future rounds.`)) {
-      return;
-    }
-
+    if (!confirm(`Drop ${playerName}?`)) return;
     setDropping(entryId);
     try {
-      await api.dropPlayer(entryId, currentRound);
+      await api.dropPlayer(entryId, event.rounds.length);
       await loadEvent();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to drop player');
+      alert(error.response?.data?.message || 'Failed to drop');
     } finally {
       setDropping(null);
     }
   };
 
-  const handleOpenResultModal = (match: Pairing) => {
-    setSelectedMatch(match);
-    setResultModalOpen(true);
-  };
-
-  const handleSubmitResult = async (
-    result: string,
-    gamesWonA: number,
-    gamesWonB: number
-  ) => {
+  const handleSubmitResult = async (result: string, gamesWonA: number, gamesWonB: number) => {
     if (!selectedMatch) return;
-
     await api.reportMatchResult(selectedMatch.id, result, gamesWonA, gamesWonB);
-
-    // Reload pairings and standings
-    if (selectedRound) {
-      await loadPairings(selectedRound);
-    }
+    if (selectedRound) await loadPairings(selectedRound);
     await loadStandings();
   };
 
-  const handleDistributePrizes = async (
-    distributions: Array<{ userId: string; amount: number; placement: number }>
-  ) => {
+  const handleDistributePrizes = async (distributions: Array<{ userId: string; amount: number; placement: number }>) => {
     if (!event) return;
-
     await api.distributePrizes(eventId, distributions);
     await loadEvent();
-    alert('Prize credits distributed successfully!');
+    alert('Prizes distributed!');
   };
 
   const loadOrgUsers = async () => {
     setLoadingUsers(true);
     try {
       const users = await api.getOrgUsers();
-      // Filter out already registered players
-      const registeredUserIds = new Set(event?.entries.map(e => e.userId) || []);
-      setOrgUsers(users.filter((u: any) => !registeredUserIds.has(u.id)));
-    } catch (error: any) {
+      const registered = new Set(event?.entries.map(e => e.userId) || []);
+      setOrgUsers(users.filter((u: any) => !registered.has(u.id)));
+    } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
       setLoadingUsers(false);
@@ -301,71 +240,53 @@ export default function EventDetailPage() {
   };
 
   const handleAddLatePlayer = async () => {
-    if (!selectedUserId) {
-      alert('Please select a player');
-      return;
-    }
-
+    if (!selectedUserId) { alert('Select a player'); return; }
     try {
       await api.addLatePlayer(eventId, selectedUserId);
       await loadEvent();
       setLateAddModalOpen(false);
       setSelectedUserId('');
-      alert('Player added successfully!');
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to add player');
     }
   };
 
   const handleMarkAsPaid = async (entryId: string, playerName: string) => {
-    if (!confirm(`Mark ${playerName} as paid?`)) {
-      return;
-    }
-
+    if (!confirm(`Mark ${playerName} as paid?`)) return;
     setMarkingPaid(entryId);
     try {
       await api.markEntryAsPaid(entryId);
       await loadEvent();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to mark as paid');
+      alert(error.response?.data?.message || 'Failed');
     } finally {
       setMarkingPaid(null);
     }
   };
 
   const handleStartRound = async (roundId: string) => {
-    if (!confirm('Start this round? Players will be notified.')) {
-      return;
-    }
-
+    if (!confirm('Start this round?')) return;
     setRoundActionLoading(true);
     try {
       await api.startRound(roundId);
       await loadEvent();
-      if (selectedRound) {
-        await loadPairings(selectedRound);
-      }
+      if (selectedRound) await loadPairings(selectedRound);
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to start round');
+      alert(error.response?.data?.message || 'Failed');
     } finally {
       setRoundActionLoading(false);
     }
   };
 
   const handleCompleteRound = async (roundId: string) => {
-    if (!confirm('Complete this round and lock in results?')) {
-      return;
-    }
-
+    if (!confirm('Complete this round?')) return;
     setRoundActionLoading(true);
     try {
       const result = await api.completeRound(roundId);
       await loadEvent();
-      if (result.tournamentComplete) {
-        alert(`Tournament Complete! ${result.reason || ''}`);
-      }
+      if (result.tournamentComplete) alert(`Tournament Complete! ${result.reason || ''}`);
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to complete round');
+      alert(error.response?.data?.message || 'Failed');
     } finally {
       setRoundActionLoading(false);
     }
@@ -373,16 +294,14 @@ export default function EventDetailPage() {
 
   const handleCancelEvent = async () => {
     if (!event) return;
-
     setCancelling(true);
     try {
       await api.cancelEvent(eventId, cancelReason || undefined);
       await loadEvent();
       setCancelModalOpen(false);
       setCancelReason('');
-      alert('Event cancelled successfully');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to cancel event');
+      alert(error.response?.data?.message || 'Failed');
     } finally {
       setCancelling(false);
     }
@@ -390,16 +309,16 @@ export default function EventDetailPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">Loading event...</p>
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-sm text-white/40">Loading event...</p>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-lg">
+      <div className="bg-red-500/5 border border-red-500/20 text-red-400 px-6 py-4 rounded-xl">
         {error || 'Event not found'}
       </div>
     );
@@ -407,60 +326,69 @@ export default function EventDetailPage() {
 
   const checkedInCount = event.entries.filter((e) => e.checkedInAt && !e.droppedAt).length;
 
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'SCHEDULED': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'IN_PROGRESS': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'COMPLETED': return 'bg-white/5 text-white/40 border-white/10';
+      case 'CANCELLED': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      default: return 'bg-white/5 text-white/40 border-white/10';
+    }
+  };
+
   return (
-    <div>
-      {/* Header */}
-      <div className="bg-card rounded-lg border border-border p-6 mb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              {event.name}
-            </h1>
-            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <span>🎮 {formatGameName(event.game)}</span>
-              <span>📋 {formatEventFormat(event.format)}</span>
-              <span>
-                📅{' '}
-                {new Date(event.startAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                event.status === 'SCHEDULED' ? 'bg-blue-500/10 text-blue-400' :
-                event.status === 'IN_PROGRESS' ? 'bg-green-500/10 text-green-400' :
-                'bg-muted text-muted-foreground'
-              }`}>
+    <div className="animate-fade-in space-y-6">
+      {/* Header Card */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <h1 className="text-2xl font-bold text-white">{event.name}</h1>
+              <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${getStatusStyle(event.status)}`}>
                 {event.status.replace('_', ' ')}
               </span>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-foreground">
-              {checkedInCount}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/50">
+              <span>{formatGameName(event.game)}</span>
+              <span className="w-1 h-1 rounded-full bg-white/20" />
+              <span>{formatEventFormat(event.format)}</span>
+              <span className="w-1 h-1 rounded-full bg-white/20" />
+              <span>
+                {new Date(event.startAt).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+                })}
+              </span>
             </div>
-            <div className="text-sm text-muted-foreground">Checked In</div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">{checkedInCount}</div>
+              <div className="text-xs text-white/40 uppercase tracking-wider">Checked In</div>
+            </div>
+            {event.maxPlayers && (
+              <div className="text-center">
+                <div className="text-3xl font-bold text-white/60">{event.maxPlayers}</div>
+                <div className="text-xs text-white/40 uppercase tracking-wider">Max</div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="mt-6 flex space-x-3">
+        <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-white/[0.06]">
           {event.rounds.length === 0 ? (
             <button
               onClick={handleCreateRound}
               disabled={checkedInCount < 2}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
             >
-              <span className="text-lg">▶</span>
               Start Tournament
             </button>
           ) : (
             <button
               onClick={handleCreateRound}
               disabled={checkedInCount < 2}
-              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
             >
               Create Round {event.rounds.length + 1}
             </button>
@@ -468,9 +396,8 @@ export default function EventDetailPage() {
           {(event.status === 'SCHEDULED' || event.status === 'IN_PROGRESS') && (
             <button
               onClick={() => setCancelModalOpen(true)}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
+              className="bg-red-500/10 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-lg font-medium hover:bg-red-500/20 transition-colors"
             >
-              <span>✕</span>
               Cancel Event
             </button>
           )}
@@ -478,163 +405,124 @@ export default function EventDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-card rounded-lg border border-border">
-        <div className="border-b border-border">
-          <div className="flex space-x-8 px-6">
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="flex border-b border-white/[0.06]">
+          {(['players', 'rounds', 'standings'] as const).map((tab) => (
             <button
-              onClick={() => setActiveTab('players')}
-              className={`py-4 border-b-2 font-medium transition ${
-                activeTab === 'players'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-4 text-sm font-medium transition-colors ${
+                activeTab === tab
+                  ? 'text-white bg-white/[0.04] border-b-2 border-primary'
+                  : 'text-white/40 hover:text-white/60'
               }`}
             >
-              Players ({event.entries.length})
+              {tab === 'players' && `Players (${event.entries.length})`}
+              {tab === 'rounds' && `Rounds (${event.rounds.length})`}
+              {tab === 'standings' && 'Standings'}
             </button>
-            <button
-              onClick={() => setActiveTab('rounds')}
-              className={`py-4 border-b-2 font-medium transition ${
-                activeTab === 'rounds'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Rounds ({event.rounds.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('standings')}
-              className={`py-4 border-b-2 font-medium transition ${
-                activeTab === 'standings'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Standings
-            </button>
-          </div>
+          ))}
         </div>
 
         <div className="p-6">
           {/* Players Tab */}
           {activeTab === 'players' && (
-            <div>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleBulkCheckIn}
+                  className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  Check In All
+                </button>
+                <button
+                  onClick={() => { setLateAddModalOpen(true); loadOrgUsers(); }}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                >
+                  + Add Player
+                </button>
+              </div>
+
               {event.entries.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No players registered yet
-                </p>
+                <div className="text-center py-12 text-white/40">No players registered</div>
               ) : (
-                <div>
-                  <div className="mb-4 flex items-center gap-3">
-                    <button
-                      onClick={handleBulkCheckIn}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"
-                    >
-                      Check In All
-                    </button>
-                    <button
-                      onClick={() => {
-                        setLateAddModalOpen(true);
-                        loadOrgUsers();
-                      }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
-                    >
-                      + Add Late Player
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border text-left">
-                          <th className="pb-3 font-medium text-muted-foreground">Player</th>
-                          <th className="pb-3 font-medium text-muted-foreground">Email</th>
-                          <th className="pb-3 font-medium text-muted-foreground">Registered</th>
-                          <th className="pb-3 font-medium text-muted-foreground">Payment</th>
-                          <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                          <th className="pb-3 font-medium text-muted-foreground">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {event.entries.map((entry) => {
-                          const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
-                          return (
-                          <tr key={entry.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/[0.06] text-left">
+                        <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Player</th>
+                        <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider hidden md:table-cell">Email</th>
+                        <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Payment</th>
+                        <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Status</th>
+                        <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {event.entries.map((entry) => {
+                        const requiresPayment = event.entryFeeCents && event.entryFeeCents > 0;
+                        return (
+                          <tr key={entry.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                             <td className="py-4">
                               <div className="flex items-center gap-3">
                                 <PlayerAvatar name={entry.user.name} avatarUrl={entry.user.avatarUrl} size="sm" />
-                                <span className="font-medium text-foreground">{entry.user.name}</span>
+                                <span className="font-medium text-white">{entry.user.name}</span>
                               </div>
                             </td>
-                            <td className="py-4 text-muted-foreground text-sm">
-                              {entry.user.email}
-                            </td>
-                            <td className="py-3 text-muted-foreground text-sm">
-                              {new Date(entry.registeredAt).toLocaleString()}
-                            </td>
-                            <td className="py-3">
+                            <td className="py-4 text-white/40 text-sm hidden md:table-cell">{entry.user.email}</td>
+                            <td className="py-4">
                               {!requiresPayment ? (
-                                <span className="text-xs text-muted-foreground">Free</span>
+                                <span className="text-xs text-white/30">Free</span>
                               ) : entry.paidAt ? (
-                                <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-xs font-medium">
-                                  Paid
-                                </span>
+                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-xs font-medium">Paid</span>
                               ) : (
-                                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 rounded-full text-xs font-medium">
-                                  Unpaid
-                                </span>
+                                <span className="px-2 py-1 bg-amber-500/10 text-amber-400 rounded text-xs font-medium">Unpaid</span>
                               )}
                             </td>
-                            <td className="py-3">
+                            <td className="py-4">
                               {entry.droppedAt ? (
-                                <span className="px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-xs font-medium">
-                                  Dropped
-                                </span>
+                                <span className="px-2 py-1 bg-red-500/10 text-red-400 rounded text-xs font-medium">Dropped</span>
                               ) : entry.checkedInAt ? (
-                                <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-xs font-medium">
-                                  Checked In
-                                </span>
+                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-xs font-medium">Checked In</span>
                               ) : (
-                                <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
-                                  Registered
-                                </span>
+                                <span className="px-2 py-1 bg-white/5 text-white/40 rounded text-xs font-medium">Registered</span>
                               )}
                             </td>
-                            <td className="py-3">
+                            <td className="py-4">
                               <div className="flex items-center gap-2">
                                 {requiresPayment && !entry.paidAt && !entry.droppedAt && (
                                   <button
                                     onClick={() => handleMarkAsPaid(entry.id, entry.user.name)}
                                     disabled={markingPaid === entry.id}
-                                    className="text-sm bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition disabled:opacity-50"
+                                    className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-md hover:bg-amber-600 transition disabled:opacity-50"
                                   >
-                                    {markingPaid === entry.id ? 'Marking...' : 'Mark Paid'}
+                                    {markingPaid === entry.id ? '...' : 'Mark Paid'}
                                   </button>
                                 )}
                                 {!entry.checkedInAt && !entry.droppedAt && (!requiresPayment || entry.paidAt) && (
                                   <button
                                     onClick={() => handleCheckIn(entry.id)}
                                     disabled={checkingIn === entry.id}
-                                    className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                                    className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-md hover:bg-emerald-600 transition disabled:opacity-50"
                                   >
-                                    {checkingIn === entry.id ? 'Checking In...' : 'Check In'}
+                                    {checkingIn === entry.id ? '...' : 'Check In'}
                                   </button>
                                 )}
                                 {entry.checkedInAt && !entry.droppedAt && (
                                   <button
                                     onClick={() => handleDropPlayer(entry.id, entry.user.name)}
                                     disabled={dropping === entry.id}
-                                    className="text-sm bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                                    className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-md hover:bg-red-500/20 transition disabled:opacity-50"
                                   >
-                                    {dropping === entry.id ? 'Dropping...' : 'Drop'}
+                                    {dropping === entry.id ? '...' : 'Drop'}
                                   </button>
                                 )}
                               </div>
                             </td>
                           </tr>
                         );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -642,70 +530,57 @@ export default function EventDetailPage() {
 
           {/* Rounds Tab */}
           {activeTab === 'rounds' && (
-            <div>
+            <div className="space-y-6">
               {event.rounds.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-4xl mb-4">🏁</div>
-                  <p className="text-lg font-medium text-foreground mb-2">Tournament Not Started</p>
-                  <p className="text-muted-foreground mb-6">
-                    Check in players first, then click "Start Tournament" to create Round 1 and generate pairings.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Currently {checkedInCount} player(s) checked in. Need at least 2 to start.
-                  </p>
+                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">🏁</span>
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">Tournament Not Started</h3>
+                  <p className="text-white/40 text-sm">Check in players, then click "Start Tournament"</p>
+                  <p className="text-white/30 text-xs mt-2">{checkedInCount} checked in (need 2+)</p>
                 </div>
               ) : (
-                <div>
-                  {/* Round Selector and Controls */}
-                  <div className="mb-6 flex flex-wrap items-end gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-2">
-                        Select Round
-                      </label>
-                      <select
-                        value={selectedRound || ''}
-                        onChange={(e) => setSelectedRound(e.target.value)}
-                        className="px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                      >
-                        {event.rounds.map((round) => (
-                          <option key={round.id} value={round.id}>
-                            Round {round.roundNumber} - {round.status}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                <>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <select
+                      value={selectedRound || ''}
+                      onChange={(e) => setSelectedRound(e.target.value)}
+                      className="px-4 py-2 bg-white/[0.02] border border-white/[0.1] rounded-lg text-sm text-white focus:outline-none focus:border-white/20"
+                    >
+                      {event.rounds.map((round) => (
+                        <option key={round.id} value={round.id}>
+                          Round {round.roundNumber} - {round.status}
+                        </option>
+                      ))}
+                    </select>
 
-                    {/* Round Action Buttons */}
                     {selectedRound && (() => {
-                      const currentRoundData = event.rounds.find(r => r.id === selectedRound);
-                      const allMatchesReported = pairings.length > 0 && pairings.every(p => p.result || !p.playerB);
-
+                      const round = event.rounds.find(r => r.id === selectedRound);
+                      const allReported = pairings.length > 0 && pairings.every(p => p.result || !p.playerB);
                       return (
                         <div className="flex gap-2">
-                          {currentRoundData?.status === 'PENDING' && (
+                          {round?.status === 'PENDING' && (
                             <button
                               onClick={() => handleStartRound(selectedRound)}
                               disabled={roundActionLoading}
-                              className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                              className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition disabled:opacity-50"
                             >
-                              <span>▶</span>
                               {roundActionLoading ? 'Starting...' : 'Start Round'}
                             </button>
                           )}
-                          {(currentRoundData?.status === 'ACTIVE' || currentRoundData?.status === 'PENDING') && (
+                          {(round?.status === 'ACTIVE' || round?.status === 'PENDING') && (
                             <button
                               onClick={() => handleCompleteRound(selectedRound)}
-                              disabled={roundActionLoading || !allMatchesReported}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
-                              title={!allMatchesReported ? 'All matches must be reported first' : ''}
+                              disabled={roundActionLoading || !allReported}
+                              className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50"
                             >
-                              <span>✓</span>
                               {roundActionLoading ? 'Completing...' : 'Complete Round'}
                             </button>
                           )}
-                          {currentRoundData?.status === 'COMPLETED' && (
-                            <span className="px-4 py-2 bg-green-500/10 text-green-400 rounded-lg font-medium">
-                              ✓ Round Completed
+                          {round?.status === 'COMPLETED' && (
+                            <span className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-sm font-medium">
+                              Round Completed
                             </span>
                           )}
                         </div>
@@ -713,79 +588,67 @@ export default function EventDetailPage() {
                     })()}
                   </div>
 
-                  {/* Pairings */}
                   {pairings.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      Loading pairings...
-                    </p>
+                    <div className="text-center py-8 text-white/40">Loading pairings...</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
-                          <tr className="border-b border-border text-left">
-                            <th className="pb-3 pl-4 font-medium text-muted-foreground w-20">Table</th>
-                            <th className="pb-3 font-medium text-muted-foreground">Player A</th>
-                            <th className="pb-3 font-medium text-muted-foreground text-center w-16">VS</th>
-                            <th className="pb-3 font-medium text-muted-foreground">Player B</th>
-                            <th className="pb-3 font-medium text-muted-foreground">Result</th>
-                            <th className="pb-3 font-medium text-muted-foreground">Actions</th>
+                          <tr className="border-b border-white/[0.06] text-left">
+                            <th className="pb-3 pl-4 text-xs font-medium text-white/40 uppercase tracking-wider w-16">Table</th>
+                            <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Player A</th>
+                            <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider text-center w-12">VS</th>
+                            <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Player B</th>
+                            <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Result</th>
+                            <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {pairings.map((pairing) => (
-                            <tr key={pairing.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${pairing.result ? 'bg-green-500/5' : ''}`}>
+                            <tr key={pairing.id} className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${pairing.result ? 'bg-emerald-500/[0.03]' : ''}`}>
                               <td className="py-4 pl-4">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 border border-primary/20">
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
                                   <span className="font-bold text-primary">{pairing.tableNumber}</span>
                                 </div>
                               </td>
                               <td className="py-4">
                                 <div className="flex items-center gap-3">
                                   <PlayerAvatar name={pairing.playerA.name} avatarUrl={pairing.playerA.avatarUrl} size="sm" />
-                                  <span className="font-medium text-foreground">{pairing.playerA.name}</span>
+                                  <span className="font-medium text-white">{pairing.playerA.name}</span>
                                 </div>
                               </td>
-                              <td className="py-4 text-center">
-                                <span className="text-muted-foreground font-medium text-xs">VS</span>
-                              </td>
+                              <td className="py-4 text-center text-white/30 text-xs">VS</td>
                               <td className="py-4">
                                 {pairing.playerB ? (
                                   <div className="flex items-center gap-3">
                                     <PlayerAvatar name={pairing.playerB.name} avatarUrl={pairing.playerB.avatarUrl} size="sm" />
-                                    <span className="font-medium text-foreground">{pairing.playerB.name}</span>
+                                    <span className="font-medium text-white">{pairing.playerB.name}</span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-fit">
-                                    <span className="text-xs">⭐</span>
-                                    <span className="font-medium text-amber-400">BYE</span>
-                                  </div>
+                                  <span className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-medium">BYE</span>
                                 )}
                               </td>
-                              <td className="py-3">
+                              <td className="py-4 text-white/40 text-sm">
                                 {pairing.result ? (
-                                  <span className="text-sm text-muted-foreground">
-                                    {pairing.result.replace('PLAYER_A_WIN', 'A Wins')
-                                      .replace('PLAYER_B_WIN', 'B Wins')
-                                      .replace('DRAW', 'Draw')
-                                      .replace('INTENTIONAL_DRAW', 'ID')}
-                                    {pairing.gamesWonA !== undefined &&
-                                      ` (${pairing.gamesWonA}-${pairing.gamesWonB})`}
+                                  <span>
+                                    {pairing.result.replace('PLAYER_A_WIN', 'A Wins').replace('PLAYER_B_WIN', 'B Wins').replace('DRAW', 'Draw').replace('INTENTIONAL_DRAW', 'ID')}
+                                    {pairing.gamesWonA !== undefined && ` (${pairing.gamesWonA}-${pairing.gamesWonB})`}
                                   </span>
                                 ) : (
-                                  <span className="text-sm text-muted-foreground">Not reported</span>
+                                  <span className="text-white/30">Pending</span>
                                 )}
                               </td>
-                              <td className="py-3">
+                              <td className="py-4">
                                 {!pairing.result && pairing.playerB && (
                                   <button
-                                    onClick={() => handleOpenResultModal(pairing)}
-                                    className="text-sm bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary/90 transition"
+                                    onClick={() => { setSelectedMatch(pairing); setResultModalOpen(true); }}
+                                    className="bg-primary text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-primary/90 transition"
                                   >
-                                    Report Result
+                                    Report
                                   </button>
                                 )}
                                 {!pairing.result && !pairing.playerB && (
-                                  <span className="text-sm text-muted-foreground">Auto Win</span>
+                                  <span className="text-xs text-white/30">Auto Win</span>
                                 )}
                               </td>
                             </tr>
@@ -794,127 +657,110 @@ export default function EventDetailPage() {
                       </table>
                     </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           )}
 
           {/* Standings Tab */}
           {activeTab === 'standings' && (
-            <div>
+            <div className="space-y-4">
               {standings.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No standings available yet. Create a round to start the tournament.
-                </p>
+                <div className="text-center py-12 text-white/40">No standings yet</div>
               ) : (
-                <div>
-                  {/* Action Buttons */}
-                  <div className="mb-4 flex items-center gap-3">
+                <>
+                  <div className="flex flex-wrap gap-3">
                     {event.totalPrizeCredits && event.totalPrizeCredits > 0 && !event.prizesDistributed && (
                       <button
                         onClick={() => setPrizeModalOpen(true)}
-                        className="bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-yellow-700 transition"
+                        className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 transition"
                       >
-                        💰 Distribute {event.totalPrizeCredits} Prize Credits
+                        Distribute {event.totalPrizeCredits} Credits
                       </button>
                     )}
                     <button
                       onClick={() => api.exportStandings(eventId)}
-                      className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+                      className="bg-white/[0.02] text-white border border-white/[0.1] px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/[0.06] transition"
                     >
-                      📥 Export CSV
+                      Export CSV
                     </button>
                   </div>
+
                   {event.prizesDistributed && (
-                    <div className="mb-4 bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg">
-                      ✅ Prize credits have been distributed{event.prizesDistributedAt && ` on ${new Date(event.prizesDistributedAt).toLocaleDateString()}`}
+                    <div className="bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-lg text-sm">
+                      Prizes distributed{event.prizesDistributedAt && ` on ${new Date(event.prizesDistributedAt).toLocaleDateString()}`}
                     </div>
                   )}
+
                   <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border text-left">
-                        <th className="pb-3 pl-4 font-medium text-muted-foreground w-16">Rank</th>
-                        <th className="pb-3 font-medium text-muted-foreground">Player</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">Points</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">Record</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">OMW%</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">GW%</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">OOMW%</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {standings.map((standing, index) => {
-                        const isTopThree = standing.rank <= 3;
-                        const rankColors = {
-                          1: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
-                          2: 'bg-slate-400/10 border-slate-400/30 text-slate-300',
-                          3: 'bg-amber-600/10 border-amber-600/30 text-amber-500',
-                        };
-                        return (
-                        <tr key={standing.userId} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${isTopThree ? 'bg-primary/5' : ''}`}>
-                          <td className="py-4 pl-4">
-                            <div className={`flex items-center justify-center w-10 h-10 rounded-lg font-bold ${isTopThree ? rankColors[standing.rank as 1 | 2 | 3] + ' border' : 'bg-muted text-foreground'}`}>
-                              {standing.rank}
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex items-center gap-3">
-                              <PlayerAvatar name={standing.userName} avatarUrl={standing.avatarUrl} size="sm" />
-                              <div>
-                                <div className="font-medium text-foreground">{standing.userName}</div>
-                                {isTopThree && (
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    {standing.rank === 1 && '🥇 Champion'}
-                                    {standing.rank === 2 && '🥈 Runner-up'}
-                                    {standing.rank === 3 && '🥉 3rd Place'}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 font-bold text-foreground text-right">
-                            {standing.points}
-                          </td>
-                          <td className="py-3 text-muted-foreground text-right">
-                            {standing.matchWins}-{standing.matchLosses}-{standing.matchDraws}
-                          </td>
-                          <td className="py-3 text-muted-foreground text-right">
-                            {(standing.omwPercent * 100).toFixed(1)}%
-                          </td>
-                          <td className="py-3 text-muted-foreground text-right">
-                            {(standing.gwPercent * 100).toFixed(1)}%
-                          </td>
-                          <td className="py-3 text-muted-foreground text-right">
-                            {(standing.oomwPercent * 100).toFixed(1)}%
-                          </td>
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/[0.06] text-left">
+                          <th className="pb-3 pl-4 text-xs font-medium text-white/40 uppercase tracking-wider w-16">Rank</th>
+                          <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider">Player</th>
+                          <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider text-right">Pts</th>
+                          <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider text-right">Record</th>
+                          <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider text-right hidden md:table-cell">OMW%</th>
+                          <th className="pb-3 text-xs font-medium text-white/40 uppercase tracking-wider text-right hidden lg:table-cell">GW%</th>
                         </tr>
-                      );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                </div>
+                      </thead>
+                      <tbody>
+                        {standings.map((standing) => {
+                          const isTop3 = standing.rank <= 3;
+                          const rankColors: Record<number, string> = {
+                            1: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+                            2: 'bg-slate-400/10 border-slate-400/30 text-slate-300',
+                            3: 'bg-orange-600/10 border-orange-600/30 text-orange-400',
+                          };
+                          return (
+                            <tr key={standing.userId} className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${isTop3 ? 'bg-primary/[0.02]' : ''}`}>
+                              <td className="py-4 pl-4">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${isTop3 ? rankColors[standing.rank] + ' border' : 'bg-white/5 text-white'}`}>
+                                  {standing.rank}
+                                </div>
+                              </td>
+                              <td className="py-4">
+                                <div className="flex items-center gap-3">
+                                  <PlayerAvatar name={standing.userName} avatarUrl={standing.avatarUrl} size="sm" />
+                                  <div>
+                                    <div className="font-medium text-white">{standing.userName}</div>
+                                    {isTop3 && (
+                                      <div className="text-xs text-white/40">
+                                        {standing.rank === 1 && 'Champion'}
+                                        {standing.rank === 2 && 'Runner-up'}
+                                        {standing.rank === 3 && '3rd Place'}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 font-bold text-white text-right">{standing.points}</td>
+                              <td className="py-4 text-white/40 text-right">{standing.matchWins}-{standing.matchLosses}-{standing.matchDraws}</td>
+                              <td className="py-4 text-white/40 text-right hidden md:table-cell">{(standing.omwPercent * 100).toFixed(1)}%</td>
+                              <td className="py-4 text-white/40 text-right hidden lg:table-cell">{(standing.gwPercent * 100).toFixed(1)}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Match Result Modal */}
+      {/* Modals */}
       {selectedMatch && (
         <MatchResultModal
           isOpen={resultModalOpen}
-          onClose={() => {
-            setResultModalOpen(false);
-            setSelectedMatch(null);
-          }}
+          onClose={() => { setResultModalOpen(false); setSelectedMatch(null); }}
           onSubmit={handleSubmitResult}
           match={selectedMatch}
         />
       )}
 
-      {/* Prize Distribution Modal */}
       {event && (
         <PrizeDistributionModal
           isOpen={prizeModalOpen}
@@ -926,50 +772,31 @@ export default function EventDetailPage() {
         />
       )}
 
-      {/* Late Add Player Modal */}
+      {/* Late Add Modal */}
       {lateAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4 text-foreground">Add Late Player</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Player will be automatically checked in upon addition.
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Select Player
-              </label>
-              {loadingUsers ? (
-                <p className="text-sm text-muted-foreground">Loading players...</p>
-              ) : (
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                >
-                  <option value="">Choose a player...</option>
-                  {orgUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setLateAddModalOpen(false);
-                  setSelectedUserId('');
-                }}
-                className="px-4 py-2 border border-border rounded-lg text-muted-foreground hover:bg-muted/50 transition"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-white mb-4">Add Late Player</h3>
+            <p className="text-sm text-white/40 mb-4">Player will be auto checked-in.</p>
+            {loadingUsers ? (
+              <p className="text-sm text-white/40">Loading...</p>
+            ) : (
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="w-full px-4 py-2 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white mb-4"
               >
+                <option value="">Choose a player...</option>
+                {orgUsers.map((user) => (
+                  <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                ))}
+              </select>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => { setLateAddModalOpen(false); setSelectedUserId(''); }} className="px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg text-white/60 hover:text-white transition">
                 Cancel
               </button>
-              <button
-                onClick={handleAddLatePlayer}
-                disabled={!selectedUserId}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
-              >
+              <button onClick={handleAddLatePlayer} disabled={!selectedUserId} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50">
                 Add Player
               </button>
             </div>
@@ -977,43 +804,25 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Cancel Event Modal */}
+      {/* Cancel Modal */}
       {cancelModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4 text-foreground">Cancel Event</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Are you sure you want to cancel this event? Registered players will be notified.
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Reason (Optional)
-              </label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Enter a reason for cancellation..."
-                className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
-                rows={3}
-              />
-            </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-white mb-4">Cancel Event</h3>
+            <p className="text-sm text-white/40 mb-4">Are you sure? Players will be notified.</p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason (optional)..."
+              className="w-full px-4 py-2 bg-white/[0.02] border border-white/[0.1] rounded-lg text-white placeholder-white/30 resize-none mb-4"
+              rows={3}
+            />
             <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setCancelModalOpen(false);
-                  setCancelReason('');
-                }}
-                disabled={cancelling}
-                className="px-4 py-2 border border-border rounded-lg text-muted-foreground hover:bg-muted/50 transition disabled:opacity-50"
-              >
+              <button onClick={() => { setCancelModalOpen(false); setCancelReason(''); }} disabled={cancelling} className="px-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg text-white/60 hover:text-white transition disabled:opacity-50">
                 Go Back
               </button>
-              <button
-                onClick={handleCancelEvent}
-                disabled={cancelling}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
-              >
-                {cancelling ? 'Cancelling...' : 'Yes, Cancel Event'}
+              <button onClick={handleCancelEvent} disabled={cancelling} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition disabled:opacity-50">
+                {cancelling ? 'Cancelling...' : 'Cancel Event'}
               </button>
             </div>
           </div>

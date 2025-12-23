@@ -30,27 +30,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Subtle red glow effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md animate-fade-in">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8">
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <Logo size="medium" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Admin Portal</h1>
-            <div className="mt-2 h-0.5 w-16 bg-primary mx-auto rounded-full" />
+            <h1 className="text-xl font-semibold text-white">Admin Portal</h1>
+            <div className="mt-3 h-px w-12 bg-primary mx-auto" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-foreground mb-2"
+                className="block text-sm font-medium text-white/60 mb-2"
               >
                 Email
               </label>
@@ -59,7 +55,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-foreground placeholder:text-muted-foreground"
+                className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg focus:border-white/20 focus:bg-white/[0.04] outline-none transition-colors text-white placeholder:text-white/30"
                 placeholder="owner@genki-tcg.com"
                 required
               />
@@ -68,7 +64,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-foreground mb-2"
+                className="block text-sm font-medium text-white/60 mb-2"
               >
                 Password
               </label>
@@ -77,14 +73,14 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-foreground placeholder:text-muted-foreground"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg focus:border-white/20 focus:bg-white/[0.04] outline-none transition-colors text-white placeholder:text-white/30"
+                placeholder="Enter your password"
                 required
               />
             </div>
 
             {error && (
-              <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/5 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -92,24 +88,31 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+              className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                'Sign In'
+              )}
             </button>
           </form>
 
           <div className="mt-4 text-center">
             <Link
               href="/forgot-password"
-              className="text-sm text-muted-foreground hover:text-foreground transition"
+              className="text-sm text-white/40 hover:text-white/60 transition-colors"
             >
               Forgot your password?
             </Link>
           </div>
 
-          <div className="mt-6 p-4 bg-muted/30 border border-border rounded-lg">
-            <p className="text-xs text-muted-foreground">
-              <strong className="text-foreground">Test accounts:</strong><br />
+          <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.04] rounded-lg">
+            <p className="text-xs text-white/40">
+              <span className="text-white/60 font-medium">Test accounts:</span><br />
               Owner: owner@genki-tcg.com<br />
               Staff: staff@genki-tcg.com<br />
               Password: password123
