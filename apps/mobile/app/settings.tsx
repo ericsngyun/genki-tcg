@@ -32,6 +32,7 @@ interface SettingsSection {
 export default function SettingsScreen() {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -64,6 +65,63 @@ export default function SettingsScreen() {
             } finally {
               setIsLoggingOut(false);
             }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    // First confirmation
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation for extra safety
+            Alert.alert(
+              'Final Confirmation',
+              'This will permanently delete:\n\n• Your profile and credentials\n• All tournament history\n• Credit balance and history\n• Rating and rankings\n• All notifications\n\nThis action is IRREVERSIBLE.',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      setIsDeletingAccount(true);
+                      await api.deleteAccount();
+                      Alert.alert(
+                        'Account Deleted',
+                        'Your account has been permanently deleted.',
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => router.replace('/login'),
+                          },
+                        ],
+                      );
+                    } catch (error: any) {
+                      logger.error('Delete account error:', error);
+                      const message = error.response?.data?.message || 'Failed to delete account. Please try again.';
+                      Alert.alert('Error', message);
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  },
+                },
+              ],
+            );
           },
         },
       ],
@@ -110,13 +168,13 @@ export default function SettingsScreen() {
         {
           icon: 'shield-checkmark-outline',
           label: 'Privacy Policy',
-          onPress: () => Alert.alert('Privacy Policy', 'Privacy policy is being prepared for app store submission.'),
+          onPress: () => openURL('https://admin.genkitcg.app/legal/privacy.html'),
           showArrow: true,
         },
         {
           icon: 'document-text-outline',
           label: 'Terms of Service',
-          onPress: () => Alert.alert('Terms of Service', 'Terms of service is being prepared for app store submission.'),
+          onPress: () => openURL('https://admin.genkitcg.app/legal/terms.html'),
           showArrow: true,
         },
       ],
@@ -222,11 +280,23 @@ export default function SettingsScreen() {
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
-          disabled={isLoggingOut}
+          disabled={isLoggingOut || isDeletingAccount}
         >
           <Ionicons name="log-out-outline" size={20} color={theme.colors.error.main} />
           <Text style={styles.logoutButtonText}>
             {isLoggingOut ? 'Logging Out...' : 'Log Out'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={handleDeleteAccount}
+          disabled={isLoggingOut || isDeletingAccount}
+        >
+          <Ionicons name="trash-outline" size={20} color={theme.colors.error.dark || '#991B1B'} />
+          <Text style={styles.deleteAccountButtonText}>
+            {isDeletingAccount ? 'Deleting Account...' : 'Delete Account'}
           </Text>
         </TouchableOpacity>
 
@@ -343,6 +413,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.error.main,
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(153, 27, 27, 0.1)',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: theme.borderRadius.lg,
+    marginTop: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(153, 27, 27, 0.2)',
+  },
+  deleteAccountButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#991B1B',
   },
   footer: {
     alignItems: 'center',
