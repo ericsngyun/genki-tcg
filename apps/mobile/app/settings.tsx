@@ -202,7 +202,7 @@ export default function SettingsScreen() {
         {
           icon: 'information-circle-outline',
           label: 'Version',
-          value: '0.1.0',
+          value: '0.2.0',
           showArrow: false,
         },
         {
