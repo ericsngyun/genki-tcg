@@ -30,12 +30,8 @@
         "EXPO_PUBLIC_ENVIRONMENT": "production",
         "EXPO_PUBLIC_PROJECT_ID": "27dbcc84-6f7b-4cbf-bfff-c320c0de0938"
       },
-      "ios": {
-        "bundleIdentifier": "com.genkitcg.app"
-      },
       "android": {
-        "buildType": "aab",
-        "package": "com.genkitcg.app"
+        "buildType": "app-bundle"
       }
     }
   },
