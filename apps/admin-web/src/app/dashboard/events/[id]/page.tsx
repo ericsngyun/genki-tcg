@@ -758,6 +758,7 @@ export default function EventDetailPage() {
           onClose={() => { setResultModalOpen(false); setSelectedMatch(null); }}
           onSubmit={handleSubmitResult}
           match={selectedMatch}
+          gameType={event?.game}
         />
       )}
 
