@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { logger } from '../lib/logger';
 import { Socket } from 'socket.io-client';
 import { createSocket, SOCKET_EVENTS, type PairingsPostedEvent, type StandingsUpdatedEvent, type RoundStartedEvent, type RoundEndedEvent, type MatchResultReportedEvent, type TimerUpdateEvent, type AnnouncementEvent, type TournamentCompletedEvent } from '../lib/socket';
@@ -116,8 +117,22 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Handle app state changes (background/foreground)
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        // App came to foreground - check if we need to reconnect
+        if (!socketRef.current?.connected) {
+          logger.debug('App returned to foreground, reconnecting socket...');
+          connect();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
     // Cleanup on unmount
     return () => {
+      subscription.remove();
       disconnect();
     };
   }, []);
