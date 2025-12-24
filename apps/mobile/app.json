@@ -57,7 +57,7 @@
         }
       ]
     ],
-    "scheme": "genki",
+    "scheme": "genki-tcg",
     "extra": {
       "router": {
         "origin": false

@@ -19,6 +19,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../lib/theme';
@@ -75,9 +76,13 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
   onViewMatch,
   onDrop,
 }) => {
+  const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const [hasActiveMatch, setHasActiveMatch] = useState<boolean | null>(null); // null = loading, true = has real match, false = BYE or no match
+
+  // For Android, use dynamic insets for navigation bar; iOS uses fixed value
+  const sheetBottomPadding = Platform.OS === 'ios' ? 34 : Math.max(insets.bottom, 24);
 
   useEffect(() => {
     if (visible) {
@@ -209,7 +214,7 @@ export const EventActionSheet: React.FC<EventActionSheetProps> = ({
           { transform: [{ translateY: slideAnim }] },
         ]}
       >
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: sheetBottomPadding }]}>
           {/* Handle Bar */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
@@ -573,7 +578,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
   },
   handleContainer: {

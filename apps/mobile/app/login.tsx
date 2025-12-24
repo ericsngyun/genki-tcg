@@ -93,6 +93,11 @@ export default function LoginScreen() {
       const { url } = event;
       logger.debug('Deep link event received:', url);
       if (url.includes('auth/callback')) {
+        // On Android, we need to manually dismiss the browser when deep link is received
+        if (Platform.OS === 'android') {
+          logger.debug('Dismissing browser on Android...');
+          await WebBrowser.dismissBrowser();
+        }
         await handleAuthCallback(url);
       }
     };
@@ -101,9 +106,13 @@ export default function LoginScreen() {
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
     // Check if app was opened with a deep link
-    Linking.getInitialURL().then((url) => {
+    Linking.getInitialURL().then(async (url) => {
       logger.debug('Initial URL:', url);
       if (url && url.includes('auth/callback')) {
+        // Also dismiss browser if app was opened via initial URL on Android
+        if (Platform.OS === 'android') {
+          await WebBrowser.dismissBrowser();
+        }
         handleAuthCallback(url);
       }
     });
@@ -280,12 +289,14 @@ export default function LoginScreen() {
           setLoading(false);
         } else if (result.type === 'dismiss') {
           // Browser closed - wait for deep link handler
+          // Android may take longer to process the deep link redirect
           logger.debug('Waiting for deep link...');
+          const timeoutMs = Platform.OS === 'android' ? 8000 : 2000;
           setTimeout(() => {
-            // If still loading after 2 seconds, something went wrong
+            // If still loading after timeout, something went wrong
             setLoading(false);
             setError('Authentication window closed. Please try again.');
-          }, 2000);
+          }, timeoutMs);
         } else if (result.type === 'success' && result.url) {
           // WebBrowser successfully captured the deep link callback
           logger.debug('Processing deep link callback from WebBrowser...');

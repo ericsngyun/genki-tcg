@@ -1,9 +1,17 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../lib/theme';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
+  // For Android, use dynamic insets to handle navigation bar
+  // For iOS, keep the existing hardcoded values that work well
+  const bottomPadding = Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 8);
+  const tabBarHeight = Platform.OS === 'ios' ? 88 : 60 + Math.max(insets.bottom, 8);
+
   return (
     <Tabs
       screenOptions={{
@@ -13,9 +21,9 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background.card,
           borderTopColor: theme.colors.border.light,
           borderTopWidth: 1,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
-          height: Platform.OS === 'ios' ? 88 : 68,
+          height: tabBarHeight,
           elevation: 0,
           shadowOpacity: 0,
         },

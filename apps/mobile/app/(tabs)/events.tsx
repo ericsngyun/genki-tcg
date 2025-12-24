@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ImageBackground } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { api } from '../../lib/api';
@@ -656,7 +657,12 @@ const EventCard: React.FC<EventCardProps> = ({
         {/* Game Image Background */}
         <View style={styles.cardImageContainer}>
           <ImageBackground source={gameImage} style={styles.cardImage} resizeMode="cover">
-            <View style={styles.cardImageOverlay} />
+            <LinearGradient
+              colors={[colors.background.card, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.7, y: 0 }}
+              style={StyleSheet.absoluteFillObject}
+            />
           </ImageBackground>
         </View>
 
@@ -890,11 +896,6 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: '100%',
-  },
-  cardImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background.card,
-    opacity: 0.7,
   },
   cardContent: {
     padding: spacing.base,
