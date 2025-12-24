@@ -20,7 +20,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.genkitcg.app",
+      "bundleIdentifier": "app.genkitcg",
       "newArchEnabled": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
