@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Genki TCG",
-    "slug": "genki-tcg",
+    "slug": "genki",
     "version": "0.2.0",
     "platforms": [
       "ios",
@@ -21,14 +21,18 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.genkitcg.app",
-      "newArchEnabled": false
+      "newArchEnabled": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#DC2626"
       },
-      "package": "com.genkitcg.app"
+      "package": "com.genkitcg.app",
+      "newArchEnabled": true
     },
     "web": {
       "bundler": "metro",
@@ -53,7 +57,7 @@
         }
       ]
     ],
-    "scheme": "genki-tcg",
+    "scheme": "genki",
     "extra": {
       "router": {
         "origin": false
