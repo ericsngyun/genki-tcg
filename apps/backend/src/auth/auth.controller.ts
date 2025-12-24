@@ -180,10 +180,11 @@ export class AuthController {
     this.logger.log('Has code:', !!code);
     this.logger.log('Has state:', !!state);
     this.logger.log('Error:', error);
+    this.logger.log('User-Agent:', userAgent);
 
-    // Detect if this is a mobile device based on user agent
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(userAgent || '');
-    this.logger.log('Is mobile device:', isMobileDevice);
+    // This is the mobile-specific callback endpoint, so ALWAYS use HTTP 302 redirect
+    // User agent detection is unreliable with Chrome Custom Tabs and in-app browsers
+    const isMobileDevice = true;
 
     // Handle OAuth errors (user cancelled, etc.)
     if (error) {
@@ -207,7 +208,7 @@ export class AuthController {
       this.logger.log('Token exchange successful, redirecting to app');
       this.logger.log('User:', result.user.email);
 
-      // Redirect to app with tokens
+      // Redirect to app with tokens via HTTP 302 (most reliable for mobile)
       return this.handleMobileRedirect(res, {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
