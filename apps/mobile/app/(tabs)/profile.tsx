@@ -288,17 +288,18 @@ export default function ProfileScreen() {
     };
   }, [lifetimeRanks, ranks]);
 
-  // Calculate display tier based on preference
+  // Calculate display tier based on preference (use lifetime ranks for consistency)
   const displayTier = useMemo((): PlayerTier => {
-    if (borderPreference === 'HIGHEST' || ranks.length === 0) {
-      if (ranks.length === 0) return 'UNRANKED';
-      const highestRating = Math.max(...ranks.map(r => r.rating));
+    const ranksToUse = lifetimeRanks.length > 0 ? lifetimeRanks : ranks;
+    if (borderPreference === 'HIGHEST' || ranksToUse.length === 0) {
+      if (ranksToUse.length === 0) return 'UNRANKED';
+      const highestRating = Math.max(...ranksToUse.map(r => r.rating));
       return mapRatingToTier(highestRating);
     }
-    const gameRank = ranks.find(r => r.gameType === borderPreference);
+    const gameRank = ranksToUse.find(r => r.gameType === borderPreference);
     if (!gameRank) return 'UNRANKED';
     return mapRatingToTier(gameRank.rating);
-  }, [ranks, borderPreference]);
+  }, [ranks, lifetimeRanks, borderPreference]);
 
   const tierColors = TIER_COLORS[displayTier];
   const tierDisplay = TIER_DISPLAY[displayTier];
@@ -342,7 +343,7 @@ export default function ProfileScreen() {
               avatarUrl={user?.avatarUrl}
               name={user?.name || 'Unknown'}
               tier={displayTier}
-              size={100}
+              size={64}
             />
 
             {/* User Info */}
@@ -368,7 +369,7 @@ export default function ProfileScreen() {
 
               {user?.discordUsername && (
                 <View style={styles.discordTag}>
-                  <Ionicons name="logo-discord" size={12} color="#5865F2" />
+                  <Ionicons name="logo-discord" size={11} color="#5865F2" />
                   <Text style={styles.discordUsername}>{user.discordUsername}</Text>
                 </View>
               )}
@@ -766,11 +767,12 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 20,
   },
   headerInfo: {
     flex: 1,
     justifyContent: 'center',
+    gap: 4,
   },
   editButton: {
     width: 40,
@@ -783,49 +785,46 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   userName: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '700',
     color: theme.colors.text.primary,
     letterSpacing: -0.3,
-    marginBottom: 6,
   },
 
   // Rank Info Container (Header)
   rankInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
   },
   rankGameName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: theme.colors.text.tertiary,
   },
   unrankedText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: theme.colors.text.tertiary,
-    marginBottom: 6,
   },
 
   // Main Tier Badge (Header) - Clean Design
   mainTierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
-    gap: 6,
+    gap: 5,
     borderWidth: 1,
   },
   tierDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   mainTierName: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
@@ -866,10 +865,10 @@ const styles = StyleSheet.create({
   discordTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   discordUsername: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#5865F2',
     fontWeight: '500',
   },

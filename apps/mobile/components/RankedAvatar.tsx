@@ -71,13 +71,20 @@ export function RankedAvatar({
   // Get initial for fallback
   const initial = name?.charAt(0)?.toUpperCase() || '?';
 
-  // Get border image
-  const borderImage = BORDER_IMAGES[tier];
+  // Get border image (use null for SPROUT and UNRANKED)
+  const borderImage = tier === 'SPROUT' || tier === 'UNRANKED' ? null : BORDER_IMAGES[tier];
+
+  // Determine if we should show a simple green border for SPROUT
+  const showSproutBorder = showBorder && tier === 'SPROUT';
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
       {/* Avatar */}
-      <View style={[styles.avatarContainer, { width: size, height: size, borderRadius: size / 2 }]}>
+      <View style={[
+        styles.avatarContainer,
+        { width: size, height: size, borderRadius: size / 2 },
+        showSproutBorder && { borderWidth: 3, borderColor: '#10b981' }
+      ]}>
         {avatarUrl ? (
           <Image
             source={{ uri: avatarUrl }}
@@ -94,7 +101,7 @@ export function RankedAvatar({
       {showBorder && borderImage && (
         <Image
           source={borderImage}
-          style={[styles.borderOverlay, { width: size * 1.6, height: size * 1.6, marginLeft: -(size * 0.3), marginTop: -(size * 0.27) }]}
+          style={[styles.borderOverlay, { width: size * 1.6, height: size * 1.6, marginLeft: -(size * 0.32), marginTop: -(size * 0.27) }]}
           resizeMode="contain"
         />
       )}

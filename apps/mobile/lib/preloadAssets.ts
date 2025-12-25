@@ -1,7 +1,7 @@
 import { Asset } from 'expo-asset';
 import { Image } from 'react-native';
 
-// Preload all ranked border images
+// Preload all ranked border images (excluding sprout - uses green border instead)
 const RANKED_BORDER_IMAGES = [
   require('../assets/ranked-borders/genki.png'),
   require('../assets/ranked-borders/diamond.png'),
@@ -9,7 +9,6 @@ const RANKED_BORDER_IMAGES = [
   require('../assets/ranked-borders/gold.png'),
   require('../assets/ranked-borders/silver.png'),
   require('../assets/ranked-borders/bronze.png'),
-  require('../assets/ranked-borders/sprout.png'),
 ];
 
 export async function preloadRankedBorders() {

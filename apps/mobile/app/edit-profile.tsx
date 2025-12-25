@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -18,6 +17,7 @@ import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
 import { TIER_COLORS } from '../components/TierEmblem';
+import { RankedAvatar } from '../components';
 
 // Storage key for border preference
 export const BORDER_PREFERENCE_KEY = 'profile_border_game';
@@ -33,15 +33,15 @@ type PlayerTier =
   | 'GENKI'
   | 'UNRANKED';
 
-// Map rating to tier
+// Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2200) return 'GENKI';
-  if (rating >= 2000) return 'DIAMOND';
-  if (rating >= 1800) return 'PLATINUM';
+  if (rating >= 2100) return 'GENKI';
+  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 1750) return 'PLATINUM';
   if (rating >= 1600) return 'GOLD';
-  if (rating >= 1400) return 'SILVER';
-  if (rating >= 1200) return 'BRONZE';
-  if (rating >= 800) return 'SPROUT';
+  if (rating >= 1450) return 'SILVER';
+  if (rating >= 1300) return 'BRONZE';
+  if (rating >= 0) return 'SPROUT';
   return 'UNRANKED';
 }
 
@@ -206,15 +206,12 @@ export default function EditProfileScreen() {
         <View style={styles.avatarPreviewCard}>
           <Text style={styles.sectionTitle}>Profile Preview</Text>
           <View style={styles.avatarPreviewContainer}>
-            <View style={styles.previewAvatar}>
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.previewAvatarImage} />
-              ) : (
-                <Text style={styles.previewAvatarInitial}>
-                  {(user?.name || 'U').charAt(0).toUpperCase()}
-                </Text>
-              )}
-            </View>
+            <RankedAvatar
+              avatarUrl={user?.avatarUrl}
+              name={user?.name || 'Unknown'}
+              tier={displayTier}
+              size={120}
+            />
             <View style={styles.previewInfo}>
               <Text style={styles.previewName}>{name || user?.name}</Text>
               {displayTier !== 'UNRANKED' && (
@@ -552,25 +549,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Preview Avatar
-  previewAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.background.elevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: 'rgba(220, 38, 38, 0.3)',
-  },
-  previewAvatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  previewAvatarInitial: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: theme.colors.text.secondary,
-  },
 });
