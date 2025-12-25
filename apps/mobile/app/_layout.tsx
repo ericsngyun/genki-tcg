@@ -7,6 +7,7 @@ import { SocketProvider } from '../contexts/SocketContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { initSentry } from '../lib/sentry';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { preloadRankedBorders } from '../lib/preloadAssets';
 
 // Integrate custom theme with React Native Paper's Material Design 3 Dark Theme
 const paperTheme = {
@@ -36,6 +37,8 @@ export default function RootLayout() {
   // Initialize Sentry inside useEffect to avoid issues with New Architecture
   useEffect(() => {
     initSentry();
+    // Preload ranked border images for faster rendering
+    preloadRankedBorders();
   }, []);
 
   // Initialize push notifications on app launch
