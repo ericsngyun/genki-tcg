@@ -32,6 +32,7 @@
         "backgroundColor": "#DC2626"
       },
       "package": "com.genkitcg.app",
+      "versionCode": 2,
       "newArchEnabled": true
     },
     "web": {
