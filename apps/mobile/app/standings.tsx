@@ -16,10 +16,12 @@ import { api } from '../lib/api';
 import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 import { logger } from '../lib/logger';
+import { RankedAvatar } from '../components';
 
 interface Standing {
   userId: string;
   userName: string;
+  avatarUrl?: string | null;
   rank: number;
   points: number;
   matchWins: number;
@@ -228,11 +230,19 @@ export default function StandingsScreen() {
                         </Text>
                       </View>
                       <View style={styles.playerCell}>
-                        <Text style={[styles.playerName, isMe && styles.playerNameMe, standing.isDropped && styles.playerNameDropped]} numberOfLines={1}>
-                          {standing.userName}
-                          {isMe && <Text style={styles.youTag}> (You)</Text>}
-                        </Text>
-                        {standing.isDropped && <Text style={styles.droppedTag}>Dropped</Text>}
+                        <RankedAvatar
+                          avatarUrl={standing.avatarUrl}
+                          name={standing.userName}
+                          tier="UNRANKED"
+                          size={32}
+                        />
+                        <View style={styles.playerInfo}>
+                          <Text style={[styles.playerName, isMe && styles.playerNameMe, standing.isDropped && styles.playerNameDropped]} numberOfLines={1}>
+                            {standing.userName}
+                            {isMe && <Text style={styles.youTag}> (You)</Text>}
+                          </Text>
+                          {standing.isDropped && <Text style={styles.droppedTag}>Dropped</Text>}
+                        </View>
                       </View>
                       <View style={styles.ptsCell}>
                         <Text style={styles.ptsValue}>{standing.points}</Text>
@@ -451,6 +461,12 @@ const styles = StyleSheet.create({
   playerCell: {
     flex: 1,
     paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  playerInfo: {
+    flex: 1,
   },
   playerName: {
     fontSize: typography.fontSize.sm,

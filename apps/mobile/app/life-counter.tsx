@@ -17,25 +17,25 @@ interface ElementConfig {
 
 const ELEMENTS: Record<Element, ElementConfig> = {
   water: {
-    name: 'Shao',
+    name: 'Water',
     icon: 'https://tcg.azuki.com/icons/water.svg',
     color: '#3b82f6',
     darkColor: '#1e3a8a',
   },
   lightning: {
-    name: 'Raizan',
+    name: 'Lightning',
     icon: 'https://tcg.azuki.com/icons/lightning.svg',
     color: '#a78bfa',
     darkColor: '#4c1d95',
   },
   earth: {
-    name: 'Bobu',
+    name: 'Earth',
     icon: 'https://tcg.azuki.com/icons/earth.svg',
-    color: '#f97316',
-    darkColor: '#7c2d12',
+    color: '#fb923c',
+    darkColor: '#92400e',
   },
   fire: {
-    name: 'Zero',
+    name: 'Fire',
     icon: 'https://tcg.azuki.com/icons/fire.svg',
     color: '#ef4444',
     darkColor: '#7f1d1d',

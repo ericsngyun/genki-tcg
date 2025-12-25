@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../lib/theme';
 import { api } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import { RankedAvatar } from '../../components';
 
 // Conditionally import reanimated for native platforms only
 let Animated: any;
@@ -172,24 +173,7 @@ export default function LeaderboardTab() {
     setRefreshing(false);
   };
 
-  // Player Avatar Component
-  const PlayerAvatar = ({ avatarUrl, name, size = 48, borderColor }: { avatarUrl?: string; name: string; size?: number; borderColor?: string }) => {
-    const initial = name?.charAt(0).toUpperCase() || '?';
-
-    return (
-      <View style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2 },
-        borderColor && { borderWidth: 2, borderColor }
-      ]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-        ) : (
-          <Text style={[styles.avatarInitial, { fontSize: size * 0.4 }]}>{initial}</Text>
-        )}
-      </View>
-    );
-  };
+  // Player Avatar Component - Now using RankedAvatar
 
   // Top 3 Podium Component
   const TopThreePodium = () => {
@@ -212,11 +196,11 @@ export default function LeaderboardTab() {
           </View>
 
           {/* Avatar with tier border */}
-          <PlayerAvatar
+          <RankedAvatar
             avatarUrl={player.avatarUrl}
             name={player.userName}
+            tier={tier}
             size={avatarSize}
-            borderColor={tierConfig.color}
           />
 
           {/* Name */}
@@ -298,11 +282,11 @@ export default function LeaderboardTab() {
         </View>
 
         {/* Avatar */}
-        <PlayerAvatar
+        <RankedAvatar
           avatarUrl={player.avatarUrl}
           name={player.userName}
+          tier={tier}
           size={44}
-          borderColor={tierConfig.color}
         />
 
         {/* Info */}

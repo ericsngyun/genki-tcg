@@ -15,12 +15,13 @@ import { api } from '../lib/api';
 import { colors, spacing, typography, borderRadius } from '../lib/theme';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
 import { logger } from '../lib/logger';
+import { RankedAvatar } from '../components';
 
 interface Pairing {
   id: string;
   tableNumber: number;
-  playerA: { id: string; name: string };
-  playerB?: { id: string; name: string };
+  playerA: { id: string; name: string; avatarUrl?: string | null };
+  playerB?: { id: string; name: string; avatarUrl?: string | null };
   result?: string;
   gamesWonA?: number;
   gamesWonB?: number;
@@ -390,13 +391,33 @@ export default function PairingsScreen() {
                         <Text style={styles.tableCellText}>{pairing.tableNumber}</Text>
                       </View>
                       <View style={styles.playersCell}>
-                        <Text style={[styles.playerName, pairing.playerA.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
-                          {pairing.playerA.name}
-                        </Text>
+                        <View style={styles.playerBlock}>
+                          <RankedAvatar
+                            avatarUrl={pairing.playerA.avatarUrl}
+                            name={pairing.playerA.name}
+                            tier="UNRANKED"
+                            size={32}
+                          />
+                          <Text style={[styles.playerName, pairing.playerA.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
+                            {pairing.playerA.name}
+                          </Text>
+                        </View>
                         <Text style={styles.vsText}>vs</Text>
-                        <Text style={[styles.playerName, pairing.playerB?.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
-                          {pairing.playerB?.name || 'BYE'}
-                        </Text>
+                        {pairing.playerB ? (
+                          <View style={styles.playerBlock}>
+                            <RankedAvatar
+                              avatarUrl={pairing.playerB.avatarUrl}
+                              name={pairing.playerB.name}
+                              tier="UNRANKED"
+                              size={32}
+                            />
+                            <Text style={[styles.playerName, pairing.playerB.id === myUserId && styles.playerNameMe]} numberOfLines={1}>
+                              {pairing.playerB.name}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.playerName}>BYE</Text>
+                        )}
                       </View>
                       <View style={styles.statusCell}>
                         <View style={[styles.statusDot, { backgroundColor: pairing.result ? colors.success.main : colors.warning.main }]} />
@@ -836,6 +857,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
+  },
+  playerBlock: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   playerName: {
     flex: 1,

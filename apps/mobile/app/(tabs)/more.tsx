@@ -59,18 +59,6 @@ export default function MoreScreen() {
       onPress: () => router.push('/notifications'),
     },
     {
-      icon: 'podium',
-      title: 'Leaderboard',
-      subtitle: 'View player rankings',
-      onPress: () => router.push('/leaderboard'),
-    },
-    {
-      icon: 'person',
-      title: 'My Profile',
-      subtitle: 'View stats and match history',
-      onPress: () => router.push('/(tabs)/profile'),
-    },
-    {
       icon: 'settings',
       title: 'Settings',
       subtitle: 'App preferences and account',
@@ -122,7 +110,7 @@ export default function MoreScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <AppHeader title="More" subtitle="Settings and options" />
+      <AppHeader title="More" subtitle="Settings and options" showLogo={false} />
 
       {/* Menu Items */}
       <View style={styles.menuContainer}>

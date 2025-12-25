@@ -23,6 +23,7 @@ import { api } from '../../lib/api'
 import { TIER_COLORS } from '../../components/TierEmblem';
 import { getGameImagePath } from '../../lib/formatters';
 import { BORDER_PREFERENCE_KEY } from '../edit-profile';
+import { RankedAvatar } from '../../components';
 
 const { width } = Dimensions.get('window');
 
@@ -337,13 +338,12 @@ export default function ProfileScreen() {
         <View style={styles.headerSection}>
           <View style={styles.headerContent}>
             {/* Avatar with Tier Border */}
-            <View style={[styles.profileAvatar, { borderColor: tierColors.primary }]}>
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.profileAvatarImage} />
-              ) : (
-                <Text style={styles.profileAvatarInitial}>{initial}</Text>
-              )}
-            </View>
+            <RankedAvatar
+              avatarUrl={user?.avatarUrl}
+              name={user?.name || 'Unknown'}
+              tier={displayTier}
+              size={100}
+            />
 
             {/* User Info */}
             <View style={styles.headerInfo}>

@@ -884,6 +884,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border.light,
     overflow: 'hidden',
     position: 'relative',
+    minHeight: 140,
   },
   cardImageContainer: {
     position: 'absolute',
