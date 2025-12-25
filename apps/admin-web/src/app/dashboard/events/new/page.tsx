@@ -165,9 +165,8 @@ export default function NewEventPage() {
                           : 'hover:scale-[1.01] opacity-60 hover:opacity-90'
                       }`}
                       style={{
-                        ['--ring-color' as string]: game.color,
-                        ringColor: isSelected ? game.color : undefined
-                      }}
+                        ['--ring-color' as string]: game.color
+                      } as React.CSSProperties}
                     >
                       {/* Game Image */}
                       <div className="aspect-[4/3] relative">

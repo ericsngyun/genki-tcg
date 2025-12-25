@@ -47,6 +47,12 @@ export default function MoreScreen() {
 
   const menuItems = [
     {
+      icon: 'heart',
+      title: 'Life Counter',
+      subtitle: 'Track life totals for Azuki TCG',
+      onPress: () => router.push('/life-counter'),
+    },
+    {
       icon: 'notifications',
       title: 'Notifications',
       subtitle: 'Manage your notifications',
