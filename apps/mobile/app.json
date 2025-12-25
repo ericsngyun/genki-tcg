@@ -2,7 +2,7 @@
   "expo": {
     "name": "Genki TCG",
     "slug": "genki",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "platforms": [
       "ios",
       "android"
