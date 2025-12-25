@@ -94,7 +94,7 @@ export function RankedAvatar({
       {showBorder && borderImage && (
         <Image
           source={borderImage}
-          style={[styles.borderOverlay, { width: size * 1.6, height: size * 1.6, marginLeft: -(size * 0.3), marginTop: -(size * 0.3) }]}
+          style={[styles.borderOverlay, { width: size * 1.6, height: size * 1.6, marginLeft: -(size * 0.3), marginTop: -(size * 0.27) }]}
           resizeMode="contain"
         />
       )}
