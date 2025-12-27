@@ -211,7 +211,7 @@ export class AuthService {
    * Grant welcome bonus to new users
    */
   private async grantWelcomeBonus(userId: string, orgId: string) {
-    const WELCOME_BONUS_AMOUNT = 10;
+    const WELCOME_BONUS_AMOUNT = 5;
 
     // Create credit ledger entry for welcome bonus
     await this.prisma.creditLedgerEntry.create({
