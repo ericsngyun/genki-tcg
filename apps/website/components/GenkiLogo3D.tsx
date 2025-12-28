@@ -121,20 +121,27 @@ export default function GenkiLogo3D() {
     const fov = isMobile ? 60 : 50; // Wider FOV on mobile
 
     return (
-        <div className="absolute inset-0 w-full h-full">
-            <Canvas
-                camera={{
-                    position: cameraPosition,
-                    fov: fov,
-                }}
-                gl={{
-                    antialias: true,
-                    alpha: true,
-                    toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: 1.1,
-                }}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-            >
+        <Canvas
+            camera={{
+                position: cameraPosition,
+                fov: fov,
+            }}
+            gl={{
+                antialias: true,
+                alpha: true,
+                toneMapping: THREE.ACESFilmicToneMapping,
+                toneMappingExposure: 1.1,
+            }}
+            style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh'
+            }}
+        >
                 <Suspense fallback={null}>
                     <ambientLight intensity={0.6} />
 
@@ -161,8 +168,7 @@ export default function GenkiLogo3D() {
 
                     <Model isMobile={isMobile} />
                 </Suspense>
-            </Canvas>
-        </div>
+        </Canvas>
     );
 }
 
