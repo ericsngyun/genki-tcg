@@ -531,10 +531,19 @@ export class RatingsService {
 
     const calculatedLifetime = this.calculateNewRating(lifetimeRating, lifetimeMatches);
 
+    // Prevent rating loss for players below PLATINUM tier (< 1750)
+    const PLATINUM_THRESHOLD = 1750;
+    let finalLifetimeRating = calculatedLifetime.rating;
+
+    if (lifetimeRating.rating < PLATINUM_THRESHOLD && calculatedLifetime.rating < lifetimeRating.rating) {
+      this.logger.log(`Prevented lifetime rating loss for user ${userId} below PLATINUM: keeping rating at ${lifetimeRating.rating}`);
+      finalLifetimeRating = lifetimeRating.rating; // Keep current rating, no loss
+    }
+
     // Enforce rating floor at minimum rating (1200 BRONZE)
     const newLifetime = {
       ...calculatedLifetime,
-      rating: Math.max(calculatedLifetime.rating, GLICKO2_DEFAULTS.minimumRating),
+      rating: Math.max(finalLifetimeRating, GLICKO2_DEFAULTS.minimumRating),
     };
 
     // 5. Calculate New Seasonal Rating
@@ -573,6 +582,14 @@ export class RatingsService {
           finalSeasonalRating = seasonalRating.rating - SEASONAL_LOSS_CAP.maxLoss;
           this.logger.log(`Applied loss cap for user ${userId}: ${rawDelta} -> ${-SEASONAL_LOSS_CAP.maxLoss}`);
         }
+      }
+
+      // Prevent rating loss for players below PLATINUM tier (< 1750)
+      // PLATINUM threshold is 1750, so players below this tier cannot lose rating
+      const PLATINUM_THRESHOLD = 1750;
+      if (seasonalRating.rating < PLATINUM_THRESHOLD && finalSeasonalRating < seasonalRating.rating) {
+        this.logger.log(`Prevented rating loss for user ${userId} below PLATINUM: ${rawDelta} prevented, keeping rating at ${seasonalRating.rating}`);
+        finalSeasonalRating = seasonalRating.rating; // Keep current rating, no loss
       }
 
       // Enforce rating floor at minimum rating (1200 BRONZE)
