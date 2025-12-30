@@ -620,27 +620,29 @@ export class RatingsService {
     });
 
     // Create Lifetime History
-    // Note: We create one history entry per match (skip phantom matches)
-    for (const match of matches) {
-      // Skip history entries for phantom losses (no real opponent)
-      if (match.opponentId === 'PHANTOM_OPPONENT') continue;
+    // Create ONE entry per tournament (not per match) since Glicko-2 processes tournaments as batches
+    // Only create if there are real (non-phantom) matches
+    const realMatches = matches.filter(m => m.opponentId !== 'PHANTOM_OPPONENT');
+    if (realMatches.length > 0) {
+      // Use the first real match for the history entry
+      const firstMatch = realMatches[0];
+      const firstOpp = oppLifetimeMap.get(firstMatch.opponentId);
 
-      const opp = oppLifetimeMap.get(match.opponentId);
       await this.prisma.lifetimeRatingHistory.create({
         data: {
           lifetimeRatingId: lifetimeRating.id,
           eventId: tournamentId,
-          matchId: match.matchId,
+          matchId: firstMatch.matchId, // Reference first match as representative
           ratingBefore: lifetimeRating.rating,
-          ratingAfter: newLifetime.rating, // This is slightly inaccurate as it applies the batch result to each match, but standard for Glicko-2 batch
+          ratingAfter: newLifetime.rating,
           ratingChange: newLifetime.rating - lifetimeRating.rating,
           rdBefore: lifetimeRating.ratingDeviation,
           rdAfter: newLifetime.ratingDeviation,
           volatilityBefore: lifetimeRating.volatility,
           volatilityAfter: newLifetime.volatility,
-          opponentId: match.opponentId,
-          opponentRatingBefore: opp ? opp.rating : GLICKO2_DEFAULTS.initialRating,
-          matchResult: match.result,
+          opponentId: firstMatch.opponentId,
+          opponentRatingBefore: firstOpp ? firstOpp.rating : GLICKO2_DEFAULTS.initialRating,
+          matchResult: firstMatch.result,
         },
       });
     }
