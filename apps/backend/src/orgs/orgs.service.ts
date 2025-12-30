@@ -38,7 +38,7 @@ export class OrgsService {
           },
         },
       },
-      take: 50,
+      take: 500,
     });
   }
 }
