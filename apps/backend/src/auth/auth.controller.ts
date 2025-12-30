@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param, Query, Logger, Res, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Patch, Param, Query, Logger, Res, Headers } from '@nestjs/common';
 import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -98,6 +98,20 @@ export class AuthController {
   @Throttle({ default: { limit: 1, ttl: 60000 } }) // 1 deletion per minute (prevent accidents)
   async deleteAccount(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.deleteAccount(user.id);
+  }
+
+  /**
+   * Update the authenticated user's profile.
+   * Currently supports updating the display name.
+   */
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 updates per minute
+  async updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() updates: { name?: string },
+  ) {
+    return this.authService.updateProfile(user.id, updates);
   }
 
   @Get('sessions')

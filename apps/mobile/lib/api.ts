@@ -399,7 +399,7 @@ class ApiClient {
   }
 
   async updateProfile(updates: { name?: string; avatarUrl?: string }) {
-    const { data } = await this.client.patch('/users/me', updates);
+    const { data } = await this.client.patch('/auth/me', updates);
     return data;
   }
 }

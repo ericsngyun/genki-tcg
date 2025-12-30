@@ -1096,4 +1096,41 @@ export class AuthService {
       message: 'Your account has been permanently deleted. All associated data has been removed.',
     };
   }
+
+  /**
+   * Update user profile information.
+   * Currently supports updating the display name.
+   */
+  async updateProfile(userId: string, updates: { name?: string }): Promise<{ user: any; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Validate name if provided
+    if (updates.name !== undefined) {
+      const trimmedName = updates.name.trim();
+      if (trimmedName.length === 0) {
+        throw new BadRequestException('Name cannot be empty');
+      }
+      if (trimmedName.length > 50) {
+        throw new BadRequestException('Name cannot exceed 50 characters');
+      }
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(updates.name && { name: updates.name.trim() }),
+      },
+    });
+
+    return {
+      user: this.sanitizeUser(updatedUser),
+      message: 'Profile updated successfully',
+    };
+  }
 }
