@@ -27,6 +27,30 @@ export class RatingsService {
   ) { }
 
   // ============================================================================
+  // Helper Methods
+  // ============================================================================
+
+  /**
+   * Check if a user is a substitute player (Player 1-10)
+   * Substitute players should not receive ratings
+   */
+  private isSubstitutePlayer(email: string, name: string): boolean {
+    // Check email pattern: player1@test.com through player10@test.com
+    const emailPattern = /^player([1-9]|10)@test\.com$/i;
+    if (emailPattern.test(email)) {
+      return true;
+    }
+
+    // Also check name pattern as fallback: "Player 1" through "Player 10"
+    const namePattern = /^Player\s+([1-9]|10)$/i;
+    if (namePattern.test(name)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // ============================================================================
   // Glicko-2 Core Algorithm
   // ============================================================================
 
@@ -427,6 +451,17 @@ export class RatingsService {
     tournamentId: string,
     matches: Array<{ opponentId: string; result: MatchResult; matchId: string; isPlayerA: boolean }>
   ) {
+    // Skip rating calculations for substitute players (Player 1-10)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    if (user && this.isSubstitutePlayer(user.email, user.name)) {
+      this.logger.log(`Skipping rating calculation for substitute player ${user.name} (${user.email})`);
+      return;
+    }
+
     // 1. Load Lifetime Rating
     let lifetimeRating = await this.prisma.playerCategoryLifetimeRating.findUnique({
       where: { userId_orgId_category: { userId, orgId, category } },
