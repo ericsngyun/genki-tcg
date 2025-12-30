@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { NotificationBell } from '@/components/NotificationBell';
+import { MobileNav } from '@/components/MobileNav';
 
 const navItems: Array<{ href: string; label: string; icon: string }> = [
   { href: '/dashboard', label: 'Events', icon: '📅' },
@@ -56,10 +57,13 @@ export default function DashboardLayout({
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06]" role="banner">
         <div className="bg-black/80 backdrop-blur-xl">
-          <div className="max-w-[1400px] mx-auto px-6">
+          <div className="max-w-[1400px] mx-auto px-4 md:px-6">
             <div className="flex justify-between items-center h-16">
-              {/* Left: Logo + Nav */}
-              <div className="flex items-center gap-10">
+              {/* Left: Mobile Menu + Logo + Nav */}
+              <div className="flex items-center gap-4 md:gap-10">
+                {/* Mobile Navigation Drawer */}
+                <MobileNav user={user} onLogout={logout} />
+
                 <Link
                   href="/dashboard"
                   className="flex items-center group"
@@ -93,13 +97,13 @@ export default function DashboardLayout({
                 </nav>
               </div>
 
-              {/* Right: Notifications + User */}
+              {/* Right: Notifications + User (hidden on mobile, shown in drawer) */}
               <div className="flex items-center gap-4">
                 <NotificationBell />
 
-                <div className="h-4 w-px bg-white/10" />
+                <div className="hidden md:block h-4 w-px bg-white/10" />
 
-                <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-medium text-white/70">
                     {user.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
@@ -110,7 +114,7 @@ export default function DashboardLayout({
 
                 <button
                   onClick={logout}
-                  className="text-sm text-white/40 hover:text-white/70 transition-colors duration-200 px-3 py-1.5 rounded-md hover:bg-white/[0.05]"
+                  className="hidden md:block text-sm text-white/40 hover:text-white/70 transition-colors duration-200 px-3 py-1.5 rounded-md hover:bg-white/[0.05]"
                   aria-label="Sign out of your account"
                 >
                   Sign Out
@@ -122,7 +126,7 @@ export default function DashboardLayout({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto px-6 py-8" role="main">
+      <main className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-8" role="main">
         {children}
       </main>
     </div>
