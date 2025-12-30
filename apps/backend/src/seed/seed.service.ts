@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -7,10 +8,21 @@ import * as bcrypt from 'bcrypt';
 export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
 
   async seed() {
     this.logger.log('🌱 Seeding database...');
+
+    // Get passwords from environment variables
+    const ownerPasswordPlain = this.configService.get<string>('OWNER_PASSWORD');
+    const staffPasswordPlain = this.configService.get<string>('STAFF_PASSWORD');
+
+    if (!ownerPasswordPlain || !staffPasswordPlain) {
+      throw new Error('OWNER_PASSWORD and STAFF_PASSWORD environment variables are required for seeding');
+    }
 
     // Create Genki organization
     const genkiOrg = await this.prisma.organization.upsert({
@@ -29,12 +41,12 @@ export class SeedService {
     this.logger.log('✅ Created organization:', genkiOrg.name);
 
     // Create owner user
-    const ownerPassword = await bcrypt.hash('password123', 12);
+    const ownerPassword = await bcrypt.hash(ownerPasswordPlain, 12);
     const owner = await this.prisma.user.upsert({
-      where: { email: 'owner@genki-tcg.com' },
+      where: { email: 'owner@genkitcg.app' },
       update: {},
       create: {
-        email: 'owner@genki-tcg.com',
+        email: 'owner@genkitcg.app',
         name: 'Shop Owner',
         passwordHash: ownerPassword,
       },
@@ -58,12 +70,12 @@ export class SeedService {
     this.logger.log('✅ Created owner:', owner.email);
 
     // Create staff user
-    const staffPassword = await bcrypt.hash('password123', 12);
+    const staffPassword = await bcrypt.hash(staffPasswordPlain, 12);
     const staff = await this.prisma.user.upsert({
-      where: { email: 'staff@genki-tcg.com' },
+      where: { email: 'staff@genkitcg.app' },
       update: {},
       create: {
-        email: 'staff@genki-tcg.com',
+        email: 'staff@genkitcg.app',
         name: 'Staff Member',
         passwordHash: staffPassword,
       },
@@ -311,8 +323,8 @@ export class SeedService {
         totalRatings: players.length * gameTypes.length * 2, // Lifetime + Seasonal
       },
       credentials: {
-        owner: 'owner@genki-tcg.com / password123',
-        staff: 'staff@genki-tcg.com / password123',
+        owner: 'owner@genkitcg.app (password from OWNER_PASSWORD env)',
+        staff: 'staff@genkitcg.app (password from STAFF_PASSWORD env)',
         players: 'player1@test.com ... player10@test.com / password123',
         inviteCode: 'GENKI',
       },

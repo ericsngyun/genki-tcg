@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -17,8 +21,20 @@ function generateSecurePassword(length: number = 16): string {
 
 async function main() {
   console.log('🌱 Seeding database...');
-  console.log('⚠️  WARNING: This script creates test accounts for DEVELOPMENT ONLY');
-  console.log('⚠️  DO NOT use these accounts in production environments\n');
+
+  // Get passwords from environment variables
+  const ownerPasswordPlain = process.env.OWNER_PASSWORD;
+  const staffPasswordPlain = process.env.STAFF_PASSWORD;
+
+  if (!ownerPasswordPlain || !staffPasswordPlain) {
+    console.error('❌ ERROR: OWNER_PASSWORD and STAFF_PASSWORD environment variables are required');
+    console.log('Please set these in your .env file:');
+    console.log('  OWNER_PASSWORD=your_secure_owner_password');
+    console.log('  STAFF_PASSWORD=your_secure_staff_password');
+    process.exit(1);
+  }
+
+  console.log('✅ Using passwords from environment variables\n');
 
   // Create Genki organization
   const genkiOrg = await prisma.organization.upsert({
@@ -36,14 +52,13 @@ async function main() {
 
   console.log('✅ Created organization:', genkiOrg.name);
 
-  // Create owner user with secure random password
-  const ownerPasswordPlain = generateSecurePassword();
+  // Create owner user with password from environment
   const ownerPassword = await bcrypt.hash(ownerPasswordPlain, 12);
   const owner = await prisma.user.upsert({
-    where: { email: 'owner@genki-tcg.com' },
+    where: { email: 'owner@genkitcg.app' },
     update: {},
     create: {
-      email: 'owner@genki-tcg.com',
+      email: 'owner@genkitcg.app',
       name: 'Shop Owner',
       passwordHash: ownerPassword,
     },
@@ -66,14 +81,13 @@ async function main() {
 
   console.log('✅ Created owner:', owner.email);
 
-  // Create staff user with secure random password
-  const staffPasswordPlain = generateSecurePassword();
+  // Create staff user with password from environment
   const staffPassword = await bcrypt.hash(staffPasswordPlain, 12);
   const staff = await prisma.user.upsert({
-    where: { email: 'staff@genki-tcg.com' },
+    where: { email: 'staff@genkitcg.app' },
     update: {},
     create: {
-      email: 'staff@genki-tcg.com',
+      email: 'staff@genkitcg.app',
       name: 'Staff Member',
       passwordHash: staffPassword,
     },
@@ -324,18 +338,17 @@ async function main() {
 
   console.log('\n🎉 Seeding complete!');
   console.log('\n' + '='.repeat(80));
-  console.log('📝 TEST CREDENTIALS (Development Only - Store Securely)');
+  console.log('📝 ADMIN CREDENTIALS');
   console.log('='.repeat(80));
-  console.log(`\nOwner Account:\n  Email: owner@genki-tcg.com\n  Password: ${ownerPasswordPlain}`);
-  console.log(`\nStaff Account:\n  Email: staff@genki-tcg.com\n  Password: ${staffPasswordPlain}`);
+  console.log(`\nOwner Account:\n  Email: owner@genkitcg.app\n  Password: (from OWNER_PASSWORD env)`);
+  console.log(`\nStaff Account:\n  Email: staff@genkitcg.app\n  Password: (from STAFF_PASSWORD env)`);
   console.log('\nPlayer Accounts:');
   playerCredentials.forEach((cred, idx) => {
     console.log(`  ${idx + 1}. ${cred.email} / ${cred.password}`);
   });
   console.log(`\nOrganization Invite Code: GENKI`);
   console.log('\n' + '='.repeat(80));
-  console.log('⚠️  SAVE THESE CREDENTIALS - They cannot be recovered!');
-  console.log('⚠️  For production, use password reset flow to set secure passwords');
+  console.log('⚠️  Player credentials are randomly generated - save them if needed!');
   console.log('='.repeat(80) + '\n');
 }
 
