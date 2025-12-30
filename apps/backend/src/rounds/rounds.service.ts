@@ -97,8 +97,8 @@ export class RoundsService {
 
     // Check if there's already an undefeated champion
     // Calculate current standings to check for undefeated players
-    const currentRound = event.rounds.length;
-    if (currentRound >= recommendedRounds) {
+    const completedRoundsCount = event.rounds.length;
+    if (completedRoundsCount >= recommendedRounds) {
       const playerIds = event.entries.map((e) => e.userId);
       const playerNames = new Map(
         event.entries.map((e) => [e.userId, e.user.name])
@@ -126,7 +126,7 @@ export class RoundsService {
 
       const tournamentStatus = getTournamentStatus({
         playerCount,
-        currentRound,
+        currentRound: completedRoundsCount,
         totalRoundsPlanned,
         standings,
         allMatchesReported: true,
