@@ -543,9 +543,6 @@ export default function PlayersPage() {
       {/* Empty State */}
       {!error && !loading && allEntries.length === 0 && (
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-12 text-center">
-          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">🎮</span>
-          </div>
           <h3 className="text-lg font-semibold text-white mb-2">
             {searchQuery ? 'No Players Found' : 'No Rankings Yet'}
           </h3>

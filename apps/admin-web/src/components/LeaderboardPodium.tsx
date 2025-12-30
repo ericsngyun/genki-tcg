@@ -34,7 +34,7 @@ const PODIUM_STYLES = {
     glow: 'shadow-[0_0_60px_-15px_rgba(234,179,8,0.5)]',
     textGlow: 'text-yellow-400',
     ringColor: 'ring-yellow-500/30',
-    icon: '👑',
+    icon: '1',
     height: 'h-56',
     delay: 'delay-200',
     avatarSize: '2xl' as const,
@@ -45,7 +45,7 @@ const PODIUM_STYLES = {
     glow: 'shadow-[0_0_50px_-15px_rgba(148,163,184,0.4)]',
     textGlow: 'text-slate-300',
     ringColor: 'ring-slate-400/30',
-    icon: '🥈',
+    icon: '2',
     height: 'h-40',
     delay: 'delay-300',
     avatarSize: 'xl' as const,
@@ -56,7 +56,7 @@ const PODIUM_STYLES = {
     glow: 'shadow-[0_0_50px_-15px_rgba(194,65,12,0.4)]',
     textGlow: 'text-orange-400',
     ringColor: 'ring-orange-600/30',
-    icon: '🥉',
+    icon: '3',
     height: 'h-36',
     delay: 'delay-500',
     avatarSize: 'xl' as const,
@@ -95,9 +95,10 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
           <div className="absolute -top-7 left-1/2 -translate-x-1/2">
             <div
               className={`
-                w-14 h-14 rounded-full border-3 flex items-center justify-center text-3xl
+                w-14 h-14 rounded-full border-3 flex items-center justify-center text-2xl font-bold
                 bg-background shadow-xl ring-2 ${style.ringColor}
                 ${style.border} transition-transform group-hover:scale-110 group-hover:rotate-6
+                ${style.textGlow}
               `}
             >
               {style.icon}
@@ -168,7 +169,6 @@ export function LeaderboardPodium({ topThree, seasonName, onPlayerClick }: Leade
   if (topThree.length === 0) {
     return (
       <div className="bg-card/50 border border-border rounded-2xl p-12 text-center animate-in fade-in zoom-in duration-500">
-        <div className="text-5xl mb-4">🏆</div>
         <h3 className="text-xl font-bold text-foreground mb-2">No Rankings Yet</h3>
         <p className="text-muted-foreground">
           Complete tournaments to see the top players appear on the podium.
