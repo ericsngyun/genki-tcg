@@ -9,9 +9,10 @@ export type Category = GameType;
 /**
  * Player tiers based on seasonal rating
  * Players only see tiers, never numeric ratings
+ *
+ * SPROUT tier removed - all players start and stay at BRONZE minimum
  */
 export type PlayerTier =
-    | 'SPROUT'
     | 'BRONZE'
     | 'SILVER'
     | 'GOLD'
@@ -25,10 +26,10 @@ export type PlayerTier =
  *
  * Updated to provide more meaningful progression:
  * - Wider tier ranges to prevent single-tournament tier jumps
- * - Lower starting tier (BRONZE) to reward progression
+ * - SPROUT tier removed - all players start at BRONZE (1200)
+ * - Rating floor enforced at 1200 to prevent severe drops
  */
 export const TIER_THRESHOLDS = {
-    SPROUT: { min: 0, max: 1199 },
     BRONZE: { min: 1200, max: 1399 },
     SILVER: { min: 1400, max: 1599 },
     GOLD: { min: 1600, max: 1799 },
@@ -41,10 +42,11 @@ export const TIER_THRESHOLDS = {
  * Map a Glicko-2 rating to its corresponding tier
  * @param rating - Player's seasonal rating
  * @returns The tier the player belongs to
+ *
+ * Note: Minimum tier is BRONZE (1200) - ratings below 1200 are still shown as BRONZE
  */
 export function mapRatingToTier(rating: number): PlayerTier {
-    if (rating < 1200) return 'SPROUT';
-    if (rating < 1400) return 'BRONZE';
+    if (rating < 1400) return 'BRONZE'; // Floor at BRONZE, no SPROUT tier
     if (rating < 1600) return 'SILVER';
     if (rating < 1800) return 'GOLD';
     if (rating < 2000) return 'PLATINUM';
@@ -116,12 +118,14 @@ export const SEASONAL_LOSS_CAP = {
  * Updated for fairer progression:
  * - initialRating: 1200 (down from 1500) - Players start at BRONZE tier
  * - initialRD: 250 (down from 350) - Reduced volatility for more stable progression
+ * - minimumRating: 1200 - Floor to prevent severe rating drops
  * - Prevents single-tournament tier jumps while maintaining rating accuracy
  */
 export const GLICKO2_DEFAULTS = {
     initialRating: 1200,
     initialRD: 250,
     minRD: 50,
+    minimumRating: 1200, // Rating floor - players cannot drop below BRONZE
     initialVolatility: 0.06,
     tau: 0.5, // System volatility constraint
 } as const;
@@ -139,13 +143,12 @@ export function getTierChange(
     newTier: PlayerTier
 ): TierChangeDirection {
     const tierRank: Record<PlayerTier, number> = {
-        SPROUT: 0,
-        BRONZE: 1,
-        SILVER: 2,
-        GOLD: 3,
-        PLATINUM: 4,
-        DIAMOND: 5,
-        GENKI: 6,
+        BRONZE: 0,
+        SILVER: 1,
+        GOLD: 2,
+        PLATINUM: 3,
+        DIAMOND: 4,
+        GENKI: 5,
     };
 
     const oldRank = tierRank[oldTier];

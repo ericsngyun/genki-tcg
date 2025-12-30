@@ -529,7 +529,13 @@ export class RatingsService {
       };
     });
 
-    const newLifetime = this.calculateNewRating(lifetimeRating, lifetimeMatches);
+    const calculatedLifetime = this.calculateNewRating(lifetimeRating, lifetimeMatches);
+
+    // Enforce rating floor at minimum rating (1200 BRONZE)
+    const newLifetime = {
+      ...calculatedLifetime,
+      rating: Math.max(calculatedLifetime.rating, GLICKO2_DEFAULTS.minimumRating),
+    };
 
     // 5. Calculate New Seasonal Rating
     let newSeasonal = null;
@@ -568,6 +574,9 @@ export class RatingsService {
           this.logger.log(`Applied loss cap for user ${userId}: ${rawDelta} -> ${-SEASONAL_LOSS_CAP.maxLoss}`);
         }
       }
+
+      // Enforce rating floor at minimum rating (1200 BRONZE)
+      finalSeasonalRating = Math.max(finalSeasonalRating, GLICKO2_DEFAULTS.minimumRating);
 
       newSeasonal = {
         ...calculatedSeasonal,
