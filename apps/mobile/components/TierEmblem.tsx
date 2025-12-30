@@ -12,7 +12,6 @@ import Svg, {
 } from 'react-native-svg';
 
 export type PlayerTier =
-    | 'SPROUT'
     | 'BRONZE'
     | 'SILVER'
     | 'GOLD'
@@ -35,13 +34,6 @@ export const TIER_COLORS: Record<PlayerTier, {
     glow: string;
     shine: string;
 }> = {
-    SPROUT: {
-        primary: '#4CAF50',
-        secondary: '#2E7D32',
-        accent: '#81C784',
-        glow: 'rgba(76, 175, 80, 0.4)',
-        shine: '#C8E6C9',
-    },
     BRONZE: {
         primary: '#CD7F32',
         secondary: '#8B4513',
@@ -97,57 +89,6 @@ export const TIER_COLORS: Record<PlayerTier, {
 const useUniqueId = (prefix: string) => {
     return useMemo(() => `${prefix}-${Math.random().toString(36).substr(2, 9)}`, [prefix]);
 };
-
-// Sprout tier - Simple leaf wreath
-function SproutEmblem({ size, colors }: { size: number; colors: typeof TIER_COLORS.SPROUT }) {
-    const id = useUniqueId('sprout');
-    const strokeWidth = size * 0.025;
-    const center = size / 2;
-    const radius = size / 2 - strokeWidth;
-
-    return (
-        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <Defs>
-                <LinearGradient id={`${id}-border`} x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0%" stopColor={colors.secondary} />
-                    <Stop offset="50%" stopColor={colors.primary} />
-                    <Stop offset="100%" stopColor={colors.secondary} />
-                </LinearGradient>
-                <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.5">
-                    <Stop offset="0%" stopColor={colors.glow} />
-                    <Stop offset="100%" stopColor="transparent" />
-                </RadialGradient>
-            </Defs>
-
-            <Circle cx={center} cy={center} r={radius + 2} fill={`url(#${id}-glow)`} />
-            <Circle
-                cx={center}
-                cy={center}
-                r={radius - strokeWidth / 2}
-                stroke={`url(#${id}-border)`}
-                strokeWidth={strokeWidth * 1.5}
-                fill="none"
-            />
-
-            <G transform={`translate(${center}, ${center})`}>
-                <Path
-                    d={`M${-radius * 0.85} ${radius * 0.1} Q${-radius * 0.6} ${-radius * 0.3} ${-radius * 0.4} ${-radius * 0.1}`}
-                    stroke={colors.accent}
-                    strokeWidth={strokeWidth * 0.8}
-                    fill="none"
-                    strokeLinecap="round"
-                />
-                <Path
-                    d={`M${radius * 0.85} ${radius * 0.1} Q${radius * 0.6} ${-radius * 0.3} ${radius * 0.4} ${-radius * 0.1}`}
-                    stroke={colors.accent}
-                    strokeWidth={strokeWidth * 0.8}
-                    fill="none"
-                    strokeLinecap="round"
-                />
-            </G>
-        </Svg>
-    );
-}
 
 // Bronze tier - Shield emblem with studs
 function BronzeEmblem({ size, colors }: { size: number; colors: typeof TIER_COLORS.BRONZE }) {
@@ -634,8 +575,6 @@ export function TierEmblem({ tier, size, style }: TierEmblemProps) {
 
     const renderEmblem = () => {
         switch (tier) {
-            case 'SPROUT':
-                return <SproutEmblem size={size} colors={colors} />;
             case 'BRONZE':
                 return <BronzeEmblem size={size} colors={colors} />;
             case 'SILVER':

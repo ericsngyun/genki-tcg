@@ -77,7 +77,6 @@ function getGameImagePath(gameType: string) {
 
 // Player Tier type
 type PlayerTier =
-  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -88,13 +87,12 @@ type PlayerTier =
 
 // Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2100) return 'GENKI';
-  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 2150) return 'GENKI';
+  if (rating >= 1950) return 'DIAMOND';
   if (rating >= 1750) return 'PLATINUM';
-  if (rating >= 1600) return 'GOLD';
-  if (rating >= 1450) return 'SILVER';
-  if (rating >= 1300) return 'BRONZE';
-  if (rating >= 0) return 'SPROUT';
+  if (rating >= 1550) return 'GOLD';
+  if (rating >= 1350) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
   return 'UNRANKED';
 }
 
@@ -106,7 +104,6 @@ const TIER_LABELS: Record<PlayerTier, string> = {
   GOLD: 'Gold',
   SILVER: 'Silver',
   BRONZE: 'Bronze',
-  SPROUT: 'Sprout',
   UNRANKED: 'Unranked',
 };
 
@@ -118,7 +115,6 @@ const TIER_CONFIG: Record<PlayerTier, { color: string; bg: string }> = {
   GOLD: { color: '#FFD700', bg: 'rgba(255, 215, 0, 0.15)' },
   SILVER: { color: '#C0C0C0', bg: 'rgba(192, 192, 192, 0.15)' },
   BRONZE: { color: '#CD7F32', bg: 'rgba(205, 127, 50, 0.15)' },
-  SPROUT: { color: '#4CAF50', bg: 'rgba(76, 175, 80, 0.15)' },
   UNRANKED: { color: '#78909C', bg: 'rgba(120, 144, 156, 0.15)' },
 };
 

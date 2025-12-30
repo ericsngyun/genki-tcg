@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
 
 export type PlayerTier =
-  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -13,24 +12,22 @@ export type PlayerTier =
 
 // Tier thresholds (synced with backend)
 const TIER_THRESHOLDS = {
-  SPROUT: { min: 0, max: 1299 },
-  BRONZE: { min: 1300, max: 1449 },
-  SILVER: { min: 1450, max: 1599 },
-  GOLD: { min: 1600, max: 1749 },
-  PLATINUM: { min: 1750, max: 1899 },
-  DIAMOND: { min: 1900, max: 2099 },
-  GENKI: { min: 2100, max: Infinity },
+  BRONZE: { min: 1200, max: 1349 },
+  SILVER: { min: 1350, max: 1549 },
+  GOLD: { min: 1550, max: 1749 },
+  PLATINUM: { min: 1750, max: 1949 },
+  DIAMOND: { min: 1950, max: 2149 },
+  GENKI: { min: 2150, max: Infinity },
 } as const;
 
 // Map rating to tier
 export function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2100) return 'GENKI';
-  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 2150) return 'GENKI';
+  if (rating >= 1950) return 'DIAMOND';
   if (rating >= 1750) return 'PLATINUM';
-  if (rating >= 1600) return 'GOLD';
-  if (rating >= 1450) return 'SILVER';
-  if (rating >= 1300) return 'BRONZE';
-  if (rating >= 0) return 'SPROUT';
+  if (rating >= 1550) return 'GOLD';
+  if (rating >= 1350) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
   return 'UNRANKED';
 }
 
@@ -42,8 +39,7 @@ const BORDER_IMAGES = {
   GOLD: require('../assets/ranked-borders/gold.png'),
   SILVER: require('../assets/ranked-borders/silver.png'),
   BRONZE: require('../assets/ranked-borders/bronze.png'),
-  SPROUT: require('../assets/ranked-borders/sprout.png'),
-  UNRANKED: require('../assets/ranked-borders/sprout.png'), // Use sprout for unranked
+  UNRANKED: require('../assets/ranked-borders/bronze.png'), // Use bronze for unranked
 };
 
 interface RankedAvatarProps {
@@ -71,19 +67,15 @@ export function RankedAvatar({
   // Get initial for fallback
   const initial = name?.charAt(0)?.toUpperCase() || '?';
 
-  // Get border image (use null for SPROUT and UNRANKED)
-  const borderImage = tier === 'SPROUT' || tier === 'UNRANKED' ? null : BORDER_IMAGES[tier];
-
-  // Determine if we should show a simple green border for SPROUT
-  const showSproutBorder = showBorder && tier === 'SPROUT';
+  // Get border image (all tiers now have border images)
+  const borderImage = BORDER_IMAGES[tier];
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
       {/* Avatar */}
       <View style={[
         styles.avatarContainer,
-        { width: size, height: size, borderRadius: size / 2 },
-        showSproutBorder && { borderWidth: 3, borderColor: '#10b981' }
+        { width: size, height: size, borderRadius: size / 2 }
       ]}>
         {avatarUrl ? (
           <Image

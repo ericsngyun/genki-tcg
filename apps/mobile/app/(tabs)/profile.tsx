@@ -80,7 +80,6 @@ const GAME_TYPE_COLORS: Record<string, { gradient: readonly [string, string] }> 
 
 // Player Tier type
 type PlayerTier =
-  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -91,24 +90,22 @@ type PlayerTier =
 
 // Tier thresholds (synced with backend)
 const TIER_THRESHOLDS = {
-  SPROUT: { min: 0, max: 1299 },
-  BRONZE: { min: 1300, max: 1449 },
-  SILVER: { min: 1450, max: 1599 },
-  GOLD: { min: 1600, max: 1749 },
-  PLATINUM: { min: 1750, max: 1899 },
-  DIAMOND: { min: 1900, max: 2099 },
-  GENKI: { min: 2100, max: Infinity },
+  BRONZE: { min: 1200, max: 1349 },
+  SILVER: { min: 1350, max: 1549 },
+  GOLD: { min: 1550, max: 1749 },
+  PLATINUM: { min: 1750, max: 1949 },
+  DIAMOND: { min: 1950, max: 2149 },
+  GENKI: { min: 2150, max: Infinity },
 } as const;
 
 // Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2100) return 'GENKI';
-  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 2150) return 'GENKI';
+  if (rating >= 1950) return 'DIAMOND';
   if (rating >= 1750) return 'PLATINUM';
-  if (rating >= 1600) return 'GOLD';
-  if (rating >= 1450) return 'SILVER';
-  if (rating >= 1300) return 'BRONZE';
-  if (rating >= 0) return 'SPROUT';
+  if (rating >= 1550) return 'GOLD';
+  if (rating >= 1350) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
   return 'UNRANKED';
 }
 
@@ -125,7 +122,7 @@ function getTierProgress(rating: number): { progress: number; nextTier: PlayerTi
   const currentProgress = rating - threshold.min;
   const progress = Math.min(100, Math.max(0, (currentProgress / tierRange) * 100));
 
-  const tierOrder: PlayerTier[] = ['SPROUT', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'GENKI'];
+  const tierOrder: PlayerTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'GENKI'];
   const currentIndex = tierOrder.indexOf(tier);
   const nextTier = currentIndex < tierOrder.length - 1 ? tierOrder[currentIndex + 1] : null;
   const pointsToNext = threshold.max - rating + 1;
@@ -141,7 +138,6 @@ const TIER_DISPLAY: Record<PlayerTier, { label: string }> = {
   GOLD: { label: 'Gold' },
   SILVER: { label: 'Silver' },
   BRONZE: { label: 'Bronze' },
-  SPROUT: { label: 'Sprout' },
   UNRANKED: { label: 'Unranked' },
 };
 

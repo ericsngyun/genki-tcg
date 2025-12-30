@@ -24,7 +24,6 @@ export const BORDER_PREFERENCE_KEY = 'profile_border_game';
 
 // Player Tier type
 type PlayerTier =
-  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -35,13 +34,12 @@ type PlayerTier =
 
 // Map rating to tier (synced with backend thresholds)
 function mapRatingToTier(rating: number): PlayerTier {
-  if (rating >= 2100) return 'GENKI';
-  if (rating >= 1900) return 'DIAMOND';
+  if (rating >= 2150) return 'GENKI';
+  if (rating >= 1950) return 'DIAMOND';
   if (rating >= 1750) return 'PLATINUM';
-  if (rating >= 1600) return 'GOLD';
-  if (rating >= 1450) return 'SILVER';
-  if (rating >= 1300) return 'BRONZE';
-  if (rating >= 0) return 'SPROUT';
+  if (rating >= 1550) return 'GOLD';
+  if (rating >= 1350) return 'SILVER';
+  if (rating >= 1200) return 'BRONZE';
   return 'UNRANKED';
 }
 
