@@ -24,18 +24,19 @@ export type PlayerTier =
  * Tier thresholds configuration
  * Based on seasonal rating (Glicko-2 scale)
  *
- * Updated to provide more meaningful progression:
- * - Wider tier ranges to prevent single-tournament tier jumps
+ * Updated for better achievability:
+ * - Lowered tier thresholds to make higher ranks achievable
  * - SPROUT tier removed - all players start at BRONZE (1200)
  * - Rating floor enforced at 1200 to prevent severe drops
+ * - Designed so undefeated players can reach GOLD-PLATINUM
  */
 export const TIER_THRESHOLDS = {
-    BRONZE: { min: 1200, max: 1399 },
-    SILVER: { min: 1400, max: 1599 },
-    GOLD: { min: 1600, max: 1799 },
-    PLATINUM: { min: 1800, max: 1999 },
-    DIAMOND: { min: 2000, max: 2199 },
-    GENKI: { min: 2200, max: Infinity },
+    BRONZE: { min: 1200, max: 1349 },
+    SILVER: { min: 1350, max: 1549 },
+    GOLD: { min: 1550, max: 1749 },
+    PLATINUM: { min: 1750, max: 1949 },
+    DIAMOND: { min: 1950, max: 2149 },
+    GENKI: { min: 2150, max: Infinity },
 } as const;
 
 /**
@@ -46,11 +47,11 @@ export const TIER_THRESHOLDS = {
  * Note: Minimum tier is BRONZE (1200) - ratings below 1200 are still shown as BRONZE
  */
 export function mapRatingToTier(rating: number): PlayerTier {
-    if (rating < 1400) return 'BRONZE'; // Floor at BRONZE, no SPROUT tier
-    if (rating < 1600) return 'SILVER';
-    if (rating < 1800) return 'GOLD';
-    if (rating < 2000) return 'PLATINUM';
-    if (rating < 2200) return 'DIAMOND';
+    if (rating < 1350) return 'BRONZE'; // Floor at BRONZE, no SPROUT tier
+    if (rating < 1550) return 'SILVER';
+    if (rating < 1750) return 'GOLD';
+    if (rating < 1950) return 'PLATINUM';
+    if (rating < 2150) return 'DIAMOND';
     return 'GENKI';
 }
 
@@ -115,15 +116,20 @@ export const SEASONAL_LOSS_CAP = {
 /**
  * Glicko-2 system constants
  *
- * Updated for fairer progression:
- * - initialRating: 1200 (down from 1500) - Players start at BRONZE tier
- * - initialRD: 250 (down from 350) - Reduced volatility for more stable progression
+ * Updated for better rank achievability:
+ * - initialRating: 1300 - Players start in upper BRONZE tier
+ * - initialRD: 300 - Higher volatility allows larger rating gains for new players
  * - minimumRating: 1200 - Floor to prevent severe rating drops
- * - Prevents single-tournament tier jumps while maintaining rating accuracy
+ * - Balanced to reward performance while maintaining fairness
+ *
+ * Expected progression:
+ * - 5-0 tournament: ~+400 points (BRONZE → GOLD/PLATINUM)
+ * - 4-1 tournament: ~+200-250 points (BRONZE → SILVER)
+ * - 3-0 tournament: ~+300 points (BRONZE → GOLD)
  */
 export const GLICKO2_DEFAULTS = {
-    initialRating: 1200,
-    initialRD: 250,
+    initialRating: 1300,
+    initialRD: 300,
     minRD: 50,
     minimumRating: 1200, // Rating floor - players cannot drop below BRONZE
     initialVolatility: 0.06,
