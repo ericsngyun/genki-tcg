@@ -95,6 +95,50 @@ export class RoundsService {
       );
     }
 
+    // Check if there's already an undefeated champion
+    // Calculate current standings to check for undefeated players
+    const currentRound = event.rounds.length;
+    if (currentRound >= recommendedRounds) {
+      const playerIds = event.entries.map((e) => e.userId);
+      const playerNames = new Map(
+        event.entries.map((e) => [e.userId, e.user.name])
+      );
+      const droppedPlayers = new Set(
+        event.entries.filter((e) => e.droppedAt).map((e) => e.userId)
+      );
+
+      const allMatches = event.rounds.flatMap((r) =>
+        r.matches.map((m) => ({
+          playerAId: m.playerAId,
+          playerBId: m.playerBId,
+          result: m.result,
+          gamesWonA: m.gamesWonA ?? 0,
+          gamesWonB: m.gamesWonB ?? 0,
+        }))
+      );
+
+      const standings = calculateStandings({
+        playerIds,
+        playerNames,
+        matches: allMatches,
+        droppedPlayers,
+      });
+
+      const tournamentStatus = getTournamentStatus({
+        playerCount,
+        currentRound,
+        totalRoundsPlanned,
+        standings,
+        allMatchesReported: true,
+      });
+
+      if (tournamentStatus.isComplete) {
+        throw new BadRequestException(
+          `Tournament is complete. ${tournamentStatus.reason ?? 'Cannot create more rounds.'}`
+        );
+      }
+    }
+
     // Get player records from actual match history
     const playerIds = event.entries.map((e) => e.userId);
     const playerNames = new Map(
