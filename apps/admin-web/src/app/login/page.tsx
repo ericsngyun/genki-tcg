@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
@@ -56,7 +55,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.1] rounded-lg focus:border-white/20 focus:bg-white/[0.04] outline-none transition-colors text-white placeholder:text-white/30"
-                placeholder="owner@genki-tcg.com"
+                placeholder="owner@genkitcg.app"
                 required
               />
             </div>
@@ -100,24 +99,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-4 text-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-white/40 hover:text-white/60 transition-colors"
-            >
-              Forgot your password?
-            </Link>
-          </div>
-
-          <div className="mt-6 p-4 bg-white/[0.02] border border-white/[0.04] rounded-lg">
-            <p className="text-xs text-white/40">
-              <span className="text-white/60 font-medium">Test accounts:</span><br />
-              Owner: owner@genki-tcg.com<br />
-              Staff: staff@genki-tcg.com<br />
-              Password: password123
-            </p>
-          </div>
         </div>
       </div>
     </div>
