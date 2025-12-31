@@ -178,7 +178,8 @@ export default function LeaderboardTab() {
     const [first, second, third] = leaderboardData.slice(0, 3);
 
     const PodiumPlayer = ({ player, position, size }: { player: any; position: 1 | 2 | 3; size: 'large' | 'small' }) => {
-      const tier = mapRatingToTier(player.lifetimeRating);
+      // Use tier from backend if available, otherwise calculate locally
+      const tier = player.tier || mapRatingToTier(player.lifetimeRating);
       const tierConfig = TIER_CONFIG[tier];
       const podiumColor = PODIUM_COLORS[position];
       const avatarSize = size === 'large' ? 80 : 60;
@@ -251,7 +252,8 @@ export default function LeaderboardTab() {
 
   // Rank Item Component
   const RankItem = ({ player, rank, index, isCurrentUser }: { player: any; rank: number; index: number; isCurrentUser?: boolean }) => {
-    const tier = mapRatingToTier(player.lifetimeRating);
+    // Use tier from backend if available, otherwise calculate locally
+    const tier = player.tier || mapRatingToTier(player.lifetimeRating);
     const tierConfig = TIER_CONFIG[tier];
     const winRate = player.matchesPlayed > 0
       ? Math.round((player.matchWins / player.matchesPlayed) * 100)

@@ -277,7 +277,8 @@ export default function ProfileScreen() {
     );
 
     return {
-      tier: mapRatingToTier(highestRank.rating),
+      // Use tier from backend if available, otherwise calculate locally
+      tier: highestRank.tier || mapRatingToTier(highestRank.rating),
       gameType: highestRank.gameType,
       gameName: GAME_TYPE_LABELS[highestRank.gameType] || highestRank.gameType,
       rating: highestRank.rating,
@@ -289,12 +290,16 @@ export default function ProfileScreen() {
     const ranksToUse = lifetimeRanks.length > 0 ? lifetimeRanks : ranks;
     if (borderPreference === 'HIGHEST' || ranksToUse.length === 0) {
       if (ranksToUse.length === 0) return 'UNRANKED';
-      const highestRating = Math.max(...ranksToUse.map(r => r.rating));
-      return mapRatingToTier(highestRating);
+      // Find the rank with highest rating and use its tier from backend
+      const highestRank = ranksToUse.reduce((highest, current) =>
+        current.rating > highest.rating ? current : highest
+      );
+      return highestRank.tier || mapRatingToTier(highestRank.rating);
     }
     const gameRank = ranksToUse.find(r => r.gameType === borderPreference);
     if (!gameRank) return 'UNRANKED';
-    return mapRatingToTier(gameRank.rating);
+    // Use tier from backend if available
+    return gameRank.tier || mapRatingToTier(gameRank.rating);
   }, [ranks, lifetimeRanks, borderPreference]);
 
   const tierColors = TIER_COLORS[displayTier];
@@ -561,7 +566,8 @@ export default function ProfileScreen() {
 
               {(ratingView === 'seasonal' ? ranks : lifetimeRanks).length > 0 ? (
                 (ratingView === 'seasonal' ? ranks : lifetimeRanks).map((rank, index) => {
-                  const tier = mapRatingToTier(rank.rating);
+                  // Use tier from backend if available, otherwise calculate locally
+                  const tier = rank.tier || mapRatingToTier(rank.rating);
                   const tierColor = TIER_COLORS[tier];
                   const tierInfo = TIER_DISPLAY[tier];
                   const tierProgress = getTierProgress(rank.rating);

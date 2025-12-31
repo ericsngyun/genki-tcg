@@ -161,16 +161,18 @@ export default function EditProfileScreen() {
     }
   };
 
-  // Get tier based on selection
+  // Get tier based on selection - use backend tier if available
   const getDisplayTier = (): PlayerTier => {
     if (selectedBorderGame === 'HIGHEST') {
       if (ranks.length === 0) return 'UNRANKED';
-      const highestRating = Math.max(...ranks.map(r => r.rating));
-      return mapRatingToTier(highestRating);
+      const highestRank = ranks.reduce((highest, current) =>
+        current.rating > highest.rating ? current : highest
+      );
+      return highestRank.tier || mapRatingToTier(highestRank.rating);
     }
     const gameRank = ranks.find(r => r.gameType === selectedBorderGame);
     if (!gameRank) return 'UNRANKED';
-    return mapRatingToTier(gameRank.rating);
+    return gameRank.tier || mapRatingToTier(gameRank.rating);
   };
 
   const displayTier = getDisplayTier();
@@ -235,9 +237,12 @@ export default function EditProfileScreen() {
               const gameRank = option.value === 'HIGHEST'
                 ? null
                 : ranks.find(r => r.gameType === option.value);
+              // Use tier from backend if available
               const optionTier = option.value === 'HIGHEST'
-                ? (ranks.length > 0 ? mapRatingToTier(Math.max(...ranks.map(r => r.rating))) : 'UNRANKED')
-                : (gameRank ? mapRatingToTier(gameRank.rating) : 'UNRANKED');
+                ? (ranks.length > 0
+                    ? (ranks.reduce((h, c) => c.rating > h.rating ? c : h).tier || mapRatingToTier(Math.max(...ranks.map(r => r.rating))))
+                    : 'UNRANKED')
+                : (gameRank ? (gameRank.tier || mapRatingToTier(gameRank.rating)) : 'UNRANKED');
 
               return (
                 <TouchableOpacity
