@@ -376,22 +376,31 @@ export default function EventDetailPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-white/[0.06]">
-          {event.rounds.length === 0 ? (
-            <button
-              onClick={handleCreateRound}
-              disabled={checkedInCount < 2}
-              className="bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
-            >
-              Start Tournament
-            </button>
-          ) : (
-            <button
-              onClick={handleCreateRound}
-              disabled={checkedInCount < 2}
-              className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
-            >
-              Create Round {event.rounds.length + 1}
-            </button>
+          {event.status !== 'COMPLETED' && event.status !== 'CANCELLED' && (
+            <>
+              {event.rounds.length === 0 ? (
+                <button
+                  onClick={handleCreateRound}
+                  disabled={checkedInCount < 2}
+                  className="bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                >
+                  Start Tournament
+                </button>
+              ) : (
+                <button
+                  onClick={handleCreateRound}
+                  disabled={checkedInCount < 2}
+                  className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                >
+                  Create Round {event.rounds.length + 1}
+                </button>
+              )}
+            </>
+          )}
+          {event.status === 'COMPLETED' && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-5 py-2.5 rounded-lg font-medium">
+              Tournament Complete
+            </div>
           )}
           {(event.status === 'SCHEDULED' || event.status === 'IN_PROGRESS') && (
             <button
