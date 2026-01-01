@@ -48,6 +48,10 @@ export class MatchesService {
       throw new ForbiddenException('Access denied to this match');
     }
 
+    // Validate match result consistency
+    const isBo3 = isBo3Format(match.round.event.game);
+    validateMatchResult(result, gamesWonA, gamesWonB, isBo3);
+
     // Update match result
     // Staff reports are auto-confirmed (don't need opponent confirmation)
     const updatedMatch = await this.prisma.match.update({
@@ -184,6 +188,10 @@ export class MatchesService {
     if (match.round.event.orgId !== userOrgId) {
       throw new ForbiddenException('Access denied to this match');
     }
+
+    // Validate match result consistency
+    const isBo3 = isBo3Format(match.round.event.game);
+    validateMatchResult(result, gamesWonA, gamesWonB, isBo3);
 
     // Update match result with override tracking
     // Set both reportedBy and confirmedBy to ensure consistency with round completion checks
