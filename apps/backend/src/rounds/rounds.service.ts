@@ -198,6 +198,10 @@ export class RoundsService {
         },
       });
 
+      // Determine games won for BYE based on game format
+      // RIFTBOUND is BO3 (2-0), ONE_PIECE_TCG and AZUKI_TCG are BO1 (1-0)
+      const byeGamesWon = event.game === 'RIFTBOUND' ? 2 : 1;
+
       const matches = await Promise.all(
         pairingResult.pairings.map((pairing) =>
           tx.match.create({
@@ -209,7 +213,7 @@ export class RoundsService {
               // Auto-report bye matches
               ...(pairing.playerBId === null && {
                 result: 'PLAYER_A_WIN',
-                gamesWonA: 2,
+                gamesWonA: byeGamesWon,
                 gamesWonB: 0,
                 reportedAt: new Date(),
               }),
@@ -768,6 +772,9 @@ export class RoundsService {
         },
       });
 
+      // BYE matches: 2-0 for BO3 (RIFTBOUND), 1-0 for BO1 (AZUKI, ONE_PIECE_TCG)
+      const byeGamesWon = round.event.game === 'RIFTBOUND' ? 2 : 1;
+
       // Create new matches
       const matches = await Promise.all(
         pairingResult.pairings.map((pairing) =>
@@ -780,7 +787,7 @@ export class RoundsService {
               // Auto-report bye matches
               ...(pairing.playerBId === null && {
                 result: 'PLAYER_A_WIN',
-                gamesWonA: 2,
+                gamesWonA: byeGamesWon,
                 gamesWonB: 0,
                 reportedAt: new Date(),
               }),
