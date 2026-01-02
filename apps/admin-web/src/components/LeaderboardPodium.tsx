@@ -1,8 +1,8 @@
 import { TierBadge } from './TierBadge';
+import { PlayerAvatar } from './PlayerAvatar';
 import { TIER_COLORS } from './TierEmblem';
 
 type PlayerTier =
-  | 'SPROUT'
   | 'BRONZE'
   | 'SILVER'
   | 'GOLD'
@@ -109,15 +109,12 @@ function PodiumCard({ player, rank, onClick }: { player: LeaderEntry; rank: 1 | 
           <div className="mt-8 text-center space-y-4">
             {/* Avatar */}
             <div className="flex justify-center">
-              <div className={`${style.avatarSize === '2xl' ? 'w-24 h-24' : 'w-20 h-20'} rounded-full bg-muted flex items-center justify-center overflow-hidden ring-4 ${style.ringColor}`}>
-                {player.userAvatar ? (
-                  <img src={player.userAvatar} alt={player.userName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className={`${style.avatarSize === '2xl' ? 'text-3xl' : 'text-2xl'} font-bold text-muted-foreground`}>
-                    {player.userName.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <PlayerAvatar
+                name={player.userName}
+                avatarUrl={player.userAvatar}
+                tier={player.tier}
+                size={style.avatarSize}
+              />
             </div>
 
             {/* Name */}
