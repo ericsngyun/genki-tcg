@@ -1272,9 +1272,9 @@ export class AuthService {
 
   /**
    * Update user profile information.
-   * Currently supports updating the display name.
+   * Supports updating the display name and avatar URL.
    */
-  async updateProfile(userId: string, updates: { name?: string }): Promise<{ user: any; message: string }> {
+  async updateProfile(userId: string, updates: { name?: string; avatarUrl?: string }): Promise<{ user: any; message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -1294,10 +1294,27 @@ export class AuthService {
       }
     }
 
+    // Validate avatarUrl if provided
+    if (updates.avatarUrl !== undefined) {
+      // Allow empty string to clear avatar, or validate URL format
+      if (updates.avatarUrl && updates.avatarUrl.length > 0) {
+        try {
+          new URL(updates.avatarUrl);
+        } catch {
+          throw new BadRequestException('Invalid avatar URL format');
+        }
+        // Limit URL length
+        if (updates.avatarUrl.length > 2048) {
+          throw new BadRequestException('Avatar URL is too long');
+        }
+      }
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
         ...(updates.name && { name: updates.name.trim() }),
+        ...(updates.avatarUrl !== undefined && { avatarUrl: updates.avatarUrl || null }),
       },
     });
 

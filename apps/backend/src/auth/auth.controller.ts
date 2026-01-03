@@ -109,7 +109,7 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 updates per minute
   async updateProfile(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() updates: { name?: string },
+    @Body() updates: { name?: string; avatarUrl?: string },
   ) {
     return this.authService.updateProfile(user.id, updates);
   }

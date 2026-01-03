@@ -8,16 +8,57 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../lib/theme';
 import { shadows } from '../lib/shadows';
 import { api } from '../lib/api';
 import { logger } from '../lib/logger';
 import { TIER_COLORS } from '../components/TierEmblem';
 import { RankedAvatar } from '../components';
+
+// Cloudinary configuration for image uploads
+// Set these environment variables for image hosting:
+// EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME - Your Cloudinary cloud name
+// EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET - Unsigned upload preset name
+const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+async function uploadImageToCloudinary(base64Image: string): Promise<string | null> {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    logger.warn('Cloudinary not configured - image upload disabled');
+    return null;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('file', `data:image/jpeg;base64,${base64Image}`);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    if (data.secure_url) {
+      return data.secure_url;
+    }
+    logger.error('Cloudinary upload failed:', data);
+    return null;
+  } catch (error) {
+    logger.error('Failed to upload image to Cloudinary:', error);
+    return null;
+  }
+}
 
 // Storage key for border preference
 export const BORDER_PREFERENCE_KEY = 'profile_border_game';
@@ -69,8 +110,10 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [ranks, setRanks] = useState<GameRank[]>([]);
   const [selectedBorderGame, setSelectedBorderGame] = useState('HIGHEST');
 
@@ -88,6 +131,7 @@ export default function EditProfileScreen() {
       const userData = userResponse.user || userResponse;
       setUser(userData);
       setName(userData.name || '');
+      setAvatarUrl(userData.avatarUrl || undefined);
 
       // Map categories to ranks format (category -> gameType)
       if (ratingsResponse?.categories) {
@@ -130,15 +174,131 @@ export default function EditProfileScreen() {
     }
   };
 
+  const pickImage = async (useCamera: boolean = false) => {
+    try {
+      // Request permissions
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
+          return;
+        }
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Photo library permission is needed to select photos.');
+          return;
+        }
+      }
+
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
+        allowsEditing: true, // Enables cropping with circular guide
+        aspect: [1, 1], // Square aspect ratio for profile pictures
+        quality: 0.8,
+        base64: true,
+      };
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+
+        // Use the local URI immediately for preview
+        setAvatarUrl(asset.uri);
+
+        // Upload to Cloudinary if configured
+        if (asset.base64) {
+          setUploadingImage(true);
+          const uploadedUrl = await uploadImageToCloudinary(asset.base64);
+          if (uploadedUrl) {
+            setAvatarUrl(uploadedUrl);
+            logger.debug('Image uploaded successfully:', uploadedUrl);
+          } else {
+            // Cloudinary not configured or upload failed
+            // Keep local URI and show warning
+            logger.warn('Image upload not available - Cloudinary not configured');
+            Alert.alert(
+              'Image Upload Not Available',
+              'Profile picture upload requires Cloudinary configuration. You can still use the photo locally, but it won\'t be saved to your profile.',
+              [{ text: 'OK' }]
+            );
+            // Reset to original avatar
+            setAvatarUrl(user?.avatarUrl || undefined);
+          }
+          setUploadingImage(false);
+        }
+      }
+    } catch (error) {
+      logger.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+      setUploadingImage(false);
+    }
+  };
+
+  const showImagePickerOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library', 'Remove Photo'],
+          destructiveButtonIndex: 3,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            pickImage(true);
+          } else if (buttonIndex === 2) {
+            pickImage(false);
+          } else if (buttonIndex === 3) {
+            setAvatarUrl(undefined);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Change Profile Photo',
+        'Choose an option',
+        [
+          { text: 'Take Photo', onPress: () => pickImage(true) },
+          { text: 'Choose from Library', onPress: () => pickImage(false) },
+          { text: 'Remove Photo', onPress: () => setAvatarUrl(undefined), style: 'destructive' },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Name cannot be empty');
       return;
     }
 
+    if (uploadingImage) {
+      Alert.alert('Please Wait', 'Image is still uploading...');
+      return;
+    }
+
     setSaving(true);
     try {
-      await api.updateProfile({ name: name.trim() });
+      // Build update payload
+      const updates: { name: string; avatarUrl?: string } = { name: name.trim() };
+
+      // Only include avatarUrl if it changed
+      const originalAvatarUrl = user?.avatarUrl || undefined;
+      if (avatarUrl !== originalAvatarUrl) {
+        // Check if it's a valid URL (not a local file URI)
+        if (avatarUrl && avatarUrl.startsWith('file://')) {
+          Alert.alert('Error', 'Image upload failed. Please try selecting the image again.');
+          setSaving(false);
+          return;
+        }
+        updates.avatarUrl = avatarUrl || '';
+      }
+
+      await api.updateProfile(updates);
       Alert.alert('Success', 'Profile updated successfully', [
         {
           text: 'OK',
@@ -206,12 +366,30 @@ export default function EditProfileScreen() {
         <View style={styles.avatarPreviewCard}>
           <Text style={styles.sectionTitle}>Profile Preview</Text>
           <View style={styles.avatarPreviewContainer}>
-            <RankedAvatar
-              avatarUrl={user?.avatarUrl}
-              name={user?.name || 'Unknown'}
-              tier={displayTier}
-              size={120}
-            />
+            <TouchableOpacity
+              style={styles.avatarEditContainer}
+              onPress={showImagePickerOptions}
+              activeOpacity={0.8}
+              disabled={uploadingImage}
+            >
+              <RankedAvatar
+                avatarUrl={avatarUrl}
+                name={user?.name || 'Unknown'}
+                tier={displayTier}
+                size={120}
+              />
+              <View style={styles.avatarEditOverlay}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={20} color="#fff" />
+                )}
+              </View>
+              <View style={styles.avatarEditBadge}>
+                <Ionicons name="pencil" size={12} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.avatarHint}>Tap to change photo</Text>
             <View style={styles.previewInfo}>
               <Text style={styles.previewName}>{name || user?.name}</Text>
               {displayTier !== 'UNRANKED' && (
@@ -395,6 +573,39 @@ const styles = StyleSheet.create({
   avatarPreviewContainer: {
     alignItems: 'center',
     paddingVertical: 16,
+  },
+  avatarEditContainer: {
+    position: 'relative',
+  },
+  avatarEditOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 60,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.8,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.background.card,
+  },
+  avatarHint: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    marginTop: 8,
   },
   previewInfo: {
     alignItems: 'center',

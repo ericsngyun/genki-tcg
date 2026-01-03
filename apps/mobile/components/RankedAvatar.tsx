@@ -31,15 +31,15 @@ export function mapRatingToTier(rating: number): PlayerTier {
   return 'UNRANKED';
 }
 
-// Border images mapping
-const BORDER_IMAGES = {
+// Border images mapping - UNRANKED has no border
+const BORDER_IMAGES: Record<string, any> = {
   GENKI: require('../assets/ranked-borders/genki.png'),
   DIAMOND: require('../assets/ranked-borders/diamond.png'),
   PLATINUM: require('../assets/ranked-borders/platinum.png'),
   GOLD: require('../assets/ranked-borders/gold.png'),
   SILVER: require('../assets/ranked-borders/silver.png'),
   BRONZE: require('../assets/ranked-borders/bronze.png'),
-  UNRANKED: require('../assets/ranked-borders/bronze.png'), // Use bronze for unranked
+  // UNRANKED intentionally has no border
 };
 
 interface RankedAvatarProps {
