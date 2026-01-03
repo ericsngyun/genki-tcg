@@ -1,8 +1,95 @@
 /**
  * PlayerAvatar - Displays user avatar with fallback to initials and optional tier border
+ * Uses PNG image borders (same assets as mobile app)
  */
 
-import { TierEmblem, type PlayerTier } from './TierEmblem';
+export type PlayerTier =
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'GENKI'
+  | 'UNRANKED'
+  | 'SPROUT';
+
+// Border images mapping - same as mobile
+const BORDER_IMAGES: Record<PlayerTier, string> = {
+  GENKI: '/ranked-borders/genki.png',
+  DIAMOND: '/ranked-borders/diamond.png',
+  PLATINUM: '/ranked-borders/platinum.png',
+  GOLD: '/ranked-borders/gold.png',
+  SILVER: '/ranked-borders/silver.png',
+  BRONZE: '/ranked-borders/bronze.png',
+  SPROUT: '/ranked-borders/sprout.png',
+  UNRANKED: '/ranked-borders/bronze.png', // Use bronze for unranked
+};
+
+// Tier color configurations (for glow effects, etc.)
+export const TIER_COLORS: Record<PlayerTier, {
+  primary: string;
+  secondary: string;
+  accent: string;
+  glow: string;
+  shine: string;
+}> = {
+  BRONZE: {
+    primary: '#CD7F32',
+    secondary: '#8B4513',
+    accent: '#DEB887',
+    glow: 'rgba(205, 127, 50, 0.4)',
+    shine: '#FFDAB9',
+  },
+  SILVER: {
+    primary: '#C0C0C0',
+    secondary: '#708090',
+    accent: '#E8E8E8',
+    glow: 'rgba(192, 192, 192, 0.5)',
+    shine: '#FFFFFF',
+  },
+  GOLD: {
+    primary: '#FFD700',
+    secondary: '#B8860B',
+    accent: '#FFF8DC',
+    glow: 'rgba(255, 215, 0, 0.5)',
+    shine: '#FFFACD',
+  },
+  PLATINUM: {
+    primary: '#00E5FF',
+    secondary: '#006064',
+    accent: '#E0F7FA',
+    glow: 'rgba(0, 229, 255, 0.6)',
+    shine: '#84FFFF',
+  },
+  DIAMOND: {
+    primary: '#2979FF',
+    secondary: '#1A237E',
+    accent: '#B3E5FC',
+    glow: 'rgba(41, 121, 255, 0.7)',
+    shine: '#FFFFFF',
+  },
+  GENKI: {
+    primary: '#FF3D00',
+    secondary: '#DD2C00',
+    accent: '#FF9E80',
+    glow: 'rgba(255, 61, 0, 0.8)',
+    shine: '#FF6E40',
+  },
+  SPROUT: {
+    primary: '#4CAF50',
+    secondary: '#2E7D32',
+    accent: '#A5D6A7',
+    glow: 'rgba(76, 175, 80, 0.4)',
+    shine: '#81C784',
+  },
+  UNRANKED: {
+    primary: '#546E7A',
+    secondary: '#37474F',
+    accent: '#78909C',
+    glow: 'transparent',
+    shine: '#B0BEC5',
+  },
+};
 
 interface PlayerAvatarProps {
   name: string;
@@ -13,21 +100,21 @@ interface PlayerAvatarProps {
 }
 
 export function PlayerAvatar({ name, avatarUrl, size = 'md', tier, className = '' }: PlayerAvatarProps) {
+  // Avatar pixel sizes
+  const avatarSizes = {
+    sm: 32,
+    md: 40,
+    lg: 48,
+    xl: 80,
+    '2xl': 96,
+  };
+
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
     xl: 'w-20 h-20 text-2xl',
     '2xl': 'w-24 h-24 text-3xl',
-  };
-
-  // Tier border sizes - slightly larger than avatar to show border outside
-  const tierBorderSizes = {
-    sm: 40,    // 32px avatar + 8px border space = 40px
-    md: 50,    // 40px avatar + 10px border space = 50px
-    lg: 60,    // 48px avatar + 12px border space = 60px
-    xl: 96,    // 80px avatar + 16px border space = 96px
-    '2xl': 112, // 96px avatar + 16px border space = 112px
   };
 
   // Get initials from name
@@ -102,11 +189,37 @@ export function PlayerAvatar({ name, avatarUrl, size = 'md', tier, className = '
     return <div className={className}>{avatarContent}</div>;
   }
 
-  // With tier, wrap in relative container with tier border overlay
+  // With tier, wrap in relative container with image border overlay
+  // Border is displayed at 160% of avatar size (same as mobile)
+  const avatarPx = avatarSizes[size];
+  const borderSize = avatarPx * 1.6;
+  const containerSize = borderSize;
+
+  // Offset to center the border over the avatar
+  const borderOffsetLeft = 0;
+  const borderOffsetTop = avatarPx * 0.02;
+
   return (
-    <div className={`relative flex items-center justify-center ${className}`} style={{ width: tierBorderSizes[size], height: tierBorderSizes[size] }}>
+    <div
+      className={`relative flex items-center justify-center ${className}`}
+      style={{ width: containerSize, height: containerSize }}
+    >
       {avatarContent}
-      <TierEmblem tier={tier} size={tierBorderSizes[size]} />
+      <img
+        src={BORDER_IMAGES[tier]}
+        alt=""
+        style={{
+          position: 'absolute',
+          width: borderSize,
+          height: borderSize,
+          top: 0,
+          left: 0,
+          marginLeft: borderOffsetLeft,
+          marginTop: borderOffsetTop,
+          pointerEvents: 'none',
+          objectFit: 'contain',
+        }}
+      />
     </div>
   );
 }

@@ -910,7 +910,6 @@ const styles = StyleSheet.create({
   },
   eventCardCompact: {},
   eventCardMuted: {
-    opacity: 0.7,
     borderColor: colors.border.subtle,
   },
   liveIndicator: {

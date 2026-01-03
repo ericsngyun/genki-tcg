@@ -19,26 +19,26 @@ const ELEMENTS: Record<Element, ElementConfig> = {
   water: {
     name: 'Water',
     icon: 'https://tcg.azuki.com/icons/water.svg',
-    color: '#3b82f6',
-    darkColor: '#1e3a8a',
+    color: '#60a5fa',
+    darkColor: '#1e40af',
   },
   lightning: {
     name: 'Lightning',
     icon: 'https://tcg.azuki.com/icons/lightning.svg',
-    color: '#a78bfa',
-    darkColor: '#4c1d95',
+    color: '#c4b5fd',
+    darkColor: '#5b21b6',
   },
   earth: {
     name: 'Earth',
     icon: 'https://tcg.azuki.com/icons/earth.svg',
-    color: '#fb923c',
-    darkColor: '#92400e',
+    color: '#fdba74',
+    darkColor: '#b45309',
   },
   fire: {
     name: 'Fire',
     icon: 'https://tcg.azuki.com/icons/fire.svg',
-    color: '#ef4444',
-    darkColor: '#7f1d1d',
+    color: '#f87171',
+    darkColor: '#991b1b',
   },
 };
 
@@ -256,9 +256,25 @@ export default function LifeCounterScreen() {
           { transform: [{ rotate: '180deg' }] }
         ]}
       >
-        {/* Element Icon Background */}
-        <View style={styles.elementIconBackground}>
-          <SvgUri uri={p1Config.icon} width={120} height={120} style={{ opacity: 0.15 }} />
+        {/* SVG Pattern Background */}
+        <View style={styles.patternContainer}>
+          {/* Center large icon */}
+          <View style={styles.centerIcon}>
+            <SvgUri uri={p1Config.icon} width={200} height={200} style={{ opacity: 0.25 }} />
+          </View>
+          {/* Corner patterns */}
+          <View style={[styles.patternIcon, styles.patternTopLeft]}>
+            <SvgUri uri={p1Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternTopRight]}>
+            <SvgUri uri={p1Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternBottomLeft]}>
+            <SvgUri uri={p1Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternBottomRight]}>
+            <SvgUri uri={p1Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
         </View>
 
         {/* Left Side - Minus */}
@@ -310,9 +326,25 @@ export default function LifeCounterScreen() {
           { backgroundColor: p2Config.darkColor }
         ]}
       >
-        {/* Element Icon Background */}
-        <View style={styles.elementIconBackground}>
-          <SvgUri uri={p2Config.icon} width={120} height={120} style={{ opacity: 0.15 }} />
+        {/* SVG Pattern Background */}
+        <View style={styles.patternContainer}>
+          {/* Center large icon */}
+          <View style={styles.centerIcon}>
+            <SvgUri uri={p2Config.icon} width={200} height={200} style={{ opacity: 0.25 }} />
+          </View>
+          {/* Corner patterns */}
+          <View style={[styles.patternIcon, styles.patternTopLeft]}>
+            <SvgUri uri={p2Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternTopRight]}>
+            <SvgUri uri={p2Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternBottomLeft]}>
+            <SvgUri uri={p2Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
+          <View style={[styles.patternIcon, styles.patternBottomRight]}>
+            <SvgUri uri={p2Config.icon} width={80} height={80} style={{ opacity: 0.12 }} />
+          </View>
         </View>
 
         {/* Left Side - Minus */}
@@ -464,13 +496,40 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     flexDirection: 'row',
+    overflow: 'hidden',
   },
-  elementIconBackground: {
+  patternContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  centerIcon: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -60 }, { translateY: -60 }],
-    zIndex: 0,
+    transform: [{ translateX: -100 }, { translateY: -100 }],
+  },
+  patternIcon: {
+    position: 'absolute',
+  },
+  patternTopLeft: {
+    top: 10,
+    left: 10,
+  },
+  patternTopRight: {
+    top: 10,
+    right: 10,
+  },
+  patternBottomLeft: {
+    bottom: 10,
+    left: 10,
+  },
+  patternBottomRight: {
+    bottom: 10,
+    right: 10,
   },
   tapZone: {
     flex: 1,
@@ -501,12 +560,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   lifeNumber: {
-    fontSize: 100,
-    fontWeight: '800',
+    fontSize: 140,
+    fontWeight: '900',
     color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
   },
   lifeNumberLow: {
     color: '#facc15',

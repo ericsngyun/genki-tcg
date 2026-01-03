@@ -142,7 +142,50 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleEditDisplayName = () => {
+    Alert.prompt(
+      'Edit Display Name',
+      'Enter your new display name:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Save',
+          onPress: async (newName: string | undefined) => {
+            if (!newName || newName.trim().length === 0) {
+              Alert.alert('Error', 'Display name cannot be empty');
+              return;
+            }
+            if (newName.trim().length > 50) {
+              Alert.alert('Error', 'Display name cannot exceed 50 characters');
+              return;
+            }
+            try {
+              await api.updateProfile({ name: newName.trim() });
+              Alert.alert('Success', 'Display name updated successfully');
+            } catch (error: any) {
+              logger.error('Update profile error:', error);
+              const message = error.response?.data?.message || 'Failed to update display name';
+              Alert.alert('Error', message);
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
   const settingsSections: SettingsSection[] = [
+    {
+      title: 'Profile',
+      items: [
+        {
+          icon: 'person-outline',
+          label: 'Edit Display Name',
+          onPress: handleEditDisplayName,
+          showArrow: true,
+        },
+      ],
+    },
     {
       title: 'Account',
       items: [

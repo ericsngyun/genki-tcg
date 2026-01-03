@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,6 +49,14 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginMethod, setLoginMethod] = useState<'discord' | 'email'>('discord');
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+
+  // Check if Apple Sign In is available (iOS only)
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      AppleAuthentication.isAvailableAsync().then(setIsAppleAvailable);
+    }
+  }, []);
 
   // Animated values for background effects
   const blob1Anim = useRef(new Animated.Value(0)).current;
@@ -347,6 +356,64 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      logger.debug('=== Apple Sign In ===');
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      logger.debug('Apple credential received:', {
+        user: credential.user,
+        hasEmail: !!credential.email,
+        hasFullName: !!credential.fullName,
+        hasIdentityToken: !!credential.identityToken,
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      // Send the identity token to our backend
+      const response = await api.appleLogin({
+        identityToken: credential.identityToken,
+        fullName: credential.fullName ? {
+          givenName: credential.fullName.givenName,
+          familyName: credential.fullName.familyName,
+        } : undefined,
+        email: credential.email || undefined,
+        user: credential.user,
+      });
+
+      if (!response.accessToken || !response.refreshToken) {
+        throw new Error('Invalid response from server');
+      }
+
+      logger.debug('Apple login successful, storing tokens...');
+      await secureStorage.setItem('access_token', response.accessToken);
+      await secureStorage.setItem('refresh_token', response.refreshToken);
+
+      logger.debug('Navigating to events screen...');
+      router.replace('/(tabs)/events');
+    } catch (err: any) {
+      if (err.code === 'ERR_REQUEST_CANCELED') {
+        // User cancelled - don't show error
+        logger.debug('Apple Sign In cancelled by user');
+      } else {
+        logger.error('Apple login error:', err);
+        setError(err.response?.data?.message || err.message || 'Apple Sign In failed');
+      }
+      setLoading(false);
+    }
+  };
+
   // Interpolate blob positions
   const blob1TranslateX = blob1Anim.interpolate({
     inputRange: [0, 1],
@@ -584,28 +651,41 @@ export default function LoginScreen() {
 
           {/* Discord Login */}
           {loginMethod === 'discord' ? (
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={handleDiscordLogin}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={['#5865F2', '#4752C4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.loginButtonGradient}
+            <View>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleDiscordLogin}
+                disabled={loading}
+                activeOpacity={0.85}
               >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <View style={styles.loginButtonContent}>
-                    <Ionicons name="logo-discord" size={22} color="#FFFFFF" />
-                    <Text style={styles.loginButtonText}>Continue with Discord</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={['#5865F2', '#4752C4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.loginButtonGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <View style={styles.loginButtonContent}>
+                      <Ionicons name="logo-discord" size={22} color="#FFFFFF" />
+                      <Text style={styles.loginButtonText}>Continue with Discord</Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Apple Sign In - iOS only */}
+              {Platform.OS === 'ios' && isAppleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                  cornerRadius={12}
+                  style={styles.appleButton}
+                  onPress={handleAppleLogin}
+                />
+              )}
+            </View>
           ) : (
             /* Email/Password Login */
             <View style={styles.emailLoginContainer}>
@@ -861,6 +941,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
     letterSpacing: 0.3,
+  },
+  appleButton: {
+    width: '100%',
+    height: 56,
+    marginTop: theme.spacing.md,
   },
   swapButton: {
     marginTop: theme.spacing.md,

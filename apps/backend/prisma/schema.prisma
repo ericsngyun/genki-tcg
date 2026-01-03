@@ -52,6 +52,9 @@ model User {
   discordUsername String?
   discordAvatar   String?
 
+  // Apple Sign In
+  appleId String? @unique
+
   // Email verification
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?

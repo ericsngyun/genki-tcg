@@ -1,14 +1,5 @@
 import { TierBadge } from './TierBadge';
-import { PlayerAvatar } from './PlayerAvatar';
-import { TIER_COLORS } from './TierEmblem';
-
-type PlayerTier =
-  | 'BRONZE'
-  | 'SILVER'
-  | 'GOLD'
-  | 'PLATINUM'
-  | 'DIAMOND'
-  | 'GENKI';
+import { PlayerAvatar, TIER_COLORS, type PlayerTier } from './PlayerAvatar';
 
 interface LeaderEntry {
   rank: number;

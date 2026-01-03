@@ -1,11 +1,4 @@
-type PlayerTier =
-  | 'SPROUT'
-  | 'BRONZE'
-  | 'SILVER'
-  | 'GOLD'
-  | 'PLATINUM'
-  | 'DIAMOND'
-  | 'GENKI';
+import { type PlayerTier } from './PlayerAvatar';
 
 interface TierBadgeProps {
   tier: PlayerTier;
@@ -63,6 +56,13 @@ const TIER_STYLES: Record<PlayerTier, { bg: string; text: string; border: string
     border: 'border-green-500/30',
     glow: 'shadow-[0_0_8px_rgba(34,197,94,0.3)]',
     icon: '🌱',
+  },
+  UNRANKED: {
+    bg: 'bg-gray-500/10',
+    text: 'text-gray-400',
+    border: 'border-gray-500/30',
+    glow: 'shadow-[0_0_8px_rgba(107,114,128,0.3)]',
+    icon: '—',
   },
 };
 

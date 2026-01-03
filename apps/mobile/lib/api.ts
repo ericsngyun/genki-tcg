@@ -148,6 +148,24 @@ class ApiClient {
     return data;
   }
 
+  async appleLogin(credentials: {
+    identityToken: string;
+    fullName?: { givenName?: string | null; familyName?: string | null };
+    email?: string;
+    user: string;
+  }) {
+    const { data } = await this.client.post('/auth/apple/callback', credentials);
+
+    // Store tokens
+    if (data.accessToken && data.refreshToken) {
+      await secureStorage.setItem('access_token', data.accessToken);
+      await secureStorage.setItem('refresh_token', data.refreshToken);
+      await secureStorage.removeItem('auth_token');
+    }
+
+    return data;
+  }
+
   async getMe() {
     const { data } = await this.client.get('/auth/me');
     return data;

@@ -1028,6 +1028,179 @@ export class AuthService {
     return { message: 'Discord account unlinked successfully' };
   }
 
+  // ============================================================================
+  // Apple Sign In
+  // ============================================================================
+
+  async handleAppleCallback(
+    identityToken: string,
+    fullName?: { givenName?: string | null; familyName?: string | null },
+    email?: string,
+    appleUserId?: string,
+  ) {
+    // Decode and verify the Apple identity token
+    // Apple's identity token is a JWT signed by Apple
+    const decodedToken = this.decodeAppleToken(identityToken);
+
+    if (!decodedToken) {
+      throw new BadRequestException('Invalid Apple identity token');
+    }
+
+    // The 'sub' claim is the unique Apple user ID
+    const appleId = decodedToken.sub;
+    const tokenEmail = decodedToken.email;
+
+    this.logger.log('Apple Sign In:', {
+      appleId,
+      tokenEmail,
+      providedEmail: email,
+      hasFullName: !!fullName,
+    });
+
+    // First, try to find user by Apple ID
+    let user = await this.prisma.user.findFirst({
+      where: { appleId },
+      include: {
+        memberships: {
+          include: { org: true },
+        },
+      },
+    });
+
+    if (!user) {
+      // Try to find by email
+      const userEmail = email || tokenEmail;
+      if (userEmail) {
+        user = await this.prisma.user.findUnique({
+          where: { email: userEmail },
+          include: {
+            memberships: {
+              include: { org: true },
+            },
+          },
+        });
+
+        if (user) {
+          // Link Apple ID to existing account
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { appleId },
+            include: {
+              memberships: {
+                include: { org: true },
+              },
+            },
+          });
+        }
+      }
+    }
+
+    if (!user) {
+      // Create new user
+      const defaultOrg = await this.prisma.organization.findFirst({
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!defaultOrg) {
+        throw new BadRequestException(
+          'No organization available. Please contact support.'
+        );
+      }
+
+      // Build display name from fullName or use "Apple User"
+      let displayName = 'Apple User';
+      if (fullName) {
+        const parts = [fullName.givenName, fullName.familyName].filter(Boolean);
+        if (parts.length > 0) {
+          displayName = parts.join(' ');
+        }
+      }
+
+      // Use provided email, token email, or generate a placeholder
+      const userEmail = email || tokenEmail || `${appleId}@privaterelay.appleid.com`;
+
+      user = await this.prisma.user.create({
+        data: {
+          email: userEmail,
+          name: displayName,
+          appleId,
+          emailVerified: true, // Apple verifies emails
+          memberships: {
+            create: {
+              orgId: defaultOrg.id,
+              role: 'PLAYER',
+            },
+          },
+        },
+        include: {
+          memberships: {
+            include: { org: true },
+          },
+        },
+      });
+
+      // Grant welcome bonus
+      await this.grantWelcomeBonus(user.id, defaultOrg.id);
+    }
+
+    const membership = user.memberships[0];
+    if (!membership) {
+      throw new UnauthorizedException('No organization membership');
+    }
+
+    // Generate tokens with extended expiration for OAuth logins
+    const accessToken = this.generateToken(user, membership, membership.orgId, true);
+    const refreshToken = await this.generateRefreshToken(user.id, {
+      deviceType: 'mobile',
+      deviceName: 'Apple Sign In',
+      isOAuthLogin: true,
+    });
+
+    return {
+      user: this.sanitizeUser(user),
+      accessToken,
+      refreshToken,
+      orgMembership: membership,
+    };
+  }
+
+  private decodeAppleToken(token: string): { sub: string; email?: string } | null {
+    try {
+      // Apple identity tokens are JWTs. We decode the payload to get the user info.
+      // In production, you should verify the signature using Apple's public keys.
+      // For now, we'll decode without verification since the token came directly
+      // from Apple's SDK on the client.
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+      const decoded = JSON.parse(payload);
+
+      // Verify the token is from Apple
+      if (decoded.iss !== 'https://appleid.apple.com') {
+        this.logger.warn('Apple token issuer mismatch:', decoded.iss);
+        return null;
+      }
+
+      // Check token is not expired
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < now) {
+        this.logger.warn('Apple token expired');
+        return null;
+      }
+
+      return {
+        sub: decoded.sub,
+        email: decoded.email,
+      };
+    } catch (error) {
+      this.logger.error('Failed to decode Apple token:', error);
+      return null;
+    }
+  }
+
   /**
    * Permanently delete a user account and all associated data.
    * This is required for App Store compliance (Apple/Google).

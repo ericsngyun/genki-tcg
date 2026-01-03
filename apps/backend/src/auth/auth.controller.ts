@@ -179,6 +179,28 @@ export class AuthController {
     return this.authService.unlinkDiscordAccount(user.id);
   }
 
+  // ============================================================================
+  // Apple Sign In Endpoints
+  // ============================================================================
+
+  @Post('apple/callback')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
+  async appleCallback(
+    @Body() body: {
+      identityToken: string;
+      fullName?: { givenName?: string | null; familyName?: string | null };
+      email?: string;
+      user: string;
+    }
+  ) {
+    return this.authService.handleAppleCallback(
+      body.identityToken,
+      body.fullName,
+      body.email,
+      body.user
+    );
+  }
+
   // Mobile-specific OAuth callback endpoint
   // Discord redirects here -> we exchange code -> we redirect to deep link
   @Get('discord/mobile-callback')
